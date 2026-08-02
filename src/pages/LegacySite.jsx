@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import "../styles.css";
+import PublicFeedbacks from "../components/feedbacks/PublicFeedbacks";
 
 const PHONE = "5588993765491";
 const COMMUNITY_URL = "https://chat.whatsapp.com/BkIqczjJ3Uv2AitaIRp4q4";
@@ -1254,22 +1255,7 @@ function SalesLandingPage({ onBack, onOpenProduct }) {
             </p>
           </div>
 
-          {testimonials.length > 0 ? (
-            <div className="testimonial-grid">
-              {testimonials.map((item) => (
-                <article className="testimonial-card" key={item.name}>
-                  <blockquote>“{item.text}”</blockquote>
-                  <strong>{item.name}</strong>
-                  <span>{item.role}</span>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="testimonial-empty">
-              A estrutura para depoimentos reais já está pronta. Nenhum depoimento foi inventado.
-              Basta adicionar avaliações verdadeiras no array <strong>testimonials</strong> do código.
-            </div>
-          )}
+          <PublicFeedbacks limit={9} compact />
         </div>
       </section>
 
@@ -1596,6 +1582,8 @@ export default function App() {
               </div>
             </div>
           </section>
+
+          <PublicFeedbacks limit={6} />
 
           <section className="section evidence">
             <div className="container evidence-grid">
