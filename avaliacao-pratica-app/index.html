@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#991b1b" />
+  <meta name="description" content="Aplicativo de avaliação prática baseado nas fichas oficiais fornecidas pelo avaliador." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Avaliação Prática</title>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">AVALIAÇÃO PRÁTICA</p>
+        <h1>Clínico e Trauma</h1>
+      </div>
+      <span class="lock-badge">Ficha oficial preservada</span>
+    </header>
+
+    <section id="setupView" class="panel">
+      <h2>Nova avaliação</h2>
+      <p class="muted">Preencha os dados e escolha uma das duas avaliações oficiais.</p>
+      <form id="setupForm" class="form-stack">
+        <label>
+          <span>Aluno</span>
+          <input id="student" name="student" autocomplete="off" required />
+        </label>
+        <label>
+          <span>Avaliador</span>
+          <input id="evaluator" name="evaluator" autocomplete="off" required />
+        </label>
+        <label>
+          <span>Data</span>
+          <input id="date" name="date" type="date" required />
+        </label>
+
+        <fieldset>
+          <legend>Tipo de avaliação</legend>
+          <label class="type-card">
+            <input type="radio" name="evaluationType" value="clinico" required />
+            <span><strong>CLÍNICO</strong><small>20 itens oficiais</small></span>
+          </label>
+          <label class="type-card">
+            <input type="radio" name="evaluationType" value="trauma" required />
+            <span><strong>TRAUMA</strong><small>21 itens oficiais</small></span>
+          </label>
+        </fieldset>
+
+        <button class="primary" type="submit">Iniciar avaliação</button>
+      </form>
+    </section>
+
+    <section id="evaluationView" hidden>
+      <div class="evaluation-head panel">
+        <div>
+          <button id="backToSetup" class="link-button" type="button">← Voltar</button>
+          <p id="evaluationTitle" class="eyebrow"></p>
+          <h2 id="studentBadge"></h2>
+          <p id="sourceRule" class="official-rule"></p>
+        </div>
+        <div class="score-box">
+          <span>Nota atual</span>
+          <strong id="currentScore">0,00</strong>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-meta"><span id="progressText"></span><span>Todos os itens são obrigatórios</span></div>
+        <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+      </div>
+
+      <div id="itemsList" class="items-list"></div>
+      <button id="finishButton" class="primary finish" type="button" disabled>Concluir e gerar nota</button>
+    </section>
+
+    <section id="resultView" class="panel" hidden>
+      <p class="eyebrow">RESULTADO FINAL</p>
+      <h2 id="resultStudent"></h2>
+      <div class="result-score"><strong id="resultScore"></strong><span> de <b id="resultMax"></b> pontos conforme a ficha</span></div>
+      <dl class="result-meta">
+        <div><dt>Avaliação</dt><dd id="resultType"></dd></div>
+        <div><dt>Avaliador</dt><dd id="resultEvaluator"></dd></div>
+        <div><dt>Data</dt><dd id="resultDate"></dd></div>
+      </dl>
+
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>#</th><th>Critério oficial</th><th>Situação</th><th>Pontos</th></tr></thead>
+          <tbody id="resultItems"></tbody>
+        </table>
+      </div>
+      <button id="newEvaluation" class="primary" type="button">Nova avaliação</button>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
