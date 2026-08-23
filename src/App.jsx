@@ -9,7 +9,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import FeedbacksPage from "./pages/admin/FeedbacksPage";
 import FeedbackEditorPage from "./pages/admin/FeedbackEditorPage";
 import ProductsPage from "./pages/admin/ProductsPage";
-import ProductEditorPage from "./pages/admin/ProductEditorPage";
+import ProductEditorPageV4 from "./pages/admin/ProductEditorPageV4";
 import SiteSettingsPage from "./pages/admin/SiteSettingsPage";
 import "./styles/auth-admin.css";
 
@@ -36,8 +36,8 @@ export default function App() {
             <Route path="feedbacks/novo" element={<FeedbackEditorPage />} />
             <Route path="feedbacks/:id" element={<FeedbackEditorPage />} />
             <Route path="produtos" element={<ProductsPage />} />
-            <Route path="produtos/novo" element={<ProductEditorPage />} />
-            <Route path="produtos/:id" element={<ProductEditorPage />} />
+            <Route path="produtos/novo" element={<ProductEditorPageV4 />} />
+            <Route path="produtos/:id" element={<ProductEditorPageV4 />} />
           </Route>
 
           <Route path="/login" element={<Navigate to="/admin/login" replace />} />
