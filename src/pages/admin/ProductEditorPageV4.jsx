@@ -17,8 +17,29 @@ const emptyForm = {
   display_order: 0,
 };
 
+const asText = (value) => (value === null || value === undefined ? "" : String(value));
+
+function normalizeProduct(data = {}) {
+  return {
+    ...emptyForm,
+    ...data,
+    title: asText(data.title),
+    slug: asText(data.slug),
+    short_description: asText(data.short_description),
+    full_description: asText(data.full_description),
+    cover_url: asText(data.cover_url),
+    category: asText(data.category),
+    price: data.price ?? "",
+    promotional_price: data.promotional_price ?? "",
+    checkout_url: asText(data.checkout_url),
+    status: asText(data.status) || "active",
+    is_featured: Boolean(data.is_featured),
+    display_order: data.display_order ?? 0,
+  };
+}
+
 function slugify(value = "") {
-  return value
+  return asText(value)
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -54,13 +75,9 @@ export default function ProductEditorPageV4() {
         setMessageType("error");
         setMessage(`Não foi possível carregar o produto: ${error.message}`);
       } else {
-        setForm({
-          ...emptyForm,
-          ...data,
-          price: data.price ?? "",
-          promotional_price: data.promotional_price ?? "",
-        });
-        setPreview(data.cover_url || "");
+        const normalized = normalizeProduct(data);
+        setForm(normalized);
+        setPreview(normalized.cover_url);
       }
       setLoading(false);
     };
@@ -83,7 +100,7 @@ export default function ProductEditorPageV4() {
   };
 
   const uploadCover = async () => {
-    if (!imageFile) return form.cover_url || null;
+    if (!imageFile) return asText(form.cover_url) || null;
     if (!imageFile.type.startsWith("image/")) throw new Error("Selecione uma imagem válida.");
     if (imageFile.size > 5 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 5 MB.");
 
@@ -108,46 +125,43 @@ export default function ProductEditorPageV4() {
       const { data: authData } = await supabase.auth.getUser();
       if (!authData?.user) throw new Error("Sua sessão expirou. Entre novamente no painel.");
 
-      if (!form.title.trim()) throw new Error("Informe o título do produto.");
-      if (!form.short_description.trim()) throw new Error("Informe a descrição curta.");
-      if (!form.checkout_url.trim()) throw new Error("Informe o link de venda da Hotmart.");
+      const title = asText(form.title).trim();
+      const shortDescription = asText(form.short_description).trim();
+      const checkoutUrl = asText(form.checkout_url).trim();
 
-      const slug = slugify(form.slug || form.title);
+      if (!title) throw new Error("Informe o título do produto.");
+      if (!shortDescription) throw new Error("Informe a descrição curta.");
+      if (!checkoutUrl) throw new Error("Informe o link de venda da Hotmart.");
+
+      const slug = slugify(asText(form.slug) || title);
       if (!slug) throw new Error("Informe um identificador válido para o endereço.");
 
       const coverUrl = await uploadCover();
       const payload = {
-        title: form.title.trim(),
+        title,
         slug,
-        short_description: form.short_description.trim(),
-        full_description: form.full_description.trim() || null,
+        short_description: shortDescription,
+        full_description: asText(form.full_description).trim() || null,
         cover_url: coverUrl,
-        category: form.category.trim() || null,
+        category: asText(form.category).trim() || null,
         price: parseMoney(form.price),
         promotional_price: parseMoney(form.promotional_price),
-        checkout_url: form.checkout_url.trim(),
-        status: form.status,
+        checkout_url: checkoutUrl,
+        status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
       };
 
-      let result;
-      if (editing) {
-        result = await supabase.from("products").update(payload).eq("id", id).select("*").single();
-      } else {
-        result = await supabase.from("products").insert(payload).select("*").single();
-      }
+      const result = editing
+        ? await supabase.from("products").update(payload).eq("id", id).select("*").single()
+        : await supabase.from("products").insert(payload).select("*").single();
 
       if (result.error) throw result.error;
       if (!result.data) throw new Error("O banco não confirmou a gravação do produto.");
 
-      setForm({
-        ...emptyForm,
-        ...result.data,
-        price: result.data.price ?? "",
-        promotional_price: result.data.promotional_price ?? "",
-      });
-      setPreview(result.data.cover_url || "");
+      const normalized = normalizeProduct(result.data);
+      setForm(normalized);
+      setPreview(normalized.cover_url);
       setImageFile(null);
       setMessageType("success");
       setMessage(editing ? "Produto salvo com sucesso no banco de dados." : "Produto criado com sucesso no banco de dados.");
@@ -183,18 +197,18 @@ export default function ProductEditorPageV4() {
 
       <form className="pe4-card" onSubmit={save} noValidate>
         <div className="pe4-grid">
-          <div className="pe4-field full"><label>Título *</label><input value={form.title} onChange={(e) => update("title", e.target.value)} required /></div>
-          <div className="pe4-field full"><label>Descrição curta *</label><textarea value={form.short_description} onChange={(e) => update("short_description", e.target.value)} required /></div>
-          <div className="pe4-field full"><label>Descrição completa</label><textarea value={form.full_description || ""} onChange={(e) => update("full_description", e.target.value)} /></div>
+          <div className="pe4-field full"><label>Título *</label><input value={asText(form.title)} onChange={(e) => update("title", e.target.value)} required /></div>
+          <div className="pe4-field full"><label>Descrição curta *</label><textarea value={asText(form.short_description)} onChange={(e) => update("short_description", e.target.value)} required /></div>
+          <div className="pe4-field full"><label>Descrição completa</label><textarea value={asText(form.full_description)} onChange={(e) => update("full_description", e.target.value)} /></div>
           <div className="pe4-field full"><label>Imagem de capa</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /><span className="pe4-help">JPG, PNG ou WEBP. Máximo 5 MB.</span>{preview && <div className="pe4-preview"><img src={preview} alt="Prévia da capa" /></div>}</div>
-          <div className="pe4-field full"><label>Link de venda Hotmart *</label><input type="url" value={form.checkout_url || ""} onChange={(e) => update("checkout_url", e.target.value)} placeholder="https://pay.hotmart.com/..." required /></div>
-          <div className="pe4-field"><label>Categoria</label><input value={form.category || ""} onChange={(e) => update("category", e.target.value)} placeholder="E-book, curso, mentoria..." /></div>
-          <div className="pe4-field"><label>Status</label><select value={form.status} onChange={(e) => update("status", e.target.value)}><option value="active">Ativo — aparece no site</option><option value="draft">Rascunho</option><option value="inactive">Inativo</option><option value="archived">Arquivado</option></select></div>
-          <div className="pe4-field"><label>Preço normal</label><input inputMode="decimal" value={form.price} onChange={(e) => update("price", e.target.value)} placeholder="0,00" /></div>
-          <div className="pe4-field"><label>Preço promocional</label><input inputMode="decimal" value={form.promotional_price} onChange={(e) => update("promotional_price", e.target.value)} placeholder="0,00" /></div>
-          <div className="pe4-field"><label>Ordem de exibição</label><input type="number" min="0" value={form.display_order} onChange={(e) => update("display_order", e.target.value)} /></div>
-          <div className="pe4-field"><label>Identificador do endereço</label><input value={form.slug} onChange={(e) => update("slug", e.target.value)} /></div>
-          <div className="pe4-field full"><label className="pe4-check"><input type="checkbox" checked={form.is_featured} onChange={(e) => update("is_featured", e.target.checked)} /> Destacar este produto no site</label></div>
+          <div className="pe4-field full"><label>Link de venda Hotmart *</label><input type="url" value={asText(form.checkout_url)} onChange={(e) => update("checkout_url", e.target.value)} placeholder="https://pay.hotmart.com/..." required /></div>
+          <div className="pe4-field"><label>Categoria</label><input value={asText(form.category)} onChange={(e) => update("category", e.target.value)} placeholder="E-book, curso, mentoria..." /></div>
+          <div className="pe4-field"><label>Status</label><select value={asText(form.status) || "active"} onChange={(e) => update("status", e.target.value)}><option value="active">Ativo — aparece no site</option><option value="draft">Rascunho</option><option value="inactive">Inativo</option><option value="archived">Arquivado</option></select></div>
+          <div className="pe4-field"><label>Preço normal</label><input inputMode="decimal" value={form.price ?? ""} onChange={(e) => update("price", e.target.value)} placeholder="0,00" /></div>
+          <div className="pe4-field"><label>Preço promocional</label><input inputMode="decimal" value={form.promotional_price ?? ""} onChange={(e) => update("promotional_price", e.target.value)} placeholder="0,00" /></div>
+          <div className="pe4-field"><label>Ordem de exibição</label><input type="number" min="0" value={form.display_order ?? 0} onChange={(e) => update("display_order", e.target.value)} /></div>
+          <div className="pe4-field"><label>Identificador do endereço</label><input value={asText(form.slug)} onChange={(e) => update("slug", e.target.value)} /></div>
+          <div className="pe4-field full"><label className="pe4-check"><input type="checkbox" checked={Boolean(form.is_featured)} onChange={(e) => update("is_featured", e.target.checked)} /> Destacar este produto no site</label></div>
         </div>
         <div className="pe4-actions"><button className="pe4-save" type="submit" disabled={saving}>{saving ? "Salvando no banco..." : "Salvar alterações"}</button><button className="pe4-cancel" type="button" onClick={() => navigate("/admin/produtos")}>Cancelar</button></div>
       </form>
