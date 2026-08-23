@@ -3,10 +3,9 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const items = [
   ["/admin", "Visão geral"],
-  ["/admin/usuarios", "Usuários"],
-  ["/admin/feedbacks", "Feedbacks"],
-  ["/admin/analises", "Análises"],
+  ["/admin/site", "Conteúdo do site"],
   ["/admin/produtos", "Produtos"],
+  ["/admin/feedbacks", "Feedbacks"],
 ];
 
 export default function AdminLayout() {
@@ -24,13 +23,18 @@ export default function AdminLayout() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
+  const exit = async () => {
+    await signOut();
+    navigate("/admin/login", { replace: true });
+  };
+
   return (
     <div className="admin-page">
       <aside className="admin-sidebar">
         <div>
           <b>HANIF ALVES</b>
           <span>PAINEL ADMINISTRATIVO</span>
-          <small className="admin-version">VERSÃO 2 • FUNCIONAL</small>
+          <small className="admin-version">V4 • CMS COMERCIAL</small>
         </div>
 
         <nav>
@@ -61,7 +65,7 @@ export default function AdminLayout() {
             <span>ADMINISTRADOR</span>
             <h1>Olá, {profile?.full_name || "Hanif"}</h1>
           </div>
-          <button type="button" onClick={signOut}>Sair</button>
+          <button type="button" onClick={exit}>Sair</button>
         </header>
 
         <Outlet />
