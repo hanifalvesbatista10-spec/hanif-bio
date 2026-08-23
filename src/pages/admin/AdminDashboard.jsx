@@ -2,41 +2,30 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 
-const emptyStats = {
-  users: 0,
-  students: 0,
-  feedbacks: 0,
-  published: 0,
-  analyses: 0,
-  products: 0,
-};
-
 export default function AdminDashboard() {
-  const [stats, setStats] = useState(emptyStats);
+  const [stats, setStats] = useState({ products: 0, feedbacks: 0, published: 0 });
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const load = async () => {
       const results = await Promise.all([
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "student"),
+        supabase.from("products").select("id", { count: "exact", head: true }),
         supabase.from("student_feedbacks").select("id", { count: "exact", head: true }),
-        supabase.from("student_feedbacks").select("id", { count: "exact", head: true }).eq("status", "published"),
-        supabase.from("student_analyses").select("id", { count: "exact", head: true }),
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("status", "active"),
+        supabase
+          .from("student_feedbacks")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "published")
+          .eq("publication_authorized", true),
       ]);
 
       const failed = results.find((item) => item.error);
       if (failed) setError(failed.error.message);
 
       setStats({
-        users: results[0].count || 0,
-        students: results[1].count || 0,
-        feedbacks: results[2].count || 0,
-        published: results[3].count || 0,
-        analyses: results[4].count || 0,
-        products: results[5].count || 0,
+        products: results[0].count || 0,
+        feedbacks: results[1].count || 0,
+        published: results[2].count || 0,
       });
     };
 
@@ -46,7 +35,7 @@ export default function AdminDashboard() {
   return (
     <>
       <div className="admin-build-confirmation">
-        Painel V2 carregado corretamente. Os menus e atalhos abaixo são navegáveis.
+        V4 comercial ativa: site público, produtos, feedbacks e conteúdo geral sob seu controle.
       </div>
 
       {error && (
@@ -56,50 +45,38 @@ export default function AdminDashboard() {
       )}
 
       <section className="admin-stats">
-        {[
-          ["Usuários", stats.users],
-          ["Alunos", stats.students],
-          ["Feedbacks", stats.feedbacks],
-          ["Publicados", stats.published],
-          ["Análises", stats.analyses],
-          ["Produtos ativos", stats.products],
-        ].map(([label, value]) => (
-          <article key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </article>
-        ))}
+        <article><span>Produtos</span><strong>{stats.products}</strong></article>
+        <article><span>Feedbacks</span><strong>{stats.feedbacks}</strong></article>
+        <article><span>Publicados</span><strong>{stats.published}</strong></article>
       </section>
 
       <section className="admin-welcome">
-        <h2>Gestão da plataforma</h2>
-        <p>
-          Cadastre, edite, publique e exclua conteúdos diretamente pelo painel.
-        </p>
+        <h2>Controle do site</h2>
+        <p>Gerencie o que o visitante vê sem precisar alterar código ou fazer novo deploy para cada mudança de conteúdo.</p>
 
         <div className="admin-actions">
           <button
             type="button"
             className="admin-button primary"
+            onClick={() => navigate("/admin/site")}
+          >
+            Editar página inicial
+          </button>
+
+          <button
+            type="button"
+            className="admin-button"
+            onClick={() => navigate("/admin/produtos/novo")}
+          >
+            + Novo produto
+          </button>
+
+          <button
+            type="button"
+            className="admin-button"
             onClick={() => navigate("/admin/feedbacks/novo")}
           >
             + Novo feedback
-          </button>
-
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => navigate("/admin/analises/nova")}
-          >
-            + Nova análise
-          </button>
-
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => navigate("/admin/produtos")}
-          >
-            Gerenciar produtos
           </button>
         </div>
       </section>
