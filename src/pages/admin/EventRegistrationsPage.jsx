@@ -25,6 +25,7 @@ export default function EventRegistrationsPage() {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     const load = async () => {
@@ -67,10 +68,35 @@ export default function EventRegistrationsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const deleteLead = async (row) => {
+    const confirmed = window.confirm(
+      `Excluir definitivamente a inscrição de ${row.full_name}?\n\nEssa ação não pode ser desfeita.`
+    );
+    if (!confirmed) return;
+
+    setDeletingId(row.id);
+    setError("");
+
+    const { error: deleteError } = await supabase
+      .from("event_registrations")
+      .delete()
+      .eq("id", row.id)
+      .eq("event_slug", EVENT_SLUG);
+
+    if (deleteError) {
+      console.error(deleteError);
+      setError("Não foi possível excluir este lead. Verifique as permissões do Supabase e tente novamente.");
+    } else {
+      setRows((current) => current.filter((item) => item.id !== row.id));
+    }
+
+    setDeletingId(null);
+  };
+
   return (
     <section>
       <style>{`
-        .event-admin-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}.event-admin-head h2{margin:4px 0 0;font-size:2rem}.event-admin-head p{margin:0;color:#6f7f8e}.event-admin-actions{display:flex;gap:10px;flex-wrap:wrap}.event-admin-actions input{min-height:42px;border:1px solid #d5dde5;border-radius:9px;padding:0 12px;min-width:240px}.event-admin-actions button{border:0;border-radius:9px;padding:0 14px;min-height:42px;background:#d6152d;color:#fff;font-weight:850;cursor:pointer}.event-stat{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border-radius:10px;background:#f3f6f8;border:1px solid #e2e7eb;font-weight:850;margin-bottom:18px}.event-table-wrap{overflow:auto;border:1px solid #e2e7eb;border-radius:14px;background:#fff}.event-table{width:100%;border-collapse:collapse;min-width:980px}.event-table th,.event-table td{text-align:left;padding:13px 14px;border-bottom:1px solid #edf1f4;font-size:.85rem}.event-table th{background:#f7f9fb;color:#344d64;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}.event-table td strong{display:block;color:#0b2034}.event-table td small{color:#748594}.event-empty{padding:32px;text-align:center;color:#6f7f8e}.event-error-box{padding:14px;border-radius:10px;background:#fff1f2;color:#9f1023;font-weight:800}
+        .event-admin-head{display:flex;justify-content:space-between;gap:20px;align-items:end;margin-bottom:24px}.event-admin-head h2{margin:4px 0 0;font-size:2rem}.event-admin-head p{margin:0;color:#6f7f8e}.event-admin-actions{display:flex;gap:10px;flex-wrap:wrap}.event-admin-actions input{min-height:42px;border:1px solid #d5dde5;border-radius:9px;padding:0 12px;min-width:240px}.event-admin-actions button{border:0;border-radius:9px;padding:0 14px;min-height:42px;background:#d6152d;color:#fff;font-weight:850;cursor:pointer}.event-stat{display:inline-flex;align-items:center;gap:8px;padding:10px 13px;border-radius:10px;background:#f3f6f8;border:1px solid #e2e7eb;font-weight:850;margin-bottom:18px}.event-table-wrap{overflow:auto;border:1px solid #e2e7eb;border-radius:14px;background:#fff}.event-table{width:100%;border-collapse:collapse;min-width:1080px}.event-table th,.event-table td{text-align:left;padding:13px 14px;border-bottom:1px solid #edf1f4;font-size:.85rem}.event-table th{background:#f7f9fb;color:#344d64;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em}.event-table td strong{display:block;color:#0b2034}.event-table td small{color:#748594}.event-empty{padding:32px;text-align:center;color:#6f7f8e}.event-error-box{padding:14px;border-radius:10px;background:#fff1f2;color:#9f1023;font-weight:800;margin-bottom:14px}.event-delete-btn{min-height:36px;padding:0 12px;border-radius:8px;border:1px solid #f2b9c1;background:#fff1f2;color:#a20d22;font-weight:850;cursor:pointer}.event-delete-btn:hover{background:#ffe3e7}.event-delete-btn:disabled{opacity:.55;cursor:not-allowed}
         @media(max-width:760px){.event-admin-head{align-items:start;flex-direction:column}.event-admin-actions{width:100%}.event-admin-actions input{min-width:0;flex:1}}
       `}</style>
 
@@ -87,9 +113,9 @@ export default function EventRegistrationsPage() {
 
       <div className="event-stat">Total de inscritos: <strong>{rows.length}</strong></div>
 
-      {error ? (
-        <div className="event-error-box">{error}</div>
-      ) : loading ? (
+      {error && <div className="event-error-box">{error}</div>}
+
+      {loading ? (
         <div className="event-empty">Carregando inscrições...</div>
       ) : (
         <div className="event-table-wrap">
@@ -103,11 +129,12 @@ export default function EventRegistrationsPage() {
                 <th>Experiência</th>
                 <th>Objetivo</th>
                 <th>Data</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="7" className="event-empty">Nenhum inscrito encontrado.</td></tr>
+                <tr><td colSpan="8" className="event-empty">Nenhum inscrito encontrado.</td></tr>
               ) : filtered.map((row) => (
                 <tr key={row.id}>
                   <td><strong>{row.full_name}</strong><small>{row.email}</small></td>
@@ -117,6 +144,16 @@ export default function EventRegistrationsPage() {
                   <td>{row.aph_experience || "—"}</td>
                   <td>{row.main_goal || "—"}</td>
                   <td>{new Date(row.created_at).toLocaleString("pt-BR")}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="event-delete-btn"
+                      onClick={() => deleteLead(row)}
+                      disabled={deletingId === row.id}
+                    >
+                      {deletingId === row.id ? "Excluindo..." : "Excluir"}
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
