@@ -1,3 +1,4 @@
+import { getProductCheckout } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -279,7 +280,7 @@ export default function PublicProductPage() {
                   {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                 </div>
               )}
-              <a className="public-product-button" href={product.checkout_url} target="_blank" rel="noreferrer">Comprar agora</a>
+              <a className="public-product-button" href={getProductCheckout(product)} target="_blank" rel="noreferrer">Comprar agora</a>
               <p className="public-product-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
             </aside>
           </div>

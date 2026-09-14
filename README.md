@@ -15,14 +15,14 @@ npm run dev
 
 Execute `supabase/01_setup_completo.sql` no SQL Editor do Supabase.
 
-## Página de agradecimento da Mentoria de APH — Hotmart
+## Página de agradecimento da Mentoria de APH — Kiwify
 
-Após publicar, configure no produto Mentoria de APH da Hotmart em “Página de obrigado e upsell” o campo “Cartão ou Pix aprovado” com:
+Após publicar, configure no produto Mentoria de APH da Kiwify com a URL da página de agradecimento com:
 
 https://hanifalves.vercel.app/obrigado/mentoria-aph
 
-Salve a configuração. Se usar outro domínio, substitua apenas o domínio. O redirecionamento após aprovação é feito pela Hotmart; criar a rota no site não configura a plataforma automaticamente.
+Salve a configuração. Se usar outro domínio, substitua apenas o domínio. O redirecionamento após aprovação é feito pela Kiwify; criar a rota no site não configura a plataforma automaticamente.
 
-A página é pública, não cria login, não libera conteúdo e não comprova pagamento. Ela orienta o comprador a consultar seu e-mail e suas compras na Hotmart. Não utiliza parâmetros da URL como prova de aprovação.
+A página é pública, não cria login, não libera conteúdo e não comprova pagamento. Ela orienta o comprador a consultar seu e-mail e suas compras na Kiwify. Não utiliza parâmetros da URL como prova de aprovação.
 
-A página de agradecimento não altera as páginas de venda nem os links checkout_url dos produtos.
+O checkout público da Mentoria de APH é definido em src/services/productCheckout.js com o endereço autorizado https://pay.kiwify.com.br/ZvtGR1D. Esse endereço tem prioridade para o slug mentoria-aph; os demais produtos continuam usando checkout_url do Supabase. O cadastro do banco não é alterado por essa configuração.

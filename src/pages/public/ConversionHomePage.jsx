@@ -1,3 +1,4 @@
+import { getProductCheckout } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -186,7 +187,7 @@ export default function ConversionHomePage() {
                           </Link>
                           <a
                             className="v4-buy"
-                            href={product.checkout_url || product.whatsapp_url || settings.whatsapp_url}
+                            href={getProductCheckout(product) || product.whatsapp_url || settings.whatsapp_url}
                             target="_blank"
                             rel="noreferrer"
                           >

@@ -1,3 +1,4 @@
+import { getProductCheckout } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -161,7 +162,7 @@ export default function DynamicProductsSection() {
 
                     <a
                       className="dynamic-product-buy"
-                      href={product.checkout_url}
+                      href={getProductCheckout(product)}
                       target="_blank"
                       rel="noreferrer"
                     >
