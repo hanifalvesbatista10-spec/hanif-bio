@@ -32,6 +32,7 @@ export default function EventBarroPage() {
   const submit = async (event) => {
     event.preventDefault();
     if (!canSubmit || sending) return;
+
     setSending(true);
     setError("");
 
@@ -48,6 +49,7 @@ export default function EventBarroPage() {
     });
 
     setSending(false);
+
     if (insertError) {
       console.error(insertError);
       setError("Não foi possível concluir sua inscrição agora. Tente novamente em instantes.");
@@ -62,79 +64,29 @@ export default function EventBarroPage() {
     <div className="event-page">
       <style>{`
         :root{--navy:#071426;--red:#d6152d;--cream:#f4f7fa;--text:#52677b}
-        *{box-sizing:border-box}
-        html{scroll-behavior:smooth}
-        body{margin:0}
+        *{box-sizing:border-box} html{scroll-behavior:smooth} body{margin:0}
         .event-page{min-height:100vh;background:#fff;color:var(--navy);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden}
         .event-container{width:min(1120px,calc(100% - 32px));margin:0 auto}
         .event-top{background:#050d17;color:#fff}
         .event-top-inner{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-        .event-brand{font-weight:950;letter-spacing:.03em}
-        .event-brand span{display:block;color:#9badbd;font-size:.62rem;letter-spacing:.15em;margin-top:3px}
-        .event-back{color:#d7e0e8;text-decoration:none;font-size:.84rem;font-weight:850}
+        .event-brand{font-weight:950;letter-spacing:.03em}.event-brand span{display:block;color:#9badbd;font-size:.62rem;letter-spacing:.15em;margin-top:3px}.event-back{color:#d7e0e8;text-decoration:none;font-size:.84rem;font-weight:850}
 
-        .event-hero-image{background:#05080d;width:100%;overflow:hidden}
-        .event-hero-link{display:block;width:100%;line-height:0;cursor:pointer}
-        .event-hero-image img{display:block;width:100%;height:auto;object-fit:contain}
+        .event-hero{position:relative;overflow:hidden;background:radial-gradient(circle at 78% 22%,rgba(214,21,45,.28),transparent 30%),linear-gradient(135deg,#05080d 0%,#081522 55%,#05080d 100%);color:#fff;padding:58px 0 52px}
+        .event-hero:before,.event-hero:after{content:"";position:absolute;pointer-events:none}.event-hero:before{inset:0;background:linear-gradient(118deg,transparent 0 62%,rgba(214,21,45,.10) 62% 100%)}.event-hero:after{right:-120px;bottom:-190px;width:520px;height:520px;border-radius:50%;border:88px solid rgba(255,255,255,.025)}
+        .event-hero-inner{position:relative;z-index:1;text-align:center}
+        .brush{display:inline-block;background:linear-gradient(90deg,#ba1024,#ef1c34,#ba1024);padding:10px 22px 12px;transform:rotate(-1deg);box-shadow:0 14px 34px rgba(214,21,45,.24);font-size:clamp(1.4rem,3vw,2.5rem);font-weight:1000;letter-spacing:.02em;text-transform:uppercase}
+        .city{margin:18px 0 10px;font-size:clamp(5.4rem,13vw,11rem);line-height:.76;letter-spacing:-.075em;font-weight:1000;text-transform:uppercase;color:#fff;text-shadow:0 16px 44px rgba(0,0,0,.45)}
+        .course{margin:22px auto 10px;max-width:900px;font-size:clamp(1.25rem,2.3vw,2rem);font-weight:950;line-height:1.1;text-transform:uppercase}.course strong{color:#ff304b}
+        .hero-tags{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0}.hero-tags span{padding:9px 12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);border-radius:10px;font-size:.78rem;font-weight:900}
+        .hero-info{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:18px auto 26px}.hero-info div{min-width:190px;padding:13px 16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);border-radius:12px}.hero-info b{display:block;font-size:.83rem}.hero-info span{display:block;color:#b8c5d1;font-size:.76rem;margin-top:4px}
+        .hero-cta{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 26px;border-radius:12px;background:var(--red);color:#fff;text-decoration:none;font-weight:1000;box-shadow:0 14px 34px rgba(214,21,45,.26)}
 
-        .event-mobile-hero{display:none;background:radial-gradient(circle at 78% 24%,rgba(214,21,45,.28),transparent 28%),linear-gradient(135deg,#05080d,#0a1522);color:#fff;padding:42px 0 38px;position:relative;overflow:hidden}
-        .event-mobile-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0 65%,rgba(214,21,45,.08) 65% 100%);pointer-events:none}
-        .event-mobile-inner{position:relative;z-index:1}
-        .event-mobile-kicker{display:inline-block;background:var(--red);padding:8px 12px;font-size:.78rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-1deg);box-shadow:0 8px 22px rgba(214,21,45,.24)}
-        .event-mobile-city{margin:14px 0 12px;font-size:clamp(4.3rem,18vw,8rem);line-height:.78;letter-spacing:-.07em;font-weight:1000;text-transform:uppercase;color:#fff;text-shadow:0 14px 32px rgba(0,0,0,.4)}
-        .event-mobile-subtitle{margin:0 0 18px;font-size:clamp(1.05rem,4.2vw,1.4rem);font-weight:900;line-height:1.15;text-transform:uppercase}
-        .event-mobile-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
-        .event-mobile-tags span{padding:8px 10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);border-radius:9px;font-size:.76rem;font-weight:850}
-        .event-mobile-cta{display:flex;align-items:center;justify-content:center;min-height:54px;width:100%;border-radius:12px;background:var(--red);color:#fff;text-decoration:none;font-weight:950;box-shadow:0 14px 34px rgba(214,21,45,.26)}
+        .event-section{padding:72px 0}.event-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}.event-copy h2{font-size:clamp(2.2rem,4vw,3.7rem);line-height:1;letter-spacing:-.045em;margin:0 0 16px}.event-copy p{color:var(--text);line-height:1.75}.event-topics{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}.event-topic{padding:18px;border-radius:16px;background:var(--cream);border:1px solid #e2e8ed}.event-topic b{display:block;margin-bottom:7px}
+        .event-form{padding:30px;border-radius:22px;border:1px solid #e1e6eb;box-shadow:0 20px 60px rgba(7,20,38,.09);background:#fff}.event-form h3{font-size:1.6rem;margin:0 0 5px}.event-form>p{margin:0 0 22px;color:var(--text)}.event-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.event-field{display:grid;gap:7px}.event-field.full{grid-column:1/-1}.event-field label{font-size:.78rem;font-weight:900;color:#284158}.event-field input,.event-field select{width:100%;min-height:49px;border:1px solid #ccd6df;border-radius:11px;padding:0 13px;background:#fff;color:#0b1a29;font:inherit;outline:none}.event-field input:focus,.event-field select:focus{border-color:#d6152d;box-shadow:0 0 0 3px rgba(214,21,45,.08)}.event-submit{margin-top:18px;width:100%;min-height:56px;border:0;border-radius:12px;background:var(--red);color:#fff;font-weight:950;font-size:1rem;cursor:pointer;box-shadow:0 14px 34px rgba(214,21,45,.22)}.event-submit:disabled{opacity:.55;cursor:not-allowed}.event-note{margin-top:11px!important;font-size:.75rem!important;color:#758697!important}.event-error{margin-top:14px;padding:12px;border-radius:10px;background:#fff1f2;color:#9f1023;font-weight:800;font-size:.84rem}
+        .event-success{min-height:100vh;background:linear-gradient(135deg,#071426,#0d2238);color:#fff;display:flex;align-items:center;padding:40px 0}.success-box{width:min(680px,calc(100% - 32px));margin:auto;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:26px;padding:42px}.success-icon{width:68px;height:68px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#17a45b;font-size:2rem}.success-box h1{font-size:clamp(2.4rem,6vw,4.2rem);line-height:1;margin:0 0 14px}.success-box p{color:#c8d4df;line-height:1.7}.success-btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 24px;margin-top:18px;border-radius:12px;background:#1da851;color:#fff;text-decoration:none;font-weight:950}.success-secondary{display:block;margin-top:18px;color:#b9c6d2;text-decoration:none;font-size:.84rem}
 
-        .event-section{padding:76px 0}
-        .event-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}
-        .event-copy h2{font-size:clamp(2.2rem,4vw,3.7rem);line-height:1;letter-spacing:-.045em;margin:0 0 16px}
-        .event-copy p{color:var(--text);line-height:1.75}
-        .event-topics{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
-        .event-topic{padding:18px;border-radius:16px;background:var(--cream);border:1px solid #e2e8ed}
-        .event-topic b{display:block;margin-bottom:7px}
-        .event-form{padding:30px;border-radius:22px;border:1px solid #e1e6eb;box-shadow:0 20px 60px rgba(7,20,38,.09);background:#fff}
-        .event-form h3{font-size:1.6rem;margin:0 0 5px}
-        .event-form>p{margin:0 0 22px;color:var(--text)}
-        .event-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-        .event-field{display:grid;gap:7px}
-        .event-field.full{grid-column:1/-1}
-        .event-field label{font-size:.78rem;font-weight:900;color:#284158}
-        .event-field input,.event-field select{width:100%;min-height:49px;border:1px solid #ccd6df;border-radius:11px;padding:0 13px;background:#fff;color:#0b1a29;font:inherit;outline:none}
-        .event-field input:focus,.event-field select:focus{border-color:#d6152d;box-shadow:0 0 0 3px rgba(214,21,45,.08)}
-        .event-submit{margin-top:18px;width:100%;min-height:56px;border:0;border-radius:12px;background:var(--red);color:#fff;font-weight:950;font-size:1rem;cursor:pointer;box-shadow:0 14px 34px rgba(214,21,45,.22)}
-        .event-submit:disabled{opacity:.55;cursor:not-allowed}
-        .event-note{margin-top:11px!important;font-size:.75rem!important;color:#758697!important}
-        .event-error{margin-top:14px;padding:12px;border-radius:10px;background:#fff1f2;color:#9f1023;font-weight:800;font-size:.84rem}
-        .event-success{min-height:100vh;background:linear-gradient(135deg,#071426,#0d2238);color:#fff;display:flex;align-items:center;padding:40px 0}
-        .success-box{width:min(680px,calc(100% - 32px));margin:auto;text-align:center;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.11);border-radius:26px;padding:42px}
-        .success-icon{width:68px;height:68px;margin:0 auto 18px;border-radius:50%;display:grid;place-items:center;background:#17a45b;font-size:2rem}
-        .success-box h1{font-size:clamp(2.4rem,6vw,4.2rem);line-height:1;margin:0 0 14px}
-        .success-box p{color:#c8d4df;line-height:1.7}
-        .success-btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 24px;margin-top:18px;border-radius:12px;background:#1da851;color:#fff;text-decoration:none;font-weight:950}
-        .success-secondary{display:block;margin-top:18px;color:#b9c6d2;text-decoration:none;font-size:.84rem}
-
-        @media(max-width:1100px){
-          .event-hero-image{display:none}
-          .event-mobile-hero{display:block}
-          .event-grid{grid-template-columns:1fr;gap:32px}
-          .event-form{max-width:720px;width:100%;margin:0 auto}
-        }
-
-        @media(max-width:700px){
-          .event-container{width:min(100% - 24px,1120px)}
-          .event-fields,.event-topics{grid-template-columns:1fr}
-          .event-field.full{grid-column:auto}
-          .event-section{padding:42px 0}
-          .event-top-inner{min-height:58px}
-          .event-brand{font-size:.88rem}
-          .event-brand span{display:none}
-          .event-back{font-size:.74rem}
-          .event-copy h2{font-size:2.15rem}
-          .event-form{padding:22px 18px;border-radius:18px}
-          .event-mobile-hero{padding:34px 0 30px}
-        }
+        @media(max-width:1000px){.event-grid{grid-template-columns:1fr;gap:32px}.event-form{max-width:760px;width:100%;margin:0 auto}}
+        @media(max-width:700px){.event-container{width:min(100% - 24px,1120px)}.event-top-inner{min-height:58px}.event-brand{font-size:.88rem}.event-brand span{display:none}.event-back{font-size:.74rem}.event-hero{padding:36px 0 32px}.brush{font-size:1.05rem;padding:8px 12px}.city{font-size:clamp(4.2rem,20vw,6.2rem);margin-top:14px}.course{font-size:1.05rem}.hero-info{display:grid;grid-template-columns:1fr 1fr}.hero-info div{min-width:0}.hero-cta{width:100%;font-size:.9rem}.event-section{padding:42px 0}.event-copy h2{font-size:2.15rem}.event-fields,.event-topics{grid-template-columns:1fr}.event-field.full{grid-column:auto}.event-form{padding:22px 18px;border-radius:18px}}
       `}</style>
 
       {success ? (
@@ -157,24 +109,18 @@ export default function EventBarroPage() {
           </header>
 
           <main>
-            <section className="event-hero-image">
-              <a className="event-hero-link" href="#inscricao" aria-label="Ir para inscrição gratuita">
-                <img src="/assets/aulao-barro-hero.jpg" alt="Aulão gratuito em Barro-CE" />
-              </a>
-            </section>
-
-            <section className="event-mobile-hero">
-              <div className="event-container event-mobile-inner">
-                <div className="event-mobile-kicker">AULÃO GRATUITO EM</div>
-                <div className="event-mobile-city">BARRO–CE</div>
-                <p className="event-mobile-subtitle">Curso Intensivo de Atendimento Pré-Hospitalar</p>
-                <div className="event-mobile-tags">
-                  <span>CLÍNICO</span>
-                  <span>TRAUMA</span>
-                  <span>PRESENCIAL</span>
-                  <span>VAGAS LIMITADAS</span>
+            <section className="event-hero">
+              <div className="event-container event-hero-inner">
+                <div className="brush">AULÃO GRATUITO EM</div>
+                <div className="city">BARRO–CE</div>
+                <div className="course">CURSO INTENSIVO DE <strong>ATENDIMENTO PRÉ-HOSPITALAR</strong></div>
+                <div className="hero-tags"><span>CLÍNICO</span><span>TRAUMA</span><span>TEORIA + PRÁTICA</span><span>100% GRATUITO</span></div>
+                <div className="hero-info">
+                  <div><b>EM BREVE</b><span>Data será divulgada aos inscritos</span></div>
+                  <div><b>BARRO–CE</b><span>Local será informado aos inscritos</span></div>
+                  <div><b>VAGAS LIMITADAS</b><span>Inscrição gratuita</span></div>
                 </div>
-                <a className="event-mobile-cta" href="#inscricao">GARANTIR MINHA INSCRIÇÃO GRATUITA</a>
+                <a className="hero-cta" href="#inscricao">GARANTIR MINHA INSCRIÇÃO GRATUITA</a>
               </div>
             </section>
 
