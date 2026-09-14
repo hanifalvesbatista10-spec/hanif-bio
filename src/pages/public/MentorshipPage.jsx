@@ -176,7 +176,7 @@ export default function MentorshipPage() {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
-                <CheckoutButton href={checkout}>Adquirir agora na Kiwify</CheckoutButton>
+                <CheckoutButton href={checkout}>Adquirir agora</CheckoutButton>
                 <p className="hem-buybox-note">Confira o valor, os itens incluídos e as condições da oferta no checkout da Kiwify.</p>
               </div>
             </div>
