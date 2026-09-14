@@ -21,7 +21,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ConversionHomePage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
-          <Route path="/obrigado/controle-de-hemorragias" element={<ThankYouPage />} />
+          <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route

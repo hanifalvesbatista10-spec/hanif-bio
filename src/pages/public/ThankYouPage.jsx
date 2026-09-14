@@ -6,7 +6,7 @@ export default function ThankYouPage() {
   useEffect(() => {
     window.scrollTo(0, 0);
     const previousTitle = document.title;
-    document.title = "Obrigado | Controle de Hemorragias – Hanif Alves";
+    document.title = "Obrigado | Mentoria de APH – Hanif Alves";
     const robots = document.createElement("meta");
     robots.name = "robots";
     robots.content = "noindex, nofollow";
@@ -18,9 +18,9 @@ export default function ThankYouPage() {
     <header className="thanks-header"><Link to="/">HANIF ALVES <span>APH · URGÊNCIA · EMERGÊNCIA</span></Link></header>
     <main className="thanks-shell">
       <div className="thanks-symbol" aria-hidden="true">♡</div>
-      <p className="thanks-eyebrow">CONTROLE DE HEMORRAGIAS</p>
-      <h1>Obrigado por escolher estudar comigo.</h1>
-      <p className="thanks-lead">Seu próximo passo é acessar o conteúdo. Confira abaixo como encontrar as orientações da sua compra.</p>
+      <p className="thanks-eyebrow">MENTORIA DE APH</p>
+      <h1>Obrigado por escolher a Mentoria de APH.</h1>
+      <p className="thanks-lead">Confira os próximos passos para encontrar as orientações de acesso à sua mentoria.</p>
       <a className="thanks-button" href="https://consumer.hotmart.com/">Acessar minhas compras na Hotmart</a>
       <p className="thanks-note">Use o mesmo e-mail informado na compra.</p>
       <section className="thanks-steps" aria-label="Próximos passos">
