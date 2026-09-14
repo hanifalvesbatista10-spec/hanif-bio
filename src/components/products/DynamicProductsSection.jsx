@@ -162,11 +162,11 @@ export default function DynamicProductsSection() {
 
                     <a
                       className="dynamic-product-buy"
-                      href={getProductCheckout(product)}
-                      target="_blank"
+                      href={product.slug === "mentoria-aph" ? "/produto/mentoria-aph" : getProductCheckout(product)}
+                      target={product.slug === "mentoria-aph" ? undefined : "_blank"}
                       rel="noreferrer"
                     >
-                      Comprar
+                      {product.slug === "mentoria-aph" ? "Conhecer a mentoria" : "Comprar"}
                     </a>
                   </div>
                 </div>

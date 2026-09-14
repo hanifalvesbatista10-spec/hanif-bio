@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminLayout from "./components/admin/AdminLayout";
 import ConversionHomePage from "./pages/public/ConversionHomePage";
 import PublicProductPage from "./pages/public/PublicProductPage";
+import MentorshipPage from "./pages/public/MentorshipPage";
 import ThankYouPage from "./pages/public/ThankYouPage";
 import LoginPage from "./pages/auth/LoginPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -20,6 +21,7 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<ConversionHomePage />} />
+          <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
 

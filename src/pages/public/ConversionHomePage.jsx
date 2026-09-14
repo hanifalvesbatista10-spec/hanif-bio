@@ -1,4 +1,4 @@
-import { getProductCheckout } from "../../services/productCheckout";
+import { getProductCheckout, withMentorship } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -59,7 +59,7 @@ export default function ConversionHomePage() {
       }
 
       if (!productsResult.error) {
-        setProducts(productsResult.data || []);
+        setProducts(withMentorship(productsResult.data || []));
       }
 
       setLoading(false);
@@ -165,14 +165,14 @@ export default function ConversionHomePage() {
                     <article className="v4-product" key={product.id}>
                       <div className="v4-product-image">
                         {product.cover_url && (
-                          <img src={product.cover_url} alt={product.title} loading="lazy" />
+                          <Link to={`/produto/${product.slug}`}><img src={product.cover_url} alt={product.title} loading="lazy" /></Link>
                         )}
                       </div>
                       <div className="v4-product-body">
                         <span className="v4-product-tag">
                           {product.category || "Formação"}
                         </span>
-                        <h3>{product.title}</h3>
+                        <h3><Link to={`/produto/${product.slug}`}>{product.title}</Link></h3>
                         <p>{product.short_description}</p>
                         {currentPrice !== null && currentPrice !== undefined && (
                           <div className="v4-price">
@@ -185,14 +185,14 @@ export default function ConversionHomePage() {
                           <Link className="v4-detail" to={`/produto/${product.slug}`}>
                             Ver detalhes
                           </Link>
-                          <a
+                          {product.slug === "mentoria-aph" ? <Link className="v4-buy" to="/produto/mentoria-aph">Conhecer a mentoria</Link> : <a
                             className="v4-buy"
                             href={getProductCheckout(product) || product.whatsapp_url || settings.whatsapp_url}
                             target="_blank"
                             rel="noreferrer"
                           >
                             Quero acessar agora
-                          </a>
+                          </a>}
                         </div>
                       </div>
                     </article>
