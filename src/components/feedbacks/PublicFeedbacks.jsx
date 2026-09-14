@@ -21,7 +21,7 @@ function initials(name = "Aluno") {
     .join("");
 }
 
-export default function PublicFeedbacks({ limit = 8, compact = false }) {
+export default function PublicFeedbacks({ limit = 8, compact = false, productId = null, hideUnavailable = false }) {
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -33,7 +33,7 @@ export default function PublicFeedbacks({ limit = 8, compact = false }) {
       setLoading(true);
       setErrorMessage("");
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("student_feedbacks")
         .select(`
           id,
@@ -58,6 +58,8 @@ export default function PublicFeedbacks({ limit = 8, compact = false }) {
         .order("display_order", { ascending: true })
         .order("testimonial_date", { ascending: false })
         .limit(limit);
+      if (productId) query = query.eq("product_id", productId);
+      const { data, error } = await query;
 
       if (!active) return;
 
@@ -87,7 +89,7 @@ export default function PublicFeedbacks({ limit = 8, compact = false }) {
       active = false;
       supabase.removeChannel(channel);
     };
-  }, [limit]);
+  }, [limit, productId]);
 
   const subtitle = useMemo(
     () =>
@@ -96,6 +98,8 @@ export default function PublicFeedbacks({ limit = 8, compact = false }) {
         : "Experiências reais de alunos e profissionais que confiaram nos conteúdos, produtos e formações.",
     [compact]
   );
+
+  if (hideUnavailable && (loading || errorMessage || feedbacks.length === 0)) return null;
 
   if (!loading && feedbacks.length === 0 && !errorMessage) return null;
 

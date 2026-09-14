@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import PublicFeedbacks from "../../components/feedbacks/PublicFeedbacks";
 import { supabase } from "../../services/supabase";
 
 function formatPrice(value) {
@@ -11,6 +12,7 @@ function formatPrice(value) {
 }
 
 function CheckoutButton({ href, children, className = "" }) {
+  if (!href || !/^https?:\/\//i.test(href)) return <span className={`hem-cta ${className}`} aria-disabled="true">Compra indisponível no momento</span>;
   return (
     <a
       className={`hem-cta ${className}`}
@@ -25,14 +27,14 @@ function CheckoutButton({ href, children, className = "" }) {
 
 function HemorrhageLanding({ product }) {
   const currentPrice = product.promotional_price ?? product.price;
-  const checkout = product.checkout_url || "#";
+  const checkout = product.checkout_url;
 
   return (
     <div className="hem-page">
       <style>{`
         :root{--hem-navy:#061426;--hem-navy2:#0d2239;--hem-red:#d6152d;--hem-red2:#af0e25;--hem-light:#f5f7fa;--hem-text:#53677b;--hem-line:#dde5ec}
         *{box-sizing:border-box}.hem-page{min-height:100vh;background:#fff;color:var(--hem-navy);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.hem-container{width:min(1160px,calc(100% - 32px));margin:0 auto}.hem-topbar{position:sticky;top:0;z-index:50;background:rgba(6,20,38,.97);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,.08)}.hem-topbar-inner{min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:20px}.hem-brand{color:#fff;text-decoration:none;font-weight:950}.hem-brand small{display:block;color:#95a8ba;font-size:.64rem;letter-spacing:.14em;margin-top:2px}.hem-mini-cta{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 15px;border-radius:10px;background:var(--hem-red);color:#fff;text-decoration:none;font-size:.84rem;font-weight:950}
-        .hem-hero{overflow:hidden;background:radial-gradient(circle at 82% 18%,rgba(214,21,45,.24),transparent 27%),linear-gradient(135deg,#061426,#0d2239 68%,#101c2c);color:#fff;padding:76px 0 64px}.hem-hero-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center}.hem-kicker{display:inline-flex;padding:7px 10px;border-radius:999px;border:1px solid rgba(255,113,130,.36);background:rgba(214,21,45,.12);color:#ff9aaa;font-size:.7rem;font-weight:950;letter-spacing:.13em;text-transform:uppercase}.hem-hero h1{margin:18px 0 18px;font-size:clamp(3rem,6.4vw,5.8rem);line-height:.95;letter-spacing:-.055em}.hem-hero-copy{margin:0;color:#c6d2dd;line-height:1.75;font-size:clamp(1rem,1.6vw,1.18rem);max-width:700px}.hem-hero-points{display:grid;gap:10px;margin:24px 0 0;padding:0;list-style:none}.hem-hero-points li{display:flex;gap:10px;color:#eef4f8;font-weight:750}.hem-hero-points li:before{content:"✓";color:#ff7182;font-weight:950}.hem-actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:28px}.hem-cta{min-height:54px;padding:0 22px;border-radius:12px;background:var(--hem-red);color:#fff;text-decoration:none;font-weight:950;display:inline-flex;align-items:center;justify-content:center;text-align:center;box-shadow:0 16px 38px rgba(214,21,45,.24)}.hem-cta:hover{background:var(--hem-red2)}.hem-cta.secondary{background:transparent;border:1px solid rgba(255,255,255,.22);box-shadow:none}.hem-hero-card{padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:26px;background:rgba(255,255,255,.055);box-shadow:0 30px 75px rgba(0,0,0,.28)}.hem-cover{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:18px;background:#132a40}.hem-offer{padding:20px 5px 4px}.hem-offer small{display:block;color:#95a8b9;font-weight:850;text-transform:uppercase;letter-spacing:.09em}.hem-price{display:flex;gap:10px;align-items:baseline;margin:7px 0 15px}.hem-price strong{font-size:2rem}.hem-price del{color:#96a6b5}.hem-offer .hem-cta{width:100%}
+        .hem-hero{overflow:hidden;background:radial-gradient(circle at 82% 18%,rgba(214,21,45,.24),transparent 27%),linear-gradient(135deg,#061426,#0d2239 68%,#101c2c);color:#fff;padding:76px 0 64px}.hem-hero-grid{display:grid;grid-template-columns:1.04fr .96fr;gap:52px;align-items:center}.hem-kicker{display:inline-flex;padding:7px 10px;border-radius:999px;border:1px solid rgba(255,113,130,.36);background:rgba(214,21,45,.12);color:#ff9aaa;font-size:.7rem;font-weight:950;letter-spacing:.13em;text-transform:uppercase}.hem-hero h1{margin:18px 0 18px;font-size:clamp(3rem,6.4vw,5.8rem);line-height:.95;letter-spacing:-.055em}.hem-hero-copy{margin:0;color:#c6d2dd;line-height:1.75;font-size:clamp(1rem,1.6vw,1.18rem);max-width:700px}.hem-hero-points{display:grid;gap:10px;margin:24px 0 0;padding:0;list-style:none}.hem-hero-points li{display:flex;gap:10px;color:#eef4f8;font-weight:750}.hem-hero-points li:before{content:"✓";color:#ff7182;font-weight:950}.hem-actions{display:flex;flex-wrap:wrap;gap:11px;margin-top:28px}.hem-cta{min-height:54px;padding:0 22px;border-radius:12px;background:var(--hem-red);color:#fff;text-decoration:none;font-weight:950;display:inline-flex;align-items:center;justify-content:center;text-align:center;box-shadow:0 16px 38px rgba(214,21,45,.24)}.hem-cta[aria-disabled="true"]{opacity:.65;box-shadow:none}.hem-page a:focus-visible,.hem-page summary:focus-visible{outline:3px solid #f5a623;outline-offset:4px}.hem-cta:hover{background:var(--hem-red2)}.hem-cta.secondary{background:transparent;border:1px solid rgba(255,255,255,.22);box-shadow:none}.hem-hero-card{padding:18px;border:1px solid rgba(255,255,255,.12);border-radius:26px;background:rgba(255,255,255,.055);box-shadow:0 30px 75px rgba(0,0,0,.28)}.hem-cover{width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:18px;background:#132a40}.hem-offer{padding:20px 5px 4px}.hem-offer small{display:block;color:#95a8b9;font-weight:850;text-transform:uppercase;letter-spacing:.09em}.hem-price{display:flex;gap:10px;align-items:baseline;margin:7px 0 15px}.hem-price strong{font-size:2rem}.hem-price del{color:#96a6b5}.hem-offer .hem-cta{width:100%}
         .hem-strip{border-bottom:1px solid var(--hem-line);background:#fff}.hem-strip-inner{min-height:82px;display:grid;grid-template-columns:repeat(3,1fr);align-items:center;text-align:center}.hem-strip-item{padding:16px;border-right:1px solid var(--hem-line);font-size:.84rem;font-weight:900;color:#2d4358}.hem-strip-item:last-child{border-right:0}
         .hem-section{padding:86px 0}.hem-section.alt{background:var(--hem-light)}.hem-eyebrow{color:var(--hem-red);font-size:.7rem;font-weight:950;letter-spacing:.13em;text-transform:uppercase}.hem-section h2{margin:8px 0 18px;font-size:clamp(2.2rem,4.5vw,4rem);line-height:1.02;letter-spacing:-.045em;max-width:880px}.hem-lead{max-width:780px;color:var(--hem-text);line-height:1.8;font-size:1.06rem}.hem-grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:34px}.hem-card{padding:28px;border:1px solid var(--hem-line);border-radius:20px;background:#fff;box-shadow:0 14px 42px rgba(7,20,38,.06)}.hem-card b{display:block;margin-bottom:9px;font-size:1.08rem}.hem-card p{margin:0;color:var(--hem-text);line-height:1.7}.hem-number{width:36px;height:36px;border-radius:10px;background:#fdecef;color:var(--hem-red);display:grid;place-items:center;font-weight:950;margin-bottom:14px}
         .hem-problem{display:grid;grid-template-columns:.9fr 1.1fr;gap:46px;align-items:center}.hem-dark-card{padding:36px;border-radius:24px;background:linear-gradient(145deg,#071426,#112b44);color:#fff}.hem-dark-card h3{margin:0 0 14px;font-size:1.8rem}.hem-dark-card p{color:#bdcad5;line-height:1.75}.hem-checklist{display:grid;gap:12px;margin-top:20px}.hem-check{display:flex;gap:11px;align-items:flex-start;padding:14px 15px;border-radius:12px;background:#f7f9fb;border:1px solid #e5ebf0;color:#30475d;font-weight:800}.hem-check:before{content:"✓";color:var(--hem-red);font-weight:950}
@@ -49,7 +51,7 @@ function HemorrhageLanding({ product }) {
             HANIF ALVES
             <small>APH • URGÊNCIA • EMERGÊNCIA</small>
           </Link>
-          <a className="hem-mini-cta" href={checkout} target="_blank" rel="noreferrer">Comprar agora</a>
+          <CheckoutButton className="hem-mini-cta" href={checkout}>Comprar agora</CheckoutButton>
         </div>
       </header>
 
@@ -58,10 +60,11 @@ function HemorrhageLanding({ product }) {
           <div className="hem-container hem-hero-grid">
             <div>
               <span className="hem-kicker">CONTROLE DE HEMORRAGIAS</span>
-              <h1>Quando cada segundo importa, improviso não é estratégia.</h1>
+              <h1>Controle de Hemorragias: estude com clareza e direção.</h1>
               <p className="hem-hero-copy">
                 Um material direto para quem quer organizar o raciocínio, revisar princípios essenciais e compreender melhor a abordagem inicial do controle de hemorragias no atendimento pré-hospitalar.
               </p>
+              <p className="hem-hero-copy" style={{marginTop: 18}}>Com Hanif Alves · Técnico de Enfermagem Socorrista – SAMU CE 192 · 10 anos de linha de frente em urgências e emergências.</p>
               <ul className="hem-hero-points">
                 <li>Conteúdo objetivo e pensado para consulta e revisão.</li>
                 <li>Foco em tomada de decisão e prioridades no atendimento.</li>
@@ -80,7 +83,7 @@ function HemorrhageLanding({ product }) {
                 {currentPrice !== null && currentPrice !== undefined && (
                   <div className="hem-price">
                     <strong>{formatPrice(currentPrice)}</strong>
-                    {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
+                    {product.promotional_price != null && product.price != null && Number(product.promotional_price) < Number(product.price) && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
                 <CheckoutButton href={checkout}>Comprar agora</CheckoutButton>
@@ -114,9 +117,10 @@ function HemorrhageLanding({ product }) {
           </div>
         </section>
 
+<section className="hem-section alt"><div className="hem-container"><span className="hem-eyebrow">BENEFÍCIOS PARA SEU ESTUDO</span><h2>Mais organização para aprofundar sua base.</h2><div className="hem-grid3"><article className="hem-card"><b>Direção</b><p>Concentre sua revisão no tema controle de hemorragias.</p></article><article className="hem-card"><b>Clareza</b><p>Use o material como apoio para organizar conceitos e dúvidas durante o estudo.</p></article><article className="hem-card"><b>Continuidade</b><p>Complemente sua formação em APH com estudo dedicado ao assunto.</p></article></div></div></section>
         <section className="hem-section alt" id="conteudo">
           <div className="hem-container">
-            <span className="hem-eyebrow">O QUE VOCÊ VAI ESTUDAR</span>
+            <span className="hem-eyebrow">CONTEÚDO E ABORDAGEM</span>
             <h2>Um caminho mais claro para revisar o controle de hemorragias.</h2>
             <div className="hem-grid3">
               <article className="hem-card"><div className="hem-number">01</div><b>Reconhecimento</b><p>Entenda o que observar e como identificar situações que exigem atenção imediata.</p></article>
@@ -156,7 +160,7 @@ function HemorrhageLanding({ product }) {
               {product.cover_url && <img className="hem-product-image" src={product.cover_url} alt={product.title} loading="lazy" />}
             </div>
             <div className="hem-product-copy">
-              <span className="hem-eyebrow">O MATERIAL</span>
+              <span className="hem-eyebrow">O QUE VOCÊ RECEBE</span>
               <h2>{product.title}</h2>
               <p className="hem-lead">{product.short_description}</p>
               {product.full_description && <div className="hem-full">{product.full_description}</div>}
@@ -164,16 +168,34 @@ function HemorrhageLanding({ product }) {
                 {currentPrice !== null && currentPrice !== undefined && (
                   <div className="hem-price">
                     <strong>{formatPrice(currentPrice)}</strong>
-                    {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
+                    {product.promotional_price != null && product.price != null && Number(product.promotional_price) < Number(product.price) && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
                 <CheckoutButton href={checkout}>Comprar agora na Hotmart</CheckoutButton>
-                <p className="hem-buybox-note">Você será direcionado para o checkout seguro cadastrado para este produto.</p>
+                <p className="hem-buybox-note">Confira o valor final, as formas de pagamento e as condições de acesso na Hotmart antes de concluir a compra.</p>
               </div>
             </div>
           </div>
         </section>
 
+        <section className="hem-section" id="autor">
+          <div className="hem-container hem-product">
+            <img className="hem-product-image" src="/assets/hanif-hero.png" alt="Hanif Alves" loading="lazy" />
+            <div>
+              <span className="hem-eyebrow">SOBRE O AUTOR</span>
+              <h2>Hanif Alves</h2>
+              <p className="hem-lead">10 anos de linha de frente em urgências e emergências. Conheça a trajetória profissional de quem está por trás deste conteúdo.</p>
+              <div className="hem-checklist">
+                <div className="hem-check">Técnico de Enfermagem Socorrista – SAMU CE 192</div>
+                <div className="hem-check">Instrumentador Cirúrgico – HRC</div>
+                <div className="hem-check">Instrutor APH – SAB</div>
+                <div className="hem-check">Analista de Dados</div>
+              </div>
+              <div className="hem-actions"><CheckoutButton href={checkout}>Quero estudar com Hanif</CheckoutButton></div>
+            </div>
+          </div>
+        </section>
+        <PublicFeedbacks productId={product.id} hideUnavailable limit={6} />
         <section className="hem-section">
           <div className="hem-container">
             <span className="hem-eyebrow">DÚVIDAS FREQUENTES</span>
@@ -218,6 +240,9 @@ export default function PublicProductPage() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
+    let active = true;
+    setLoading(true);
+    setNotFound(false);
     const load = async () => {
       const { data, error } = await supabase
         .from("products")
@@ -226,6 +251,7 @@ export default function PublicProductPage() {
         .eq("status", "active")
         .maybeSingle();
 
+      if (!active) return;
       if (error || !data) {
         setNotFound(true);
         setProduct(null);
@@ -235,6 +261,7 @@ export default function PublicProductPage() {
       setLoading(false);
     };
     load();
+    return () => { active = false; };
   }, [slug]);
 
   if (loading) return <main className="public-product-loading">Carregando produto...</main>;
@@ -276,7 +303,7 @@ export default function PublicProductPage() {
               {currentPrice !== null && (
                 <div className="public-product-price">
                   <strong>{formatPrice(currentPrice)}</strong>
-                  {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
+                  {product.promotional_price != null && product.price != null && Number(product.promotional_price) < Number(product.price) && <del>{formatPrice(product.price)}</del>}
                 </div>
               )}
               <a className="public-product-button" href={product.checkout_url} target="_blank" rel="noreferrer">Comprar agora</a>
