@@ -82,7 +82,7 @@ export default function MentorshipPage() {
             </div>
 
             <aside className="hem-hero-card">
-              {product.cover_url && <img className="hem-cover" src={product.cover_url} alt={`Capa de ${product.title}`} />}
+              {product.cover_url && <img className="hem-cover" style={{aspectRatio: "auto", height: "auto"}} src={product.cover_url} alt={`Capa de ${product.title}`} />}
               <div className="hem-offer">
                 <small>Mentoria de APH</small>
                 <p className="hem-hero-copy">Confira o valor e as condições na Kiwify.</p>

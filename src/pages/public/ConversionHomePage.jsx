@@ -165,7 +165,7 @@ export default function ConversionHomePage() {
                     <article className="v4-product" key={product.id}>
                       <div className="v4-product-image">
                         {product.cover_url && (
-                          <Link to={`/produto/${product.slug}`}><img src={product.cover_url} alt={product.title} loading="lazy" /></Link>
+                          <Link to={`/produto/${product.slug}`}><img src={product.cover_url} alt={product.title} loading="lazy" style={product.slug === "mentoria-aph" ? {objectFit: "contain", background: "#07090c"} : undefined} /></Link>
                         )}
                       </div>
                       <div className="v4-product-body">
