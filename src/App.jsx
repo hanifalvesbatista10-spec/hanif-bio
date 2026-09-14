@@ -24,6 +24,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<ConversionHomePage />} />
           <Route path="/evento/aulao-barro" element={<EventBarroPage />} />
+          <Route path="/produto/evento-aulao-barro" element={<EventBarroPage />} />
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
