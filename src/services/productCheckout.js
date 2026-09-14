@@ -8,8 +8,8 @@ export function getProductCheckout(product) {
 // Entrada pública autorizada para apresentar a página da mentoria na bio.
 export const mentorshipProduct = {
   id: "mentoria-aph", slug: "mentoria-aph", title: "Mentoria de APH",
-  short_description: "Conheça a Mentoria de Atendimento Pré-Hospitalar com Hanif Alves.",
-  cover_url: "/assets/hanif-hero.png", category: "Mentoria", price: null, promotional_price: null
+  short_description: "Mentoria teórica de APH: emergências traumáticas, clínicas e psiquiátricas, afogamento e assuntos de urgência e emergência.",
+  cover_url: "/assets/mentoria-conteudo.svg", category: "Mentoria", price: null, promotional_price: null
 };
 export function withMentorship(products = []) {
   return products.some(product => product.slug === mentorshipProduct.slug)

@@ -66,14 +66,14 @@ export default function MentorshipPage() {
           <div className="hem-container hem-hero-grid">
             <div>
               <span className="hem-kicker">MENTORIA DE APH</span>
-              <h1>Seu próximo passo no APH começa aqui.</h1>
+              <h1>Entenda as emergências. Aprofunde seu conhecimento em APH.</h1>
               <p className="hem-hero-copy">
-                Conheça a Mentoria de APH com Hanif Alves. Uma escolha para quem quer dedicar mais atenção à sua trajetória no atendimento pré-hospitalar.
+                Uma mentoria teórica para profissionais e estudantes da saúde que querem ingressar nos serviços de urgência e emergência ou aprimorar seus conhecimentos. Estude emergências traumáticas, clínicas, psiquiátricas, afogamento e temas do atendimento pré-hospitalar.
               </p>
               <ul className="hem-hero-points">
-                <li>Com Hanif Alves, Instrutor APH – SAB.</li>
-                <li>10 anos de linha de frente em urgências e emergências.</li>
-                <li>Técnico de Enfermagem Socorrista – SAMU CE 192.</li>
+                <li>Emergências traumáticas, clínicas e psiquiátricas.</li>
+                <li>Afogamento e assuntos de urgência e emergência.</li>
+                <li>Abordagem teórica voltada ao conhecimento em APH.</li>
               </ul>
               <div className="hem-actions">
                 <CheckoutButton href={checkout}>Quero adquirir agora</CheckoutButton>
@@ -100,7 +100,7 @@ export default function MentorshipPage() {
 
         <section className="hem-strip">
           <div className="hem-container hem-strip-inner">
-            <div className="hem-strip-item">Hanif Alves • Instrutor APH – SAB</div>
+            <div className="hem-strip-item">Mentoria teórica • Urgência e emergência</div>
             <div className="hem-strip-item">10 anos de linha de frente em urgências e emergências</div>
             <div className="hem-strip-item">Compra processada no checkout da Kiwify</div>
           </div>
@@ -110,38 +110,38 @@ export default function MentorshipPage() {
           <div className="hem-container hem-problem">
             <div>
               <span className="hem-eyebrow">O PROBLEMA</span>
-              <h2>Você quer dar o próximo passo na sua trajetória em APH?</h2>
+              <h2>Estudar emergência vai além de um único tipo de ocorrência.</h2>
               <p className="hem-lead">
-                Entre tantos conteúdos e caminhos de formação, escolher onde investir sua atenção também faz parte do seu desenvolvimento. Conheça a mentoria, a trajetória do mentor e as condições da oferta antes de decidir.
+                Trauma, emergências clínicas, crises psiquiátricas e afogamento trazem contextos diferentes para o atendimento. A Mentoria de APH reúne esses temas para quem quer ampliar sua visão sobre urgência e emergência.
               </p>
             </div>
             <div className="hem-dark-card">
               <h3>Você já se pegou pensando...</h3>
-              <p>“Qual é meu próximo passo no APH?”, “Quem está por trás dessa mentoria?”, “Essa proposta combina com meu momento?”</p>
-              <p>Comece conhecendo a experiência profissional de Hanif Alves e confira os detalhes da Mentoria de APH.</p>
+              <p>“Estou estudando só trauma?”, “E as emergências clínicas?”, “Como ampliar meu conhecimento para outros contextos do APH?”</p>
+              <p>Aqui, o estudo contempla diferentes situações de emergência, com uma abordagem teórica para aprofundar seu conhecimento.</p>
             </div>
           </div>
         </section>
 
         <section className="hem-section alt" id="conteudo">
           <div className="hem-container">
-            <span className="hem-eyebrow">CONHEÇA QUEM CONDUZ A MENTORIA</span>
-            <h2>Uma trajetória ligada ao atendimento e ao ensino de APH.</h2>
+            <span className="hem-eyebrow">O QUE VOCÊ VAI ENCONTRAR</span>
+            <h2>Os temas da mentoria, apresentados com clareza.</h2>
             <div className="hem-grid3">
-              <article className="hem-card"><div className="hem-number">01</div><b>Hanif Alves</b><p>Conheça o profissional por trás da Mentoria de APH.</p></article>
-              <article className="hem-card"><div className="hem-number">02</div><b>10 anos de linha de frente</b><p>Trajetória em urgências e emergências.</p></article>
-              <article className="hem-card"><div className="hem-number">03</div><b>SAMU CE 192</b><p>Técnico de Enfermagem Socorrista.</p></article>
-              <article className="hem-card"><div className="hem-number">04</div><b>Instrutor APH – SAB</b><p>Atuação no ensino de Atendimento Pré-Hospitalar.</p></article>
-              <article className="hem-card"><div className="hem-number">05</div><b>Instrumentador Cirúrgico – HRC</b><p>Experiência profissional também no contexto cirúrgico.</p></article>
-              <article className="hem-card"><div className="hem-number">06</div><b>Analista de Dados</b><p>Outra área que integra a trajetória profissional de Hanif Alves.</p></article>
+              <article className="hem-card"><div className="hem-number">01</div><b>Emergências traumáticas</b><p>Estudo das situações de trauma no contexto do atendimento pré-hospitalar.</p></article>
+              <article className="hem-card"><div className="hem-number">02</div><b>Emergências clínicas</b><p>Conteúdos sobre emergências de natureza clínica, ampliando o estudo para além do trauma.</p></article>
+              <article className="hem-card"><div className="hem-number">03</div><b>Emergências psiquiátricas</b><p>Estudo das emergências psiquiátricas como parte dos diferentes contextos de urgência.</p></article>
+              <article className="hem-card"><div className="hem-number">04</div><b>Afogamento</b><p>Conteúdo dedicado ao afogamento dentro do estudo das emergências.</p></article>
+              <article className="hem-card"><div className="hem-number">05</div><b>Urgências e emergências</b><p>Assuntos de emergência em geral para ampliar seu repertório de estudo.</p></article>
+              <article className="hem-card"><div className="hem-number">06</div><b>Atendimento pré-hospitalar</b><p>Uma abordagem teórica dos temas da mentoria para quem quer ingressar na área ou aprimorar conhecimentos.</p></article>
             </div>
           </div>
         </section>
 
         <section className="hem-midcta">
           <div className="hem-container">
-            <h2>Dê atenção ao seu próximo passo no APH.</h2>
-            <p>Conheça a oferta da mentoria e, quando estiver pronto, conclua sua aquisição pela Kiwify.</p>
+            <h2>Amplie seu estudo em urgência e emergência.</h2>
+            <p>Trauma, emergências clínicas, psiquiátricas e afogamento em uma mentoria teórica dedicada ao APH.</p>
             <CheckoutButton href={checkout}>Quero adquirir a mentoria</CheckoutButton>
           </div>
         </section>
@@ -149,12 +149,12 @@ export default function MentorshipPage() {
         <section className="hem-section">
           <div className="hem-container">
             <span className="hem-eyebrow">PARA QUEM É</span>
-            <h2>A mentoria faz sentido para o seu momento?</h2>
+            <h2>Para quem quer ingressar na área ou aprimorar conhecimentos.</h2>
             <div className="hem-checklist">
-              <div className="hem-check">Você estuda na área da saúde e tem interesse em APH.</div>
-              <div className="hem-check">Você atua na área da saúde e quer conhecer uma mentoria de APH.</div>
-              <div className="hem-check">Você está explorando os próximos passos da sua formação.</div>
-              <div className="hem-check">Você quer conhecer o mentor e avaliar a proposta antes de adquirir.</div>
+              <div className="hem-check">Estudantes da saúde que pretendem ingressar nos serviços de urgência e emergência.</div>
+              <div className="hem-check">Profissionais da saúde que desejam aprimorar seus conhecimentos em APH.</div>
+              <div className="hem-check">Quem busca estudar diferentes contextos: trauma, emergências clínicas, psiquiátricas e afogamento.</div>
+              <div className="hem-check">Quem procura uma mentoria teórica para complementar sua formação.</div>
             </div>
           </div>
         </section>
@@ -165,7 +165,7 @@ export default function MentorshipPage() {
               {product.cover_url && <img className="hem-product-image" src={product.cover_url} alt={product.title} loading="lazy" />}
             </div>
             <div className="hem-product-copy">
-              <span className="hem-eyebrow">A MENTORIA</span>
+              <span className="hem-eyebrow">SEU ACESSO À MENTORIA</span>
               <h2>{product.title}</h2>
               <p className="hem-lead">{product.short_description}</p>
               {product.full_description && <div className="hem-full">{product.full_description}</div>}
@@ -189,7 +189,8 @@ export default function MentorshipPage() {
             <h2>Antes de adquirir.</h2>
             <div className="hem-faq">
               <details><summary>Como encontro as orientações de acesso?</summary><p>A compra é concluída na Kiwify. As instruções de acesso são fornecidas pela própria plataforma após a confirmação da compra.</p></details>
-              <details><summary>É um conteúdo voltado para APH?</summary><p>Sim. Esta é a Mentoria de Atendimento Pré-Hospitalar com Hanif Alves. Confira os detalhes da oferta antes de adquirir.</p></details>
+              <details><summary>Quais assuntos a mentoria aborda?</summary><p>Emergências traumáticas, clínicas e psiquiátricas, afogamento e assuntos de urgência e emergência no contexto do APH.</p></details>
+              <details><summary>A mentoria é prática?</summary><p>Não. A mentoria é teórica, destinada a profissionais e estudantes da saúde que desejam ingressar na área ou aprimorar seus conhecimentos.</p></details>
               <details><summary>Onde vejo o valor e o que está incluído?</summary><p>Consulte o checkout da Kiwify para conferir as informações da oferta, o valor e as condições de pagamento antes de concluir a compra.</p></details>
               <details><summary>A mentoria substitui treinamento prático ou protocolo institucional?</summary><p>Não. O conteúdo é educacional e deve ser utilizado em conjunto com treinamento, protocolos, legislação e atribuições profissionais aplicáveis.</p></details>
             </div>
@@ -198,8 +199,8 @@ export default function MentorshipPage() {
 
         <section className="hem-final">
           <div className="hem-container">
-            <h2>Seu próximo passo no APH pode começar agora.</h2>
-            <p>Conheça a oferta da Mentoria de APH com Hanif Alves e conclua sua aquisição na Kiwify.</p>
+            <h2>Aprofunde seu estudo das emergências no APH.</h2>
+            <p>Da emergência traumática à clínica e psiquiátrica, incluindo afogamento: conheça os temas, amplie seus estudos e participe da mentoria.</p>
             <CheckoutButton href={checkout}>Quero adquirir agora</CheckoutButton>
           </div>
         </section>
@@ -218,4 +219,3 @@ export default function MentorshipPage() {
     </div>
   );
 }
-
