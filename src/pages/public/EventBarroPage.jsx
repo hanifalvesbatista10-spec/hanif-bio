@@ -64,16 +64,29 @@ export default function EventBarroPage() {
         :root{--navy:#071426;--red:#d6152d;--cream:#f4f7fa;--text:#52677b}
         *{box-sizing:border-box}
         html{scroll-behavior:smooth}
-        .event-page{min-height:100vh;background:#fff;color:var(--navy);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        body{margin:0}
+        .event-page{min-height:100vh;background:#fff;color:var(--navy);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden}
         .event-container{width:min(1120px,calc(100% - 32px));margin:0 auto}
         .event-top{background:#050d17;color:#fff}
         .event-top-inner{min-height:68px;display:flex;align-items:center;justify-content:space-between;gap:20px}
         .event-brand{font-weight:950;letter-spacing:.03em}
         .event-brand span{display:block;color:#9badbd;font-size:.62rem;letter-spacing:.15em;margin-top:3px}
         .event-back{color:#d7e0e8;text-decoration:none;font-size:.84rem;font-weight:850}
+
         .event-hero-image{background:#05080d;width:100%;overflow:hidden}
         .event-hero-link{display:block;width:100%;line-height:0;cursor:pointer}
-        .event-hero-image img{display:block;width:100%;height:auto;max-width:none;object-fit:contain}
+        .event-hero-image img{display:block;width:100%;height:auto;object-fit:contain}
+
+        .event-mobile-hero{display:none;background:radial-gradient(circle at 78% 24%,rgba(214,21,45,.28),transparent 28%),linear-gradient(135deg,#05080d,#0a1522);color:#fff;padding:42px 0 38px;position:relative;overflow:hidden}
+        .event-mobile-hero:before{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 0 65%,rgba(214,21,45,.08) 65% 100%);pointer-events:none}
+        .event-mobile-inner{position:relative;z-index:1}
+        .event-mobile-kicker{display:inline-block;background:var(--red);padding:8px 12px;font-size:.78rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase;transform:rotate(-1deg);box-shadow:0 8px 22px rgba(214,21,45,.24)}
+        .event-mobile-city{margin:14px 0 12px;font-size:clamp(4.3rem,18vw,8rem);line-height:.78;letter-spacing:-.07em;font-weight:1000;text-transform:uppercase;color:#fff;text-shadow:0 14px 32px rgba(0,0,0,.4)}
+        .event-mobile-subtitle{margin:0 0 18px;font-size:clamp(1.05rem,4.2vw,1.4rem);font-weight:900;line-height:1.15;text-transform:uppercase}
+        .event-mobile-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+        .event-mobile-tags span{padding:8px 10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);border-radius:9px;font-size:.76rem;font-weight:850}
+        .event-mobile-cta{display:flex;align-items:center;justify-content:center;min-height:54px;width:100%;border-radius:12px;background:var(--red);color:#fff;text-decoration:none;font-weight:950;box-shadow:0 14px 34px rgba(214,21,45,.26)}
+
         .event-section{padding:76px 0}
         .event-grid{display:grid;grid-template-columns:.9fr 1.1fr;gap:48px;align-items:start}
         .event-copy h2{font-size:clamp(2.2rem,4vw,3.7rem);line-height:1;letter-spacing:-.045em;margin:0 0 16px}
@@ -81,7 +94,7 @@ export default function EventBarroPage() {
         .event-topics{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:26px}
         .event-topic{padding:18px;border-radius:16px;background:var(--cream);border:1px solid #e2e8ed}
         .event-topic b{display:block;margin-bottom:7px}
-        .event-form{padding:30px;border-radius:22px;border:1px solid #e1e6eb;box-shadow:0 20px 60px rgba(7,20,38,.09)}
+        .event-form{padding:30px;border-radius:22px;border:1px solid #e1e6eb;box-shadow:0 20px 60px rgba(7,20,38,.09);background:#fff}
         .event-form h3{font-size:1.6rem;margin:0 0 5px}
         .event-form>p{margin:0 0 22px;color:var(--text)}
         .event-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -101,13 +114,26 @@ export default function EventBarroPage() {
         .success-box p{color:#c8d4df;line-height:1.7}
         .success-btn{display:inline-flex;align-items:center;justify-content:center;min-height:56px;padding:0 24px;margin-top:18px;border-radius:12px;background:#1da851;color:#fff;text-decoration:none;font-weight:950}
         .success-secondary{display:block;margin-top:18px;color:#b9c6d2;text-decoration:none;font-size:.84rem}
-        @media(max-width:840px){
-          .event-grid{grid-template-columns:1fr}
+
+        @media(max-width:1100px){
+          .event-hero-image{display:none}
+          .event-mobile-hero{display:block}
+          .event-grid{grid-template-columns:1fr;gap:32px}
+          .event-form{max-width:720px;width:100%;margin:0 auto}
+        }
+
+        @media(max-width:700px){
+          .event-container{width:min(100% - 24px,1120px)}
           .event-fields,.event-topics{grid-template-columns:1fr}
-          .event-section{padding:48px 0}
-          .event-top-inner{min-height:60px}
+          .event-field.full{grid-column:auto}
+          .event-section{padding:42px 0}
+          .event-top-inner{min-height:58px}
+          .event-brand{font-size:.88rem}
           .event-brand span{display:none}
-          .event-back{font-size:.78rem}
+          .event-back{font-size:.74rem}
+          .event-copy h2{font-size:2.15rem}
+          .event-form{padding:22px 18px;border-radius:18px}
+          .event-mobile-hero{padding:34px 0 30px}
         }
       `}</style>
 
@@ -135,6 +161,21 @@ export default function EventBarroPage() {
               <a className="event-hero-link" href="#inscricao" aria-label="Ir para inscrição gratuita">
                 <img src="/assets/aulao-barro-hero.jpg" alt="Aulão gratuito em Barro-CE" />
               </a>
+            </section>
+
+            <section className="event-mobile-hero">
+              <div className="event-container event-mobile-inner">
+                <div className="event-mobile-kicker">AULÃO GRATUITO EM</div>
+                <div className="event-mobile-city">BARRO–CE</div>
+                <p className="event-mobile-subtitle">Curso Intensivo de Atendimento Pré-Hospitalar</p>
+                <div className="event-mobile-tags">
+                  <span>CLÍNICO</span>
+                  <span>TRAUMA</span>
+                  <span>PRESENCIAL</span>
+                  <span>VAGAS LIMITADAS</span>
+                </div>
+                <a className="event-mobile-cta" href="#inscricao">GARANTIR MINHA INSCRIÇÃO GRATUITA</a>
+              </div>
             </section>
 
             <section className="event-section" id="inscricao">
