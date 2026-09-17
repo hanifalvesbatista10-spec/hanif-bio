@@ -7,6 +7,7 @@ import PublicProductPage from "./pages/public/PublicProductPage";
 import MentorshipPage from "./pages/public/MentorshipPage";
 import ThankYouPage from "./pages/public/ThankYouPage";
 import EventBarroPage from "./pages/public/EventBarroPage";
+import PublicFormPage from "./pages/public/PublicFormPage";
 import LoginPage from "./pages/auth/LoginPage";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import FeedbacksPage from "./pages/admin/FeedbacksPage";
@@ -15,6 +16,9 @@ import ProductsPage from "./pages/admin/ProductsPage";
 import ProductEditorPageV4 from "./pages/admin/ProductEditorPageV4";
 import SiteSettingsPage from "./pages/admin/SiteSettingsPage";
 import EventRegistrationsPage from "./pages/admin/EventRegistrationsPage";
+import FormsPage from "./pages/admin/FormsPage";
+import FormBuilderPage from "./pages/admin/FormBuilderPage";
+import FormResultsPage from "./pages/admin/FormResultsPage";
 import "./styles/auth-admin.css";
 
 export default function App() {
@@ -28,6 +32,7 @@ export default function App() {
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
+          <Route path="/f/:slug" element={<PublicFormPage />} />
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route
@@ -47,6 +52,10 @@ export default function App() {
             <Route path="produtos/novo" element={<ProductEditorPageV4 />} />
             <Route path="produtos/:id" element={<ProductEditorPageV4 />} />
             <Route path="inscricoes" element={<EventRegistrationsPage />} />
+            <Route path="formularios" element={<FormsPage />} />
+            <Route path="formularios/novo" element={<FormBuilderPage />} />
+            <Route path="formularios/:id" element={<FormBuilderPage />} />
+            <Route path="formularios/:id/resultados" element={<FormResultsPage />} />
           </Route>
 
           <Route path="/login" element={<Navigate to="/admin/login" replace />} />

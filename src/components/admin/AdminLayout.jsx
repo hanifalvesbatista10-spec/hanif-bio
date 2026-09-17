@@ -5,6 +5,7 @@ const items = [
   ["/admin", "Visão geral"],
   ["/admin/site", "Conteúdo do site"],
   ["/admin/produtos", "Produtos"],
+  ["/admin/formularios", "Formulários e atividades"],
   ["/admin/inscricoes", "Inscrições do evento"],
   ["/admin/feedbacks", "Feedbacks"],
 ];
