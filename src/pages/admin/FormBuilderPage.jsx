@@ -190,7 +190,7 @@ export default function FormBuilderPage() {
       setBlocks((current) => [...current, ...imported]);
       setBulkText("");
       setShowBulk(false);
-      setMessage(\`\${imported.length} pergunta(s) importada(s). Revise e salve/publice.\`);
+      setMessage(`${imported.length} pergunta(s) importada(s). Revise e salve/publice.`);
     } catch (error) {
       setMessage(error.message || "Não foi possível importar as perguntas.");
     }
