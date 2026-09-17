@@ -50,6 +50,8 @@ export default function FormBuilderPage() {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [bulkText, setBulkText] = useState("");
+  const [showBulk, setShowBulk] = useState(false);
 
   useEffect(() => {
     if (!editing) return;
@@ -99,6 +101,100 @@ export default function FormBuilderPage() {
     [copy[index],copy[target]] = [copy[target],copy[index]];
     return copy;
   });
+
+  const parseBulkQuestions = (text) => {
+    const clean = String(text || "").replace(/\r/g, "").trim();
+    if (!clean) throw new Error("Cole as perguntas para importar.");
+
+    // Aceita JSON gerado por IA.
+    if (clean.startsWith("[") || clean.startsWith("{")) {
+      try {
+        const parsed = JSON.parse(clean);
+        const items = Array.isArray(parsed) ? parsed : parsed.questions;
+        if (!Array.isArray(items)) throw new Error("JSON sem lista de perguntas.");
+
+        return items.map((item) => {
+          const typeMap = {
+            multipla: "choice", escolha: "choice", choice: "choice",
+            multipla_selecao: "multi_choice", multi_choice: "multi_choice",
+            verdadeiro_falso: "true_false", true_false: "true_false",
+            sim_nao: "yes_no", yes_no: "yes_no",
+            curta: "short_text", short_text: "short_text",
+            longa: "long_text", long_text: "long_text",
+            escala: "scale", scale: "scale",
+          };
+          const type = typeMap[String(item.type || item.tipo || "choice").toLowerCase()] || "choice";
+          const options = item.options || item.alternativas || [];
+          return {
+            ...emptyBlock(),
+            type,
+            title: String(item.question || item.pergunta || item.title || "").trim(),
+            description: String(item.description || item.descricao || "").trim(),
+            options_text: Array.isArray(options) ? options.join("\n") : String(options || ""),
+            required: item.required !== false && item.obrigatoria !== false,
+            correct_answer: String(item.correct_answer || item.resposta_correta || item.correta || "").trim(),
+            points: Number(item.points ?? item.pontos ?? 0) || 0,
+          };
+        }).filter((item) => item.title);
+      } catch (error) {
+        throw new Error("Não consegui interpretar o JSON. Verifique o formato ou use o modelo de texto.");
+      }
+    }
+
+    // Formato de texto amigável para copiar de qualquer IA.
+    const chunks = clean.split(/\n\s*---+\s*\n/g).map(v => v.trim()).filter(Boolean);
+    const imported = chunks.map((chunk) => {
+      const lines = chunk.split("\n").map(v => v.trim()).filter(Boolean);
+      const get = (labels) => {
+        const line = lines.find(v => labels.some(label => v.toLowerCase().startsWith(label)));
+        if (!line) return "";
+        return line.slice(line.indexOf(":") + 1).trim();
+      };
+
+      const typeRaw = get(["tipo:", "type:"]).toLowerCase();
+      const typeMap = {
+        "multipla escolha": "choice", "múltipla escolha": "choice", "multipla": "choice",
+        "caixas de selecao": "multi_choice", "caixas de seleção": "multi_choice",
+        "verdadeiro ou falso": "true_false", "verdadeiro/falso": "true_false",
+        "sim ou nao": "yes_no", "sim ou não": "yes_no",
+        "resposta curta": "short_text", "curta": "short_text",
+        "resposta longa": "long_text", "longa": "long_text",
+        "escala": "scale",
+      };
+      const type = typeMap[typeRaw] || "choice";
+      const question = get(["pergunta:", "questao:", "questão:", "question:"]) || lines[0].replace(/^\d+[\).\-\s]+/, "");
+      const correct = get(["correta:", "resposta correta:", "gabarito:", "correct:"]);
+      const points = Number(String(get(["pontos:", "pontuacao:", "pontuação:", "points:"]) || "0").replace(",", ".")) || 0;
+      const requiredRaw = get(["obrigatoria:", "obrigatória:", "required:"]).toLowerCase();
+      const optionLines = lines.filter(v => /^[A-Ha-h][\)\.\-:]\s+/.test(v) || /^[-•]\s+/.test(v));
+      const options = optionLines.map(v => v.replace(/^[A-Ha-h][\)\.\-:]\s+/, "").replace(/^[-•]\s+/, "").trim());
+
+      return {
+        ...emptyBlock(),
+        type,
+        title: question.trim(),
+        options_text: options.join("\n"),
+        required: requiredRaw ? !["nao","não","false","0"].includes(requiredRaw) : true,
+        correct_answer: correct.trim(),
+        points,
+      };
+    }).filter((item) => item.title);
+
+    if (!imported.length) throw new Error("Nenhuma pergunta reconhecida. Use o modelo mostrado abaixo.");
+    return imported;
+  };
+
+  const importBulk = () => {
+    try {
+      const imported = parseBulkQuestions(bulkText);
+      setBlocks((current) => [...current, ...imported]);
+      setBulkText("");
+      setShowBulk(false);
+      setMessage(\`\${imported.length} pergunta(s) importada(s). Revise e salve/publice.\`);
+    } catch (error) {
+      setMessage(error.message || "Não foi possível importar as perguntas.");
+    }
+  };
 
   const uploadImage = async (file) => {
     if (!file) return "";
@@ -189,8 +285,8 @@ export default function FormBuilderPage() {
         .fb-actions-top{display:flex;gap:8px;flex-wrap:wrap}.fb-btn{min-height:42px;padding:0 14px;border-radius:10px;font-weight:900;cursor:pointer}.fb-btn.dark{border:0;background:#071426;color:#fff}.fb-btn.red{border:0;background:#d6152d;color:#fff}.fb-btn.light{border:1px solid #d9e2ea;background:#fff;color:#24394e}
         .fb-card{background:#fff;border:1px solid #e0e7ee;border-radius:18px;padding:20px;margin-bottom:16px}.fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fb-field{display:grid;gap:6px}.fb-field.full{grid-column:1/-1}.fb-field label{font-size:.78rem;font-weight:900;color:#2d4256}.fb-field input,.fb-field textarea,.fb-field select{width:100%;padding:11px 12px;border:1px solid #d7e0e8;border-radius:10px;font:inherit}.fb-field textarea{min-height:90px;resize:vertical}.fb-check{display:flex;gap:8px;align-items:center;font-weight:800;color:#30465a}.fb-check input{width:18px;height:18px}
         .fb-block{border:1px solid #dfe6ed;border-radius:16px;padding:17px;background:#fbfcfd;margin-top:12px}.fb-block-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.fb-block-head strong{color:#071426}.fb-mini{display:flex;gap:6px}.fb-mini button{border:1px solid #d8e1e8;background:#fff;border-radius:8px;min-width:34px;height:34px;cursor:pointer;font-weight:900}.fb-mini .del{color:#b11830}
-        .fb-link{padding:12px;border-radius:10px;background:#f3f6f9;color:#52677b;word-break:break-all;font-size:.82rem}.fb-add{width:100%;min-height:48px;border:1px dashed #bac7d2;border-radius:12px;background:#fff;color:#21384e;font-weight:900;cursor:pointer}
-        @media(max-width:760px){.fb-head{align-items:stretch;flex-direction:column}.fb-grid{grid-template-columns:1fr}.fb-field.full{grid-column:auto}}
+        .fb-link{padding:12px;border-radius:10px;background:#f3f6f9;color:#52677b;word-break:break-all;font-size:.82rem}.fb-add{width:100%;min-height:48px;border:1px dashed #bac7d2;border-radius:12px;background:#fff;color:#21384e;font-weight:900;cursor:pointer}.fb-content-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.fb-bulk{border:1px solid #dfe6ed;border-radius:16px;background:#f7f9fb;padding:18px;margin-bottom:16px}.fb-bulk textarea{width:100%;min-height:260px;border:1px solid #d5dfe7;border-radius:12px;padding:14px;font:inherit;resize:vertical;background:#fff}.fb-bulk-note{font-size:.8rem;color:#63778a;line-height:1.6;margin:8px 0 12px}.fb-bulk-example{white-space:pre-wrap;background:#071426;color:#d9e5ef;padding:14px;border-radius:12px;font-size:.78rem;line-height:1.55;margin:12px 0}.fb-bulk-actions{display:flex;gap:8px;flex-wrap:wrap}.fb-import{min-height:48px;border:0;border-radius:12px;background:#071426;color:#fff;font-weight:900;cursor:pointer}.fb-ai{min-height:48px;border:1px solid #d6152d;border-radius:12px;background:#fff;color:#b20e28;font-weight:900;cursor:pointer}
+        @media(max-width:760px){.fb-head{align-items:stretch;flex-direction:column}.fb-grid{grid-template-columns:1fr}.fb-field.full{grid-column:auto}.fb-content-actions{grid-template-columns:1fr}}
       `}</style>
 
       <div className="fb-head">
@@ -222,6 +318,47 @@ export default function FormBuilderPage() {
 
       <div className="fb-card">
         <h3 style={{marginTop:0}}>Conteúdo</h3>
+        <div className="fb-content-actions">
+          <button className="fb-ai" type="button" onClick={()=>setShowBulk(v=>!v)}>
+            {showBulk ? "Fechar importação" : "⚡ Importar várias perguntas"}
+          </button>
+          <button className="fb-add" type="button" onClick={addBlock}>+ Adicionar uma pergunta</button>
+        </div>
+
+        {showBulk && (
+          <div className="fb-bulk">
+            <strong>Importação em lote</strong>
+            <p className="fb-bulk-note">
+              Peça para qualquer IA gerar as perguntas no modelo abaixo, cole tudo aqui e clique em importar.
+              Também aceitamos JSON.
+            </p>
+            <div className="fb-bulk-example">{`TIPO: múltipla escolha
+PERGUNTA: Qual a frequência correta de compressões na RCP adulta?
+A) 60–80/min
+B) 80–100/min
+C) 100–120/min
+D) 120–140/min
+CORRETA: 100–120/min
+PONTOS: 1
+OBRIGATÓRIA: sim
+---
+TIPO: verdadeiro ou falso
+PERGUNTA: O DEA deve ser utilizado assim que estiver disponível.
+CORRETA: Verdadeiro
+PONTOS: 1
+OBRIGATÓRIA: sim`}</div>
+            <textarea
+              value={bulkText}
+              onChange={e=>setBulkText(e.target.value)}
+              placeholder="Cole aqui 10, 20, 50 perguntas geradas por IA..."
+            />
+            <div className="fb-bulk-actions">
+              <button className="fb-import" type="button" onClick={importBulk}>Importar perguntas</button>
+              <button className="fb-btn light" type="button" onClick={()=>setBulkText("")}>Limpar</button>
+            </div>
+          </div>
+        )}
+
         {blocks.map((b,index)=>(
           <div className="fb-block" key={b.id || index}>
             <div className="fb-block-head">
@@ -245,7 +382,7 @@ export default function FormBuilderPage() {
             </div>
           </div>
         ))}
-        <button className="fb-add" type="button" onClick={addBlock}>+ Adicionar bloco / pergunta</button>
+        <button className="fb-add" type="button" onClick={addBlock}>+ Adicionar outro bloco / pergunta</button>
       </div>
     </section>
   );
