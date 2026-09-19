@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
-const DESKTOP = {
-  video: "/media/hero/hero-desktop-optimized.mp4",
-  poster: "/media/hero/hero-desktop-poster.webp",
-  codec: 'video/mp4; codecs="avc1.640028"',
+const DESKTOP_POSTER = "/media/hero/hero-desktop-poster.webp";
+const DESKTOP_HD = {
+  video: "/media/hero/hero-desktop-hd.mp4",
+  poster: DESKTOP_POSTER,
+  codec: 'video/mp4; codecs="avc1.640032"',
+};
+// Telas grandes ou de alta densidade (retina, 4K) recebem a versão 4K; as demais, a 1440p.
+const DESKTOP_4K = {
+  video: "/media/hero/hero-desktop-4k.mp4",
+  poster: DESKTOP_POSTER,
+  codec: 'video/mp4; codecs="avc1.640033"',
 };
 const MOBILE = {
   video: "/media/hero/hero-mobile.mp4",
@@ -30,7 +37,9 @@ export default function HeroMedia({ alt, hold = false }) {
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const asset = isMobile ? MOBILE : DESKTOP;
+  const physicalWidth = Math.max(window.screen?.width || 0, window.innerWidth) * (window.devicePixelRatio || 1);
+  const wants4k = physicalWidth >= 2560 && Boolean(document.createElement("video").canPlayType(DESKTOP_4K.codec));
+  const asset = isMobile ? MOBILE : wants4k ? DESKTOP_4K : DESKTOP_HD;
   const saveData = Boolean(navigator.connection?.saveData);
   const canPlay = Boolean(document.createElement("video").canPlayType(asset.codec));
   const showVideo = !reduceMotion && !saveData && canPlay && !failed;
