@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import ConversionHomePage from "./pages/public/ConversionHomePage";
@@ -9,7 +9,7 @@ import ContentDetailPage from "./pages/public/ContentDetailPage";
 import PublicProductPage from "./pages/public/PublicProductPage";
 import MentorshipPage from "./pages/public/MentorshipPage";
 import ThankYouPage from "./pages/public/ThankYouPage";
-import EventBarroPage from "./pages/public/EventBarroPage";
+import EventPage from "./pages/public/EventPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
 import LoginPage from "./pages/auth/LoginPage";
 import StudentLoginPage from "./pages/auth/StudentLoginPage";
@@ -26,7 +26,8 @@ const FeedbackEditorPage = lazy(() => import("./pages/admin/FeedbackEditorPage")
 const ProductsPage = lazy(() => import("./pages/admin/ProductsPage"));
 const ProductEditorPageV4 = lazy(() => import("./pages/admin/ProductEditorPageV4"));
 const SiteSettingsPage = lazy(() => import("./pages/admin/SiteSettingsPage"));
-const EventRegistrationsPage = lazy(() => import("./pages/admin/EventRegistrationsPage"));
+const EventsPage = lazy(() => import("./pages/admin/EventsPage"));
+const EventDetailPage = lazy(() => import("./pages/admin/EventDetailPage"));
 const FormsPage = lazy(() => import("./pages/admin/FormsPage"));
 const FormBuilderPage = lazy(() => import("./pages/admin/FormBuilderPage"));
 const FormResultsPage = lazy(() => import("./pages/admin/FormResultsPage"));
@@ -39,6 +40,12 @@ const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const MemberPreviewPage = lazy(() => import("./pages/admin/MemberPreviewPage"));
 const LessonAuditPage = lazy(() => import("./pages/admin/LessonAuditPage"));
 const CommentsPage = lazy(() => import("./pages/admin/CommentsPage"));
+
+// Links antigos do Aulão Barro–CE continuam valendo (preservando ?origem=).
+function LegacyEventRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/evento/aulao-aph-barro-2026${search}`} replace />;
+}
 
 function AdminFallback() {
   return <div className="auth-loading">Carregando painel administrativo...</div>;
@@ -53,8 +60,9 @@ export default function App() {
           <Route path="/sobre" element={<SobrePage />} />
           <Route path="/conteudos" element={<ContentListPage />} />
           <Route path="/conteudos/:slug" element={<ContentDetailPage />} />
-          <Route path="/evento/aulao-barro" element={<EventBarroPage />} />
-          <Route path="/produto/evento-aulao-barro" element={<EventBarroPage />} />
+          <Route path="/evento/aulao-barro" element={<LegacyEventRedirect />} />
+          <Route path="/produto/evento-aulao-barro" element={<LegacyEventRedirect />} />
+          <Route path="/evento/:slug" element={<EventPage />} />
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
@@ -135,11 +143,28 @@ export default function App() {
                 </Suspense>
               }
             />
+            <Route path="inscricoes" element={<Navigate to="/admin/eventos" replace />} />
             <Route
-              path="inscricoes"
+              path="eventos"
               element={
                 <Suspense fallback={<AdminFallback />}>
-                  <EventRegistrationsPage />
+                  <EventsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="eventos/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <EventDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="eventos/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <EventDetailPage />
                 </Suspense>
               }
             />
