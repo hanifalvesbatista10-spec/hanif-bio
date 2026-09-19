@@ -62,7 +62,7 @@ export default function HeroMedia({ alt, hold = false }) {
             className={`site-hero-video ${ready ? "is-ready" : ""}`}
             src={asset.video}
             muted
-            loop
+            loop={isMobile /* no desktop toca uma vez e fica no último quadro, como o vídeo original */}
             autoPlay={!hold}
             playsInline
             preload="metadata"
