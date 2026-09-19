@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import LessonComments from "../../components/member/LessonComments";
+import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
 import { supabase } from "../../services/supabase";
 import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
@@ -20,7 +21,7 @@ export default function CourseLessonsPage() {
       supabase.from("products").select("id,title").eq("id", productId).maybeSingle(),
       supabase
         .from("product_lessons")
-        .select("id,title,description,video_url,duration,position")
+        .select("*")
         .eq("product_id", productId)
         .eq("status", "published")
         .order("position", { ascending: true }),
@@ -83,14 +84,18 @@ export default function CourseLessonsPage() {
               {activeLesson && (
                 <>
                   <h2>{activeLesson.title}</h2>
-                  <div className="member-video">
-                    <iframe
-                      src={toEmbedUrl(activeLesson.video_url)}
-                      title={activeLesson.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
+                  {activeLesson.video_provider === "mux" ? (
+                    <MuxLessonPlayer lesson={activeLesson} />
+                  ) : (
+                    <div className="member-video">
+                      <iframe
+                        src={toEmbedUrl(activeLesson.video_url)}
+                        title={activeLesson.title}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  )}
                   {activeLesson.description && <p className="member-description">{activeLesson.description}</p>}
                   <LessonComments lessonId={activeLesson.id} />
                 </>

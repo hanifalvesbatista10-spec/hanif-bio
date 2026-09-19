@@ -3,6 +3,13 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { checkYoutubeVideo, toEmbedUrl, watchUrl, youtubeId } from "../../services/video";
 
+const muxLabels = {
+  ready: { text: "Mux · pronto e protegido", tone: "ok" },
+  processing: { text: "Mux · processando", tone: "warn" },
+  uploading: { text: "Mux · enviando", tone: "warn" },
+  errored: { text: "Mux · erro no processamento", tone: "bad" },
+};
+
 const videoLabels = {
   ok: { text: "Vídeo encontrado", tone: "ok" },
   unavailable: { text: "Vídeo privado, removido ou sem incorporação", tone: "bad" },
@@ -16,7 +23,10 @@ function staticIssues(lesson, siblings) {
   if (lesson.status !== "published") issues.push({ tone: "warn", text: "Rascunho — o aluno não vê" });
   if (!lesson.description?.trim()) issues.push({ tone: "warn", text: "Sem descrição" });
   if (!lesson.duration?.trim()) issues.push({ tone: "warn", text: "Sem duração" });
-  if (!youtubeId(lesson.video_url) && lesson.video_provider === "youtube") {
+  if (lesson.video_provider === "mux") {
+    if (lesson.mux_status === "errored") issues.push({ tone: "bad", text: "Mux não conseguiu processar o vídeo" });
+    else if (lesson.mux_status !== "ready") issues.push({ tone: "warn", text: "Vídeo ainda processando no Mux" });
+  } else if (!youtubeId(lesson.video_url) && lesson.video_provider === "youtube") {
     issues.push({ tone: "bad", text: "Link fora dos formatos aceitos pelo player" });
   }
   if (siblings.filter((item) => item.position === lesson.position).length > 1) {
@@ -73,7 +83,7 @@ export default function LessonAuditPage() {
 
   const checkVideos = useCallback(async () => {
     setChecking(true);
-    const queue = visibleLessons.filter((lesson) => lesson.video_provider === "youtube" || youtubeId(lesson.video_url));
+    const queue = visibleLessons.filter((lesson) => lesson.video_provider !== "mux" && (lesson.video_provider === "youtube" || youtubeId(lesson.video_url)));
     const results = {};
     let cursor = 0;
     const worker = async () => {
@@ -173,7 +183,8 @@ export default function LessonAuditPage() {
                     {items.map((lesson) => {
                       const issues = staticIssues(lesson, items);
                       const video = videoResults[lesson.id];
-                      const label = video ? videoLabels[video.state] : null;
+                      const isMux = lesson.video_provider === "mux";
+                      const label = isMux ? muxLabels[lesson.mux_status] || muxLabels.processing : video ? videoLabels[video.state] : null;
                       return (
                         <tr key={lesson.id}>
                           <td>{lesson.position}</td>
@@ -186,7 +197,7 @@ export default function LessonAuditPage() {
                             {label ? (
                               <div className={`adm-check is-${label.tone}`}>
                                 <strong>{label.text}</strong>
-                                {video.title && <small>{video.title}</small>}
+                                {isMux ? <small>{lesson.duration_seconds ? `${Math.round(lesson.duration_seconds / 60)} min · link assinado` : "link assinado"}</small> : video?.title && <small>{video.title}</small>}
                               </div>
                             ) : (
                               <small>{youtubeId(lesson.video_url) ? "Ainda não verificado" : "—"}</small>

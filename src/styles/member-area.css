@@ -239,3 +239,51 @@
     order: -1;
   }
 }
+
+/* ---------- Player Mux (vídeo protegido) ---------- */
+.member-mux {
+  position: relative;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #000;
+  aspect-ratio: 16 / 9;
+}
+
+.member-mux mux-player {
+  --media-object-fit: contain;
+}
+
+.member-mux-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #cbd6e2;
+  font-size: 0.95rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.member-mux-note.is-error {
+  color: #ffb3bd;
+}
+
+.member-watermark {
+  position: absolute;
+  z-index: 3;
+  max-width: 70%;
+  padding: 2px 6px;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  user-select: none;
+  transition: top 1.2s ease, left 1.2s ease;
+}

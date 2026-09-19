@@ -1332,3 +1332,132 @@ html.adm-scroll-lock body {
   background: #eef2f6;
   color: #26384b !important;
 }
+
+/* ==========================================================================
+   Escolha do player (YouTube / Mux) e envio de vídeo
+   ========================================================================== */
+
+.adm-provider {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.adm-provider legend {
+  margin-bottom: 8px;
+  padding: 0;
+  color: #26384b;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.adm-provider-option {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 10px !important;
+  padding: 12px 14px;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.adm-provider-option.is-active {
+  border-color: var(--brand-navy, #071426);
+  box-shadow: 0 0 0 1px var(--brand-navy, #071426);
+  background: #f6f9fc;
+}
+
+.adm-provider-option input {
+  width: 18px !important;
+  height: 18px;
+  margin-top: 2px;
+  padding: 0 !important;
+  flex: 0 0 auto;
+  accent-color: var(--brand-red, #d6152d);
+}
+
+.adm-provider-option strong,
+.adm-provider-option small {
+  display: block;
+}
+
+.adm-provider-option small {
+  margin-top: 3px;
+  color: var(--adm-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.adm-mux-box {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px dashed #b9c6d3;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.adm-mux-current {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.adm-mux-box input[type="file"] {
+  padding: 9px 10px;
+  background: #fff;
+}
+
+.adm-progress {
+  display: grid;
+  gap: 6px;
+}
+
+.adm-progress-bar {
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #dfe6ee;
+}
+
+.adm-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--brand-red, #d6152d);
+  transition: width 0.3s ease;
+}
+
+.adm-lesson-thumb.is-mux {
+  background: linear-gradient(140deg, #0d2238, #071426);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.adm-provider-tag.is-ready {
+  color: #167344;
+  font-weight: 700;
+}
+
+.adm-provider-tag.is-processing,
+.adm-provider-tag.is-uploading {
+  color: #8a5d00;
+  font-weight: 700;
+}
+
+.adm-provider-tag.is-errored {
+  color: #a20e20;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .adm-provider {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
