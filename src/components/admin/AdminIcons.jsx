@@ -110,6 +110,14 @@ export const icons = {
       <path d="m8.8 12 2.2 2.2 4.2-4.4" />
     </Icon>
   ),
+  certificate: (
+    <Icon>
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M7 9h10M7 12.5h5" />
+      <circle cx="16" cy="15.5" r="2.5" />
+      <path d="m15 17.8-.8 3.2 1.8-1 1.8 1-.8-3.2" />
+    </Icon>
+  ),
   external: (
     <Icon>
       <path d="M14 4h6v6M20 4l-9 9" />

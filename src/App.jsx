@@ -10,6 +10,7 @@ import PublicProductPage from "./pages/public/PublicProductPage";
 import MentorshipPage from "./pages/public/MentorshipPage";
 import ThankYouPage from "./pages/public/ThankYouPage";
 import EventPage from "./pages/public/EventPage";
+import CertificateVerifyPage from "./pages/public/CertificateVerifyPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
 import LoginPage from "./pages/auth/LoginPage";
 import StudentLoginPage from "./pages/auth/StudentLoginPage";
@@ -26,6 +27,8 @@ const FeedbackEditorPage = lazy(() => import("./pages/admin/FeedbackEditorPage")
 const ProductsPage = lazy(() => import("./pages/admin/ProductsPage"));
 const ProductEditorPageV4 = lazy(() => import("./pages/admin/ProductEditorPageV4"));
 const SiteSettingsPage = lazy(() => import("./pages/admin/SiteSettingsPage"));
+const CertificatesPage = lazy(() => import("./pages/admin/CertificatesPage"));
+const CertificateTemplateEditor = lazy(() => import("./pages/admin/CertificateTemplateEditor"));
 const EventsPage = lazy(() => import("./pages/admin/EventsPage"));
 const EventDetailPage = lazy(() => import("./pages/admin/EventDetailPage"));
 const FormsPage = lazy(() => import("./pages/admin/FormsPage"));
@@ -63,6 +66,8 @@ export default function App() {
           <Route path="/evento/aulao-barro" element={<LegacyEventRedirect />} />
           <Route path="/produto/evento-aulao-barro" element={<LegacyEventRedirect />} />
           <Route path="/evento/:slug" element={<EventPage />} />
+          <Route path="/certificado" element={<CertificateVerifyPage />} />
+          <Route path="/certificado/:code" element={<CertificateVerifyPage />} />
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
@@ -140,6 +145,30 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <ProductEditorPageV4 />
+                </Suspense>
+              }
+            />
+            <Route
+              path="certificados"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <CertificatesPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="certificados/modelo/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <CertificateTemplateEditor />
+                </Suspense>
+              }
+            />
+            <Route
+              path="certificados/modelo/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <CertificateTemplateEditor />
                 </Suspense>
               }
             />

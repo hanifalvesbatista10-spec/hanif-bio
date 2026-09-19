@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import MyCertificates from "../../components/member/MyCertificates";
 import { supabase } from "../../services/supabase";
 
 export default function StudentCoursesPage() {
@@ -59,6 +60,8 @@ export default function StudentCoursesPage() {
             ))
           )}
         </section>
+
+        <MyCertificates />
 
         <Link className="portal-home" to="/">Voltar ao site</Link>
       </div>
