@@ -5,6 +5,8 @@ import { supabase } from "../../services/supabase";
 import PublicFeedbacks from "../../components/feedbacks/PublicFeedbacks";
 import SiteHeader from "../../components/layout/SiteHeader";
 import SiteFooter from "../../components/layout/SiteFooter";
+import BrandIntro, { shouldPlayIntro } from "../../components/site/BrandIntro";
+import HeroMedia from "../../components/site/HeroMedia";
 import "./ConversionHomePage.css";
 
 const fallbackSettings = {
@@ -104,6 +106,8 @@ export default function ConversionHomePage() {
   const [content, setContent] = useState([]);
   const [faqs, setFaqs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [playIntro] = useState(() => shouldPlayIntro());
+  const [introActive, setIntroActive] = useState(playIntro);
 
   useEffect(() => {
     const load = async () => {
@@ -159,16 +163,12 @@ export default function ConversionHomePage() {
   }, [location.hash]);
 
   return (
-    <div className="site-page">
+    <div className={`site-page ${introActive ? "is-intro-active" : ""}`}>
+      {playIntro && <BrandIntro onFinish={() => setIntroActive(false)} />}
       <SiteHeader primaryLabel={settings.hero_primary_label || "Ver treinamentos"} />
 
       <section className="site-hero" id="top">
-        <div className="site-hero-media">
-          <img
-            src={settings.hero_image_url}
-            alt="Hanif Alves, técnico de enfermagem socorrista e instrutor de APH, uniformizado do SAMU 192"
-          />
-        </div>
+        <HeroMedia hold={introActive} alt="Hanif Alves, técnico de enfermagem socorrista e instrutor de APH, de braços cruzados" />
         <div className="site-hero-content">
           <div className="site-hero-inner">
             <div className="site-hero-copy">

@@ -60,7 +60,7 @@
   height: 48px;
 }
 
-@media (min-width: 781px) {
+@media (min-width: 768px) {
   .site-brand img {
     height: 76px;
   }
@@ -167,33 +167,108 @@
   z-index: 0;
 }
 
-.site-hero-media img {
+.site-hero-frame {
+  /* The subject is centered in the source media. Shifting the frame to the
+     right opens the left side for the copy; the navy gradient below hides
+     the frame edge. */
   position: absolute;
-  top: 0;
-  right: 0;
+  inset: 0;
+  transform: translateX(min(16vw, 260px));
+}
+
+.site-hero-poster,
+.site-hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
   height: 100%;
-  width: clamp(340px, 46vw, 660px);
   object-fit: cover;
-  object-position: top center;
+  object-position: 50% 12%;
+}
+
+.site-hero-video {
+  opacity: 0;
+  transition: opacity 0.9s var(--ease-standard);
+}
+
+.site-hero-video.is-ready {
+  opacity: 1;
 }
 
 .site-hero-media::before {
-  /* seam: soft blend from navy into the photo, no hard card edge */
-  content: "";
-  position: absolute;
-  top: 0;
-  right: clamp(340px, 46vw, 660px);
-  bottom: 0;
-  width: min(30vw, 420px);
-  background: linear-gradient(to right, var(--brand-navy) 0%, transparent 100%);
-}
-
-.site-hero-media::after {
-  /* top scrim: keeps header legible over the photo before scroll */
+  /* Only the overlay needed for text legibility. */
   content: "";
   position: absolute;
   inset: 0;
+  z-index: 1;
+  background: linear-gradient(90deg, #050d17 0%, #050d17 30%, rgba(5, 13, 23, 0.7) 46%, rgba(5, 13, 23, 0) 68%);
+}
+
+.site-hero-media::after {
+  /* top scrim: keeps header legible over the media before scroll */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   background: linear-gradient(to bottom, rgba(5, 13, 23, 0.65) 0, transparent 200px);
+}
+
+/* ---------- Brand intro (once per session) ---------- */
+.brand-intro {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  overflow: hidden;
+  background: #010a1d;
+  opacity: 1;
+  transition: opacity 0.7s var(--ease-standard);
+}
+
+.brand-intro.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.brand-intro-video {
+  /* The file has black bars baked in: clip to the real picture area and
+     feather its edges into the matching navy background. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(1500px, 140vw);
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  clip-path: inset(21.9% 13.5%);
+  object-fit: contain;
+  -webkit-mask-image: linear-gradient(to right, transparent 13.5%, #000 22%, #000 78%, transparent 86.5%), linear-gradient(to bottom, transparent 21.9%, #000 30%, #000 70%, transparent 78.1%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent 13.5%, #000 22%, #000 78%, transparent 86.5%), linear-gradient(to bottom, transparent 21.9%, #000 30%, #000 70%, transparent 78.1%);
+  mask-composite: intersect;
+}
+
+.brand-intro-skip {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.site-page.is-intro-active .site-hero-copy {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-hero-video {
+    display: none;
+  }
 }
 
 .site-hero-content {
@@ -209,10 +284,10 @@
 .site-hero-inner {
   width: var(--container-width);
   margin: 0 auto;
-  max-width: 640px;
 }
 
 .site-hero-copy {
+  max-width: min(540px, 44vw);
   animation: site-fade-up 0.7s var(--ease-standard) both;
 }
 
@@ -237,11 +312,12 @@
 
 .site-hero h1 {
   margin: 20px 0 0;
-  font-size: clamp(2.5rem, 5.4vw, 5rem);
-  line-height: 1.03;
-  letter-spacing: -0.03em;
-  max-width: 11ch;
+  font-size: clamp(2.4rem, 4.1vw, 3.9rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  max-width: 16ch;
   font-weight: 800;
+  text-wrap: balance;
 }
 
 .site-hero-subtitle {
@@ -800,7 +876,7 @@
   }
 }
 
-@media (max-width: 780px) {
+@media (max-width: 767px) {
   .site-page {
     --header-h: 72px;
   }
@@ -816,16 +892,21 @@
     min-height: 340px;
   }
 
-  .site-hero-media img {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-position: top center;
+  .site-hero-frame {
+    transform: none;
+  }
+
+  .site-hero-poster,
+  .site-hero-video {
+    object-position: 50% 8%;
   }
 
   .site-hero-media::before {
     display: none;
+  }
+
+  .brand-intro-video {
+    width: 220vw;
   }
 
   .site-hero-media::after {
@@ -837,7 +918,7 @@
     padding-bottom: 48px;
   }
 
-  .site-hero-inner {
+  .site-hero-copy {
     max-width: none;
   }
 
