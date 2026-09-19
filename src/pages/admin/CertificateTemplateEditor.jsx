@@ -11,10 +11,12 @@ import {
   getPages,
   humanize,
   isMissingCertTables,
+  lineBlock,
   newBlock,
   newPageId,
   readImageSize,
   sampleValues,
+  signatureBlocks,
   starterBlocks,
   templateVariables,
   usesPhoto,
@@ -36,6 +38,7 @@ async function uploadImage(file, folder) {
 function blockLabel(block) {
   if (block.type === "image") return "Imagem (assinatura / logo)";
   if (block.type === "photo") return "Foto do participante";
+  if (block.type === "line") return "Traço (linha)";
   const text = block.text || "(vazio)";
   return text.length > 34 ? `${text.slice(0, 34)}…` : text;
 }
@@ -165,6 +168,21 @@ export default function CertificateTemplateEditor() {
     setSelectedId(block.id);
   };
 
+  const addLine = () => {
+    const block = lineBlock();
+    patchPage((item) => ({ blocks: [...item.blocks, block] }));
+    setSelectedId(block.id);
+  };
+
+  // Traço + nome + cargo de uma vez; a 2ª, 3ª... assinatura entram em outro ponto da página.
+  const addSignature = () => {
+    const taken = page.blocks.filter((block) => /\{facilitador\d*\}/.test(block.text || "")).length;
+    const group = signatureBlocks(taken);
+    patchPage((item) => ({ blocks: [...item.blocks, ...group] }));
+    setSelectedId(group[1].id);
+    notify("success", "Assinatura adicionada. Arraste o traço, o nome e o cargo; troque “Facilitador” por outro cargo se quiser.");
+  };
+
   const removeBlock = (blockId) => {
     patchPage((item) => ({ blocks: item.blocks.filter((block) => block.id !== blockId) }));
     setSelectedId(null);
@@ -242,15 +260,17 @@ export default function CertificateTemplateEditor() {
   }, []);
 
   // ------------------------------------------------------------ salvar
-  const save = async () => {
+  const save = async (asCopy = false) => {
     if (!name.trim()) return notify("error", "Dê um nome ao modelo.");
     if (pages.length === 0) return notify("error", "Adicione ao menos uma página com a arte de fundo.");
     setSaving(true);
+    const createNew = isNew || asCopy === true;
+    // Cópia reaproveita as mesmas artes; sem o caminho, excluir um modelo não apaga o arquivo do outro.
     const pagePayload = pages.map((item) => ({
       id: item.id,
       name: item.name,
       background_url: item.background_url,
-      background_path: item.background_path || null,
+      background_path: asCopy === true ? null : item.background_path || null,
       width: item.width,
       height: item.height,
       blocks: item.blocks,
@@ -258,7 +278,7 @@ export default function CertificateTemplateEditor() {
     }));
     const first = pagePayload[0];
     const payload = {
-      name: name.trim(),
+      name: asCopy === true ? `${name.trim()} (novo)` : name.trim(),
       // a 1ª página também fica nos campos antigos (compatibilidade)
       background_url: first.background_url,
       background_path: first.background_path,
@@ -269,7 +289,7 @@ export default function CertificateTemplateEditor() {
       pages: pagePayload,
       defaults,
     };
-    const result = isNew
+    const result = createNew
       ? await supabase.from("certificate_templates").insert(payload).select("*").single()
       : await supabase.from("certificate_templates").update(payload).eq("id", id).select("*").single();
     setSaving(false);
@@ -282,7 +302,10 @@ export default function CertificateTemplateEditor() {
           : `Erro ao salvar: ${text}`);
       return;
     }
-    if (isNew) navigate(`/admin/certificados/modelo/${result.data.id}`, { replace: true, state: { created: true } });
+    if (createNew) {
+      navigate(`/admin/certificados/modelo/${result.data.id}`, { replace: !asCopy, state: { created: true } });
+      if (asCopy === true) notify("success", "Novo modelo criado a partir deste (o original continua como estava). Renomeie e ajuste o parágrafo.");
+    }
     else notify("success", "Modelo salvo. Os certificados já emitidos usam a versão atual do modelo ao serem baixados.");
   };
 
@@ -306,7 +329,8 @@ export default function CertificateTemplateEditor() {
         </div>
         <div className="cert-head-actions">
           {!isNew && <Link className="admin-button" to={`/admin/certificados?aba=emitir&modelo=${id}`}>Emitir com este modelo</Link>}
-          <button type="button" className="admin-button primary" onClick={save} disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar modelo"}</button>
+          {!isNew && <button type="button" className="admin-button" onClick={() => save(true)} disabled={saving || uploading} title="Cria outro modelo com esta arte e estes itens, sem mexer neste">Salvar como novo modelo</button>}
+          <button type="button" className="admin-button primary" onClick={() => save(false)} disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar modelo"}</button>
         </div>
       </div>
 
@@ -428,13 +452,23 @@ export default function CertificateTemplateEditor() {
                       if (value === "") return;
                       if (value === "image") pickImage("image");
                       else if (value === "photo") addPhoto();
+                      else if (value === "line") addLine();
+                      else if (value === "signature") addSignature();
                       else addPreset(Number(value));
                     }}
                   >
                     <option value="">+ Escolha o que adicionar…</option>
-                    {BLOCK_PRESETS.map((preset, index) => <option key={preset.label} value={index}>{preset.label}</option>)}
-                    <option value="image">Imagem (assinatura, logo, carimbo)</option>
-                    <option value="photo">Foto do participante</option>
+                    <optgroup label="Assinatura e traços">
+                      <option value="signature">Assinatura do facilitador (traço + nome + cargo)</option>
+                      <option value="line">Traço (linha)</option>
+                      <option value="image">Imagem (assinatura, logo, carimbo)</option>
+                    </optgroup>
+                    <optgroup label="Textos">
+                      {BLOCK_PRESETS.map((preset, index) => <option key={preset.label} value={index}>{preset.label}</option>)}
+                    </optgroup>
+                    <optgroup label="Outros">
+                      <option value="photo">Foto do participante</option>
+                    </optgroup>
                   </select>
                 </label>
               </div>
@@ -456,6 +490,34 @@ export default function CertificateTemplateEditor() {
                     <button type="button" className="adm-action is-danger" onClick={() => removeBlock(selected.id)}>Remover</button>
                   </div>
                   <p className="adm-hint">Dica: use PNG com fundo transparente para assinaturas.</p>
+                </div>
+              )}
+
+              {selected && selected.type === "line" && (
+                <div className="cert-side-block">
+                  <h3>Traço selecionado</h3>
+                  <div className="cert-grid two">
+                    <label className="cert-field">Comprimento (%)
+                      <input type="number" min="1" max="100" value={selected.width} onChange={(e) => updateBlock(selected.id, { width: clamp(Number(e.target.value) || 1, 1, 100) })} />
+                    </label>
+                    <label className="cert-field">Espessura
+                      <input type="number" step="0.5" min="0.5" max="30" value={selected.thickness ?? 2} onChange={(e) => updateBlock(selected.id, { thickness: clamp(Number(e.target.value) || 2, 0.5, 30) })} />
+                    </label>
+                    <label className="cert-field">Cor
+                      <input type="color" value={selected.color || "#111111"} onChange={(e) => updateBlock(selected.id, { color: e.target.value })} />
+                    </label>
+                    <label className="cert-field">Estilo
+                      <select value={selected.lineStyle || "solid"} onChange={(e) => updateBlock(selected.id, { lineStyle: e.target.value })}>
+                        <option value="solid">Contínuo</option>
+                        <option value="dashed">Tracejado</option>
+                        <option value="dotted">Pontilhado</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="cert-row-actions">
+                    <button type="button" className="adm-action" onClick={() => duplicateBlock(selected)}>Duplicar</button>
+                    <button type="button" className="adm-action is-danger" onClick={() => removeBlock(selected.id)}>Remover</button>
+                  </div>
                 </div>
               )}
 
@@ -485,7 +547,7 @@ export default function CertificateTemplateEditor() {
                   <h3>Texto selecionado</h3>
                   <label className="cert-field">
                     Conteúdo <small>use {"{nome}"}, {"{cpf}"}, {"{curso}"}… para campos variáveis e **duas estrelas** para negrito</small>
-                    <textarea ref={textRef} rows={4} value={selected.text} onChange={(e) => updateBlock(selected.id, { text: e.target.value })} />
+                    <textarea ref={textRef} rows={selected.align === "justify" || selected.fit === "wrap" ? 8 : 4} value={selected.text} onChange={(e) => updateBlock(selected.id, { text: e.target.value })} />
                   </label>
                   <div className="cert-row-actions">
                     <button type="button" className="adm-action" onClick={boldSelection}><strong>N</strong> Negrito no trecho selecionado</button>

@@ -26,6 +26,7 @@ export const BLOCK_PRESETS = [
   { label: "Carga horária", block: { text: "Carga horária: {carga_horaria}", x: 50, y: 68, size: 18, font: "Montserrat", weight: "600", maxWidth: 60, fit: "shrink", color: "#26384b" } },
   { label: "Data", block: { text: "{data}", x: 50, y: 76, size: 18, font: "Montserrat", weight: "400", maxWidth: 50, fit: "shrink", color: "#26384b" } },
   { label: "Código de verificação", block: { text: "Código: {codigo}", x: 12, y: 93, size: 13, font: "Montserrat", weight: "400", maxWidth: 40, fit: "shrink", color: "#5b6b7c", align: "left" } },
+  { label: "Parágrafo justificado (texto corrido)", block: { text: "Certificamos que **{nome}** concluiu o curso **{curso}**, com carga horária de **{carga_horaria}**.", x: 50, y: 52, size: 22, font: "Montserrat", weight: "400", align: "justify", maxWidth: 80, fit: "wrap", lineHeight: 1.5, color: "#111111" } },
   { label: "Texto livre", block: { text: "Seu texto aqui", x: 50, y: 50, size: 20, font: "Montserrat", weight: "400", maxWidth: 60, fit: "wrap", color: "#26384b" } },
 ];
 
@@ -56,12 +57,41 @@ export function starterBlocks(kind) {
       newBlock({ type: "photo", x: 82.9, y: 66.3, width: 28.7, ratio: 1.37, radius: 3, text: "" }),
     ];
   }
+  if (kind === "paragrafo") {
+    return [
+      newBlock({
+        text: "Certificamos que **{nome}** participou de **{curso}**, realizado em **{data}**, com carga horária de **{carga_horaria}**.",
+        x: 50, y: 48, size: 24, font: "Montserrat", align: "justify", maxWidth: 80, fit: "wrap", lineHeight: 1.5, color: "#111111",
+      }),
+      ...signatureBlocks(0),
+      newBlock({ text: "Código: {codigo}", x: 4, y: 96.5, size: 11, font: "Montserrat", align: "left", maxWidth: 40, color: "#5b6b7c" }),
+    ];
+  }
   return [];
+}
+
+// Traço (linha) para assinatura, divisórias ou sublinhados. x/y = centro; width em % da largura da arte.
+export function lineBlock(partial = {}) {
+  return newBlock({ type: "line", text: "", x: 50, y: 84, width: 24, thickness: 2, color: "#111111", lineStyle: "solid", ...partial });
+}
+
+// Assinatura completa: traço + nome do facilitador + cargo. Cada assinatura extra ocupa outro ponto da
+// página e usa o próprio campo ({facilitador2}, {facilitador3}...), para trocar o nome por certificado.
+const SIGNATURE_SLOTS = [50, 25, 75, 12, 88];
+export function signatureBlocks(count = 0) {
+  const x = SIGNATURE_SLOTS[count % SIGNATURE_SLOTS.length];
+  const key = count === 0 ? "facilitador" : `facilitador${count + 1}`;
+  return [
+    lineBlock({ x, y: 84 }),
+    newBlock({ text: `{${key}}`, x, y: 86.6, size: 15, font: "Montserrat", weight: "700", maxWidth: 28, color: "#111111" }),
+    newBlock({ text: "Facilitador", x, y: 89.2, size: 12, font: "Montserrat", weight: "400", maxWidth: 28, color: "#26384b" }),
+  ];
 }
 
 export const PAGE_STARTERS = [
   { id: "certificado", label: "Certificado com parágrafo (como o modelo do IMAPH)" },
   { id: "carteirinha", label: "Carteirinha SOCORRISTA (campos + foto, como o modelo do IMAPH)" },
+  { id: "paragrafo", label: "Parágrafo novo + assinatura do facilitador (você escreve o texto)" },
   { id: "branco", label: "Página em branco" },
 ];
 
@@ -168,6 +198,7 @@ export function varKey(name) {
 
 const LABELS = {
   curso: "Curso",
+  facilitador: "Facilitador",
   carga_horaria: "Carga horária",
   data: "Data",
   data_conclusao: "Data de conclusão",
@@ -190,6 +221,8 @@ const LABELS = {
 
 export function humanize(key) {
   if (LABELS[key]) return LABELS[key];
+  const numbered = /^(facilitador)(\d+)$/.exec(String(key));
+  if (numbered) return `Facilitador ${numbered[2]}`;
   const text = String(key || "").replace(/_/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -430,6 +463,28 @@ async function drawImageBlock(ctx, block, canvasW, canvasH) {
   return { id: block.id, box: { x, y, w, h } };
 }
 
+function drawLineBlock(ctx, block, canvasW, canvasH) {
+  const w = (Number(block.width) / 100) * canvasW;
+  const thick = Math.max(1, (Number(block.thickness) || 2) * (canvasW / 1000));
+  const cx = (Number(block.x) / 100) * canvasW;
+  const cy = (Number(block.y) / 100) * canvasH;
+  ctx.save();
+  ctx.globalAlpha = block.opacity === undefined ? 1 : Number(block.opacity);
+  ctx.strokeStyle = block.color || "#111111";
+  ctx.lineWidth = thick;
+  ctx.lineCap = block.lineStyle === "dotted" ? "round" : "butt";
+  if (block.lineStyle === "dashed") ctx.setLineDash([thick * 6, thick * 4]);
+  else if (block.lineStyle === "dotted") ctx.setLineDash([0, thick * 2.5]);
+  ctx.beginPath();
+  ctx.moveTo(cx - w / 2, cy);
+  ctx.lineTo(cx + w / 2, cy);
+  ctx.stroke();
+  ctx.restore();
+  // a caixa de arraste é mais alta que o traço para ser fácil de pegar
+  const hitH = Math.max(thick, canvasW * 0.014);
+  return { id: block.id, box: { x: cx - w / 2, y: cy - hitH / 2, w, h: hitH } };
+}
+
 function roundRect(ctx, x, y, w, h, r) {
   const radius = Math.min(r, w / 2, h / 2);
   ctx.beginPath();
@@ -497,6 +552,7 @@ export async function renderCertificate({ template, page, pageIndex = 0, values,
     const type = block.type || "text";
     if (type === "image") metrics.push(await drawImageBlock(ctx, block, width, height));
     else if (type === "photo") metrics.push(await drawPhotoBlock(ctx, block, values, width, height, placeholders));
+    else if (type === "line") metrics.push(drawLineBlock(ctx, block, width, height));
     else metrics.push(drawBlock(ctx, block, values, width, height));
   }
 
