@@ -168,12 +168,11 @@
 }
 
 .site-hero-frame {
-  /* The subject is centered in the source media. Shifting the frame to the
-     right opens the left side for the copy; the navy gradient below hides
-     the frame edge. */
+  /* The subject already sits on the right of the source media, so the frame
+     is not shifted; the navy gradient below opens the left side for the copy. */
   position: absolute;
   inset: 0;
-  transform: translateX(min(16vw, 260px));
+  transform: none;
 }
 
 .site-hero-poster,
