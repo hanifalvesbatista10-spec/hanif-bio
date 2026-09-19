@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { icons } from "../../components/admin/AdminIcons";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({ products: 0, feedbacks: 0, published: 0 });
@@ -34,9 +35,10 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <div className="admin-build-confirmation">
-        V4 comercial ativa: site público, produtos, feedbacks e conteúdo geral sob seu controle.
-      </div>
+      <header className="adm-page-head">
+        <h2>Visão geral</h2>
+        <p>Acompanhe os números principais e vá direto ao que precisa ser atualizado.</p>
+      </header>
 
       {error && (
         <div className="admin-alert error">
@@ -44,42 +46,41 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <section className="admin-stats">
-        <article><span>Produtos</span><strong>{stats.products}</strong></article>
-        <article><span>Feedbacks</span><strong>{stats.feedbacks}</strong></article>
-        <article><span>Publicados</span><strong>{stats.published}</strong></article>
+      <section className="adm-stats" aria-label="Indicadores">
+        <article className="adm-stat">
+          <span className="adm-stat-icon">{icons.products}</span>
+          <div><span>Produtos</span><strong>{stats.products}</strong></div>
+        </article>
+        <article className="adm-stat">
+          <span className="adm-stat-icon">{icons.feedbacks}</span>
+          <div><span>Feedbacks</span><strong>{stats.feedbacks}</strong></div>
+        </article>
+        <article className="adm-stat">
+          <span className="adm-stat-icon">{icons.content}</span>
+          <div><span>Publicados</span><strong>{stats.published}</strong></div>
+        </article>
       </section>
 
-      <section className="admin-welcome">
-        <h2>Controle do site</h2>
+      <section className="adm-card">
+        <h3>Controle do site</h3>
         <p>Gerencie o que o visitante vê sem precisar alterar código ou fazer novo deploy para cada mudança de conteúdo.</p>
 
-        <div className="admin-actions">
-          <button
-            type="button"
-            className="admin-button primary"
-            onClick={() => navigate("/admin/site")}
-          >
+        <div className="adm-actions">
+          <button type="button" className="admin-button primary" onClick={() => navigate("/admin/site")}>
             Editar página inicial
           </button>
-
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => navigate("/admin/produtos/novo")}
-          >
+          <button type="button" className="admin-button" onClick={() => navigate("/admin/produtos/novo")}>
             + Novo produto
           </button>
-
-          <button
-            type="button"
-            className="admin-button"
-            onClick={() => navigate("/admin/feedbacks/novo")}
-          >
+          <button type="button" className="admin-button" onClick={() => navigate("/admin/feedbacks/novo")}>
             + Novo feedback
           </button>
         </div>
       </section>
+
+      <p className="adm-meta adm-note">
+        Versão comercial ativa: site público, produtos, feedbacks e conteúdo geral sob seu controle.
+      </p>
     </>
   );
 }

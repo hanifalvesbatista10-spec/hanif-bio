@@ -1,0 +1,591 @@
+/* ==========================================================================
+   Painel administrativo — shell responsivo (sidebar desktop + drawer mobile)
+   Usa os tokens de marca de tokens.css. Prefixo adm- para não colidir.
+   ========================================================================== */
+
+.adm-shell {
+  --adm-sidebar-w: 272px;
+  --adm-header-h: 64px;
+  --adm-bg: #f4f6f9;
+  --adm-surface: #ffffff;
+  --adm-line: var(--brand-border, #e4e9ee);
+  --adm-text: var(--brand-navy, #071426);
+  --adm-muted: #5d7085;
+  display: grid;
+  grid-template-columns: var(--adm-sidebar-w) minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: var(--font-sans, Inter, system-ui, sans-serif);
+}
+
+body:has(.adm-shell) {
+  margin: 0;
+}
+
+html.adm-scroll-lock,
+html.adm-scroll-lock body {
+  overflow: hidden;
+}
+
+/* ---------- Ícones ---------- */
+.adm-icon {
+  flex: 0 0 auto;
+  display: block;
+}
+
+/* ---------- Marca ---------- */
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.adm-brand-mark {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--brand-navy, #071426);
+}
+
+.adm-brand-mark img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+}
+
+.adm-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.adm-brand-text strong {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--adm-text);
+}
+
+.adm-brand-text small {
+  margin-top: 2px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--adm-muted);
+}
+
+/* ---------- Sidebar (desktop) ---------- */
+.adm-sidebar {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 14px 14px;
+  overflow: hidden;
+  background: var(--adm-surface);
+  border-right: 1px solid var(--adm-line);
+}
+
+.adm-sidebar .adm-brand {
+  flex: 0 0 auto;
+  padding: 0 6px 18px;
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.adm-nav {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.adm-nav-group {
+  display: grid;
+  gap: 2px;
+}
+
+.adm-nav-label {
+  margin: 0 0 4px;
+  padding: 0 12px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8092a5;
+}
+
+.adm-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #3d5166;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.adm-nav-link span {
+  min-width: 0;
+}
+
+.adm-nav-link:hover {
+  background: #eef2f6;
+  color: var(--adm-text);
+}
+
+.adm-nav-link.is-active {
+  background: var(--brand-navy, #071426);
+  color: #fff;
+}
+
+.adm-nav-link.is-danger:hover {
+  background: #fff0f2;
+  color: var(--brand-red, #d6152d);
+}
+
+.adm-nav-foot {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--adm-line);
+}
+
+.adm-shell :is(.adm-nav-link, .adm-menu-button, .adm-icon-button):focus-visible {
+  outline: 2px solid var(--brand-red, #d6152d);
+  outline-offset: 2px;
+}
+
+/* ---------- Corpo, header e conteúdo ---------- */
+.adm-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.adm-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--adm-header-h);
+  padding: 0 28px;
+  background: var(--adm-surface);
+  border-bottom: 1px solid var(--adm-line);
+}
+
+.adm-header-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 1.1rem;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.adm-header-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.adm-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #eef2f6;
+  color: var(--adm-text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.adm-header-name {
+  max-width: 180px;
+  overflow: hidden;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--adm-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.adm-menu-button,
+.adm-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--adm-line);
+  border-radius: 10px;
+  background: var(--adm-surface);
+  color: var(--adm-text);
+  cursor: pointer;
+}
+
+.adm-menu-button {
+  display: none;
+}
+
+.adm-main {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 28px 28px 56px;
+}
+
+.adm-content {
+  min-width: 0;
+  width: 100%;
+  max-width: min(100%, 1240px);
+  margin: 0 auto;
+}
+
+/* ---------- Drawer + backdrop (só mobile) ---------- */
+.adm-backdrop,
+.adm-drawer {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .adm-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-sidebar {
+    display: none;
+  }
+
+  .adm-menu-button {
+    display: inline-grid;
+  }
+
+  .adm-header {
+    padding: 0 12px;
+  }
+
+  .adm-header-name {
+    display: none;
+  }
+
+  .adm-main {
+    padding: 18px 14px 40px;
+  }
+
+  .adm-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    background: rgba(3, 10, 22, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+  }
+
+  .adm-backdrop.is-open {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.25s ease, visibility 0s;
+  }
+
+  .adm-drawer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    width: 82vw;
+    max-width: 320px;
+    height: 100vh;
+    height: 100dvh;
+    padding: 16px 14px 14px;
+    overflow: hidden;
+    background: var(--adm-surface);
+    border-right: 1px solid var(--adm-line);
+    box-shadow: 12px 0 40px rgba(3, 10, 22, 0.18);
+    transform: translateX(-102%);
+    visibility: hidden;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.28s;
+  }
+
+  .adm-drawer.is-open {
+    transform: translateX(0);
+    visibility: visible;
+    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+  }
+
+  .adm-drawer-head {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--adm-line);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-backdrop,
+  .adm-drawer,
+  .adm-drawer.is-open,
+  .adm-nav-link {
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   Sistema visual das páginas internas (normaliza as classes já existentes
+   sem alterar a lógica de nenhuma página)
+   ========================================================================== */
+
+.adm-content .admin-section {
+  margin-top: 0;
+}
+
+/* Cabeçalhos de página */
+.adm-content :is(.admin-section-head, .products-admin-header, .pe4-head, .site-cms-head, .forms-head, .fb-head, .fr-head, .event-admin-head) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px 18px;
+  margin-bottom: 22px;
+}
+
+.adm-content :is(.admin-section-head, .products-admin-header, .pe4-head, .site-cms-head, .forms-head, .fb-head, .fr-head, .event-admin-head) h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 1.1rem + 1vw, 1.8rem);
+  line-height: 1.2;
+  color: var(--adm-text);
+  overflow-wrap: break-word;
+}
+
+.adm-content :is(.admin-section-head, .products-admin-header, .pe4-head, .site-cms-head, .forms-head, .fb-head, .fr-head, .event-admin-head) span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--brand-red, #d6152d);
+}
+
+/* Cards e superfícies */
+.adm-content :is(.admin-form, .admin-table-wrap, .admin-empty, .site-cms-card, .pe4-card, .fb-card, .form-card, .product-manage-card, .fr-list, .fr-detail, .event-table-wrap, .fr-stat) {
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: var(--adm-surface);
+  box-shadow: 0 1px 2px rgba(7, 20, 38, 0.05);
+}
+
+/* Contenção de largura */
+.adm-content :where(div, section, article, form, label, header, nav, ul, li, fieldset) {
+  min-width: 0;
+}
+
+.adm-content :where(img, video, canvas, svg) {
+  max-width: 100%;
+}
+
+.adm-content :where(h1, h2, h3, h4, p, strong, small, span, td, th, label, a, li) {
+  overflow-wrap: break-word;
+}
+
+.adm-content :is(.admin-table-wrap, .event-table-wrap) {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.adm-content :is(.admin-empty, .products-empty, .event-empty) {
+  padding: 32px 20px;
+  text-align: center;
+  color: var(--adm-muted);
+}
+
+/* Alertas */
+.adm-content .admin-alert {
+  margin: 0 0 16px;
+  border: 1px solid #cfe0f6;
+  border-radius: 12px;
+}
+
+.adm-content .admin-alert.error {
+  border-color: #f1c8cf;
+}
+
+/* Dashboard */
+.adm-page-head {
+  margin-bottom: 22px;
+}
+
+.adm-page-head h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 1.1rem + 1vw, 1.85rem);
+  line-height: 1.2;
+}
+
+.adm-page-head p {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--adm-muted);
+  line-height: 1.6;
+}
+
+.adm-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.adm-stat {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: var(--adm-surface);
+  box-shadow: 0 1px 2px rgba(7, 20, 38, 0.05);
+}
+
+.adm-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: 0 0 auto;
+  border-radius: 12px;
+  background: #eef2f6;
+  color: var(--adm-text);
+}
+
+.adm-stat span {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--adm-muted);
+}
+
+.adm-stat strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 1.8rem;
+  line-height: 1.1;
+}
+
+.adm-card {
+  padding: 22px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: var(--adm-surface);
+  box-shadow: 0 1px 2px rgba(7, 20, 38, 0.05);
+}
+
+.adm-card + .adm-card {
+  margin-top: 16px;
+}
+
+.adm-card h3 {
+  margin: 0 0 6px;
+  font-size: 1.1rem;
+}
+
+.adm-card p {
+  margin: 0;
+  color: var(--adm-muted);
+  line-height: 1.6;
+}
+
+.adm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.adm-meta {
+  font-size: 0.82rem;
+  color: var(--adm-muted);
+}
+
+/* Botões e campos (área de toque) */
+.adm-content :is(.admin-button, .table-actions a, .table-actions button, .admin-toolbar button) {
+  min-height: 44px;
+}
+
+@media (max-width: 767px) {
+  .adm-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-card {
+    padding: 18px;
+  }
+
+  .adm-content :is(.admin-button, .table-actions a, .table-actions button) {
+    min-height: 44px;
+  }
+
+  .adm-content :is(input, select, textarea) {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .adm-content textarea {
+    min-height: 88px;
+  }
+
+  .adm-content .form-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-content :is(.admin-section-head, .products-admin-header, .pe4-head, .site-cms-head, .forms-head, .fb-head, .fr-head, .event-admin-head) {
+    align-items: stretch;
+  }
+}
+
+.adm-note {
+  margin: 16px 0 0;
+}
