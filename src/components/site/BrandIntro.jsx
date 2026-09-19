@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 
 const SESSION_KEY = "ha_intro_seen";
-const INTRO_SRC = "/media/hero/brand-intro.mp4";
-// HEVC: o arquivo de abertura está nesse codec. Sem suporte, o site abre direto.
-const INTRO_CODEC = 'video/mp4; codecs="hvc1.1.6.L120.B0"';
+const INTRO_SRC = "/media/hero/brand-intro-optimized.mp4";
+const INTRO_CODEC = 'video/mp4; codecs="avc1.640028"';
 const START_TIMEOUT_MS = 3500;
 const HARD_TIMEOUT_MS = 9000;
 const FADE_MS = 700;

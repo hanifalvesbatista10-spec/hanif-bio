@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
 const DESKTOP = {
-  video: "/media/hero/hero-desktop.mp4",
+  video: "/media/hero/hero-desktop-optimized.mp4",
   poster: "/media/hero/hero-desktop-poster.webp",
-  // O arquivo desktop está em HEVC: sem suporte do navegador, fica só o poster.
-  codec: 'video/mp4; codecs="hvc1.1.6.L153.B0"',
+  codec: 'video/mp4; codecs="avc1.640028"',
 };
 const MOBILE = {
   video: "/media/hero/hero-mobile.mp4",

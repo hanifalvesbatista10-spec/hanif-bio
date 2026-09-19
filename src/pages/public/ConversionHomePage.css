@@ -230,19 +230,17 @@
 }
 
 .brand-intro-video {
-  /* The file has black bars baked in: clip to the real picture area and
-     feather its edges into the matching navy background. */
+  /* Source is already a clean 16:9 picture (no baked-in bars): fit it fully
+     inside the viewport and feather its edges into the matching navy. */
   position: absolute;
   top: 50%;
   left: 50%;
-  width: min(1500px, 140vw);
-  aspect-ratio: 1 / 1;
+  width: min(100vw, 177.78vh);
+  aspect-ratio: 16 / 9;
   transform: translate(-50%, -50%);
-  clip-path: inset(21.9% 13.5%);
-  object-fit: contain;
-  -webkit-mask-image: linear-gradient(to right, transparent 13.5%, #000 22%, #000 78%, transparent 86.5%), linear-gradient(to bottom, transparent 21.9%, #000 30%, #000 70%, transparent 78.1%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 5%, #000 95%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 6%, #000 94%, transparent 100%);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to right, transparent 13.5%, #000 22%, #000 78%, transparent 86.5%), linear-gradient(to bottom, transparent 21.9%, #000 30%, #000 70%, transparent 78.1%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 5%, #000 95%, transparent 100%), linear-gradient(to bottom, transparent 0%, #000 6%, #000 94%, transparent 100%);
   mask-composite: intersect;
 }
 
@@ -906,7 +904,7 @@
   }
 
   .brand-intro-video {
-    width: 220vw;
+    width: 250vw;
   }
 
   .site-hero-media::after {
