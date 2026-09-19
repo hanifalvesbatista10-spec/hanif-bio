@@ -4,7 +4,7 @@ import Button from "../ui/Button";
 import Container from "../ui/Container";
 import EcgLine from "../ui/EcgLine";
 
-export default function Hero({ settings, introActive }) {
+export default function Hero({ settings, introActive, pending = false }) {
   return (
     <section className="site-hero hx-hero" id="top" aria-label="Apresentação">
       <HeroMedia
@@ -17,7 +17,7 @@ export default function Hero({ settings, introActive }) {
       </div>
 
       <Container className="hx-hero-inner">
-        <div className="hx-hero-copy">
+        <div className={`hx-hero-copy ${pending ? "is-pending" : ""}`}>
           <span className="hx-identity">SAMU 192 · Urgência e Emergência</span>
           <h1>
             <Accent text={settings.hero_title} fallback={/situações críticas/i} />

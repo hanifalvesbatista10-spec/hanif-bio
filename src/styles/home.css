@@ -353,6 +353,12 @@
   pointer-events: none;
 }
 
+/* Até os textos do admin chegarem, a copy fica invisível (não mostra o texto padrão para trocar depois). */
+.hx-hero-copy.is-pending {
+  opacity: 0;
+  animation: none;
+}
+
 .site-page.is-intro-active .hx-hero-copy {
   animation-play-state: paused;
 }

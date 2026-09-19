@@ -65,6 +65,8 @@ const fallbackSettings = {
 
 export default function ConversionHomePage() {
   const [settings, setSettings] = useState(fallbackSettings);
+  // Enquanto os textos do admin não chegam, a copy do Hero fica oculta: assim o texto padrão nunca aparece para trocar depois.
+  const [settingsReady, setSettingsReady] = useState(false);
   const [products, setProducts] = useState([]);
   const [content, setContent] = useState([]);
   const [faqs, setFaqs] = useState([]);
@@ -73,9 +75,18 @@ export default function ConversionHomePage() {
   const [introActive, setIntroActive] = useState(playIntro);
 
   useEffect(() => {
+    // Textos primeiro e em separado: o Hero aparece assim que eles chegam, sem esperar produtos e FAQ.
+    const loadSettings = async () => {
+      try {
+        const { data } = await supabase.from("site_settings").select("*").eq("id", 1).maybeSingle();
+        if (data) setSettings((current) => ({ ...current, ...data }));
+      } finally {
+        setSettingsReady(true);
+      }
+    };
+
     const load = async () => {
-      const [settingsResult, productsResult, contentResult, faqResult] = await Promise.all([
-        supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(),
+      const [productsResult, contentResult, faqResult] = await Promise.all([
         supabase
           .from("products")
           .select("*")
@@ -95,10 +106,6 @@ export default function ConversionHomePage() {
           .order("display_order", { ascending: true }),
       ]);
 
-      if (settingsResult.data) {
-        setSettings((current) => ({ ...current, ...settingsResult.data }));
-      }
-
       if (!productsResult.error) {
         setProducts(productsResult.data || []);
       }
@@ -114,6 +121,7 @@ export default function ConversionHomePage() {
       setLoading(false);
     };
 
+    loadSettings();
     load();
   }, []);
 
@@ -133,7 +141,7 @@ export default function ConversionHomePage() {
       {playIntro && <BrandIntro onFinish={() => setIntroActive(false)} />}
       <SiteHeader primaryLabel={settings.hero_primary_label || "Ver treinamentos"} />
 
-      <Hero settings={settings} introActive={introActive} />
+      <Hero settings={settings} introActive={introActive} pending={!settingsReady} />
 
       <main>
         <ExpertiseStrip />
