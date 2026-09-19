@@ -122,7 +122,7 @@ export default function PublicFeedbacks({ limit = 8, compact = false }) {
         .public-feedback-stars span.filled{color:#f5a623}
         .public-feedback-card h3{margin:0 0 9px;color:#0b1b2d;font-size:1.08rem;line-height:1.35}
         .public-feedback-quote{flex:1;margin:0;color:#4d6074;font-size:.94rem;line-height:1.72}
-        .public-feedback-result{margin-top:17px;padding:12px 14px;border-left:4px solid #d6162e;border-radius:0 11px 11px 0;background:#f7f9fb;color:#23384e;font-size:.83rem;line-height:1.5}
+        .public-feedback-result{margin-top:17px;padding:12px 14px;border:1px solid rgba(214,22,46,.18);border-radius:11px;background:#f7f9fb;color:#23384e;font-size:.83rem;line-height:1.5}
         .public-feedback-footer{display:flex;justify-content:space-between;gap:12px;margin-top:18px;padding-top:15px;border-top:1px solid rgba(8,31,54,.08);color:#8391a0;font-size:.72rem}
         .public-feedback-featured-label{position:absolute;top:16px;right:16px;padding:6px 9px;border-radius:999px;background:rgba(214,22,46,.09);color:#c3142a;font-size:.61rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
         .public-feedback-state{max-width:760px;margin:0 auto;padding:26px;border-radius:18px;text-align:center;background:#fff;border:1px solid rgba(8,31,54,.08);color:#64768a}

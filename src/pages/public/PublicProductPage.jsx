@@ -259,7 +259,7 @@ export default function PublicProductPage() {
   return (
     <main className="public-product-page">
       <style>{`
-        .public-product-page{min-height:100vh;padding:90px 0 110px;background:#f4f7fa;color:#071426}.public-product-shell{width:min(1120px,calc(100% - 30px));margin:0 auto}.public-product-back{display:inline-flex;margin-bottom:18px;color:#31485e;font-weight:900}.public-product-hero{overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(7,20,38,.12)}.public-product-cover{width:100%;max-height:600px;aspect-ratio:16/8;object-fit:cover;background:#e8eef3}.public-product-content{display:grid;grid-template-columns:1fr .42fr;gap:42px;padding:42px}.public-product-category{color:#d6152d;font-size:.74rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.public-product-copy h1{margin:10px 0 16px;color:#071426;font-size:clamp(2.3rem,5vw,4.8rem);line-height:1.03;letter-spacing:-.045em}.public-product-short{margin:0;color:#506478;font-size:1.1rem;line-height:1.75}.public-product-full{margin-top:26px;padding-top:24px;border-top:1px solid #e1e7ed;color:#485d72;line-height:1.8;white-space:pre-line}.public-product-buybox{align-self:start;position:sticky;top:92px;padding:27px;border-radius:20px;background:#071426;color:#fff}.public-product-buybox small{color:#9fb2c4;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.public-product-price{margin:12px 0 21px}.public-product-price strong{display:block;color:#fff;font-size:2rem}.public-product-price del{color:#98a8b8}.public-product-button{min-height:56px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#d6152d;color:#fff;font-weight:900;text-align:center;text-decoration:none}.public-product-help{margin:13px 0 0;color:#aebcca;font-size:.77rem;line-height:1.5;text-align:center}.public-product-loading,.public-product-not-found{min-height:100vh;display:grid;place-content:center;text-align:center;background:#f4f7fa;color:#071426;padding:30px}.public-product-not-found a{margin-top:12px;color:#d6152d;font-weight:900}@media(max-width:820px){.public-product-content{grid-template-columns:1fr}.public-product-buybox{position:static}}@media(max-width:620px){.public-product-page{padding-top:72px}.public-product-cover{aspect-ratio:16/10}.public-product-content{padding:25px 20px}.public-product-hero{border-radius:20px}.public-product-copy h1{font-size:2.5rem}}
+        .public-product-page{min-height:100vh;padding:90px 0 110px;background:#f4f7fa;color:#071426}.public-product-shell{width:min(1120px,calc(100% - 30px));margin:0 auto}.public-product-back{display:inline-flex;margin-bottom:18px;color:#31485e;font-weight:900}.public-product-hero{overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(7,20,38,.12)}.public-product-cover{width:100%;max-height:600px;aspect-ratio:16/8;object-fit:cover;background:#e8eef3}.public-product-content{display:grid;grid-template-columns:1fr .42fr;gap:42px;padding:42px}.public-product-category{color:#d6152d;font-size:.74rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.public-product-copy h1{margin:10px 0 16px;color:#071426;font-size:clamp(2.3rem,5vw,4.8rem);line-height:1.03;letter-spacing:-.045em}.public-product-short{margin:0;color:#506478;font-size:1.1rem;line-height:1.75}.public-product-full{margin-top:26px;padding-top:24px;border-top:1px solid #e1e7ed;color:#485d72;line-height:1.8;white-space:pre-line}.public-product-buybox{align-self:start;position:sticky;top:92px;padding:27px;border-radius:20px;background:#071426;color:#fff}.public-product-buybox small{color:#9fb2c4;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.public-product-price{margin:12px 0 21px}.public-product-price strong{display:block;color:#fff;font-size:2rem}.public-product-price del{color:#98a8b8}.public-product-button{min-height:56px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#d6152d;color:#fff;font-weight:900;text-align:center;text-decoration:none}.public-product-help{margin:13px 0 0;color:#aebcca;font-size:.77rem;line-height:1.5;text-align:center}.public-product-loading,.public-product-not-found{min-height:100vh;display:grid;place-content:center;text-align:center;background:#f4f7fa;color:#071426;padding:30px}.public-product-not-found a{margin-top:12px;color:#d6152d;font-weight:900}.public-product-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.public-product-tags span{padding:5px 10px;border-radius:999px;background:#f4f7fa;border:1px solid #e1e7ed;font-size:.72rem;font-weight:700;color:#53677b}.public-product-faq{margin-top:34px;display:grid;gap:12px}.public-product-faq h2{margin:0 0 4px;color:#071426;font-size:1.5rem}.public-product-faq details{border:1px solid #e1e7ed;border-radius:15px;background:#fff;padding:16px 18px}.public-product-faq summary{cursor:pointer;font-weight:900;color:#183047}.public-product-faq p{color:#53677b;line-height:1.7;margin:12px 0 0}@media(max-width:820px){.public-product-content{grid-template-columns:1fr}.public-product-buybox{position:static}}@media(max-width:620px){.public-product-page{padding-top:72px}.public-product-cover{aspect-ratio:16/10}.public-product-content{padding:25px 20px}.public-product-hero{border-radius:20px}.public-product-copy h1{font-size:2.5rem}}
       `}</style>
       <div className="public-product-shell">
         <Link className="public-product-back" to="/">← Voltar para o site</Link>
@@ -270,6 +270,13 @@ export default function PublicProductPage() {
               <span className="public-product-category">{product.category || "Produto educacional"}</span>
               <h1>{product.title}</h1>
               <p className="public-product-short">{product.short_description}</p>
+              {(product.duration || product.format || product.availability_status) && (
+                <div className="public-product-tags">
+                  {product.duration && <span>{product.duration}</span>}
+                  {product.format && <span>{product.format}</span>}
+                  {product.availability_status && <span>{product.availability_status}</span>}
+                </div>
+              )}
               {product.full_description && <div className="public-product-full">{product.full_description}</div>}
             </div>
             <aside className="public-product-buybox">
@@ -285,6 +292,18 @@ export default function PublicProductPage() {
             </aside>
           </div>
         </article>
+
+        {Array.isArray(product.faq) && product.faq.length > 0 && (
+          <div className="public-product-faq">
+            <h2>Perguntas frequentes</h2>
+            {product.faq.map((item, index) => (
+              <details key={index}>
+                <summary>{item.question}</summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );

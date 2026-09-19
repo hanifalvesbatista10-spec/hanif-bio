@@ -15,6 +15,10 @@ const emptyForm = {
   status: "active",
   is_featured: true,
   display_order: 0,
+  faq: [],
+  format: "",
+  duration: "",
+  availability_status: "",
 };
 
 const asText = (value) => (value === null || value === undefined ? "" : String(value));
@@ -35,6 +39,12 @@ function normalizeProduct(data = {}) {
     status: asText(data.status) || "active",
     is_featured: Boolean(data.is_featured),
     display_order: data.display_order ?? 0,
+    format: asText(data.format),
+    duration: asText(data.duration),
+    availability_status: asText(data.availability_status),
+    faq: Array.isArray(data.faq)
+      ? data.faq.map((item) => ({ question: asText(item?.question), answer: asText(item?.answer) }))
+      : [],
   };
 }
 
@@ -99,6 +109,22 @@ export default function ProductEditorPageV4() {
     });
   };
 
+  const updateFaqItem = (index, key, value) => {
+    setForm((current) => {
+      const faq = current.faq.slice();
+      faq[index] = { ...faq[index], [key]: value };
+      return { ...current, faq };
+    });
+  };
+
+  const addFaqItem = () => {
+    setForm((current) => ({ ...current, faq: [...current.faq, { question: "", answer: "" }] }));
+  };
+
+  const removeFaqItem = (index) => {
+    setForm((current) => ({ ...current, faq: current.faq.filter((_, i) => i !== index) }));
+  };
+
   const uploadCover = async () => {
     if (!imageFile) return asText(form.cover_url) || null;
     if (!imageFile.type.startsWith("image/")) throw new Error("Selecione uma imagem válida.");
@@ -144,12 +170,18 @@ export default function ProductEditorPageV4() {
         full_description: asText(form.full_description).trim() || null,
         cover_url: coverUrl,
         category: asText(form.category).trim() || null,
+        format: asText(form.format).trim() || null,
+        duration: asText(form.duration).trim() || null,
+        availability_status: asText(form.availability_status).trim() || null,
         price: parseMoney(form.price),
         promotional_price: parseMoney(form.promotional_price),
         checkout_url: checkoutUrl,
         status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
+        faq: (form.faq || [])
+          .map((item) => ({ question: asText(item.question).trim(), answer: asText(item.answer).trim() }))
+          .filter((item) => item.question && item.answer),
       };
 
       const result = editing
@@ -173,6 +205,8 @@ export default function ProductEditorPageV4() {
       setMessage(
         text.includes("row-level security") || text.includes("permission denied")
           ? "O Supabase bloqueou a gravação por permissão. Execute o arquivo 06_v4_fix_products_permissions.sql no SQL Editor e tente novamente."
+          : text.includes("column") && text.includes("does not exist")
+          ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
           : text
       );
     } finally {
@@ -185,7 +219,7 @@ export default function ProductEditorPageV4() {
   return (
     <section className="admin-section">
       <style>{`
-        .pe4-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.pe4-head h2{margin:4px 0 0;color:#071426;font-size:2rem}.pe4-head span{color:#d6152d;font-size:.72rem;font-weight:900;letter-spacing:.12em}.pe4-back{border:1px solid #dbe3eb;border-radius:11px;background:#fff;padding:11px 15px;font-weight:900;cursor:pointer}.pe4-card{background:#fff;border:1px solid #e0e7ee;border-radius:20px;padding:24px;box-shadow:0 14px 40px rgba(7,20,38,.06)}.pe4-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pe4-field{display:grid;gap:7px}.pe4-field.full{grid-column:1/-1}.pe4-field label{font-size:.8rem;font-weight:900;color:#273d53}.pe4-field input,.pe4-field textarea,.pe4-field select{width:100%;border:1px solid #d6e0e9;border-radius:11px;padding:12px 13px;font:inherit;color:#13283c;background:#fff}.pe4-field textarea{min-height:105px;resize:vertical}.pe4-check{display:flex;align-items:center;gap:9px;font-weight:900;color:#273d53}.pe4-check input{width:18px;height:18px}.pe4-preview{margin-top:8px;max-width:360px;border-radius:14px;overflow:hidden;border:1px solid #e1e7ed}.pe4-preview img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}.pe4-actions{display:flex;gap:10px;margin-top:22px}.pe4-save{flex:1;min-height:52px;border:0;border-radius:12px;background:#d6152d;color:#fff;font-weight:950;cursor:pointer}.pe4-save:disabled{opacity:.55}.pe4-cancel{min-height:52px;border:1px solid #dbe3eb;border-radius:12px;background:#fff;padding:0 18px;font-weight:900;cursor:pointer}.pe4-message{margin-bottom:18px;padding:14px 16px;border-radius:12px;font-weight:850}.pe4-message.success{background:#edf8f1;color:#236842;border:1px solid #c8e5d2}.pe4-message.error{background:#fff0f2;color:#a60d25;border:1px solid #f1c8cf}.pe4-help{font-size:.74rem;color:#7b8c9c}@media(max-width:700px){.pe4-head{align-items:stretch;flex-direction:column}.pe4-grid{grid-template-columns:1fr}.pe4-field.full{grid-column:auto}.pe4-actions{flex-direction:column}.pe4-card{padding:18px}}
+        .pe4-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.pe4-head h2{margin:4px 0 0;color:#071426;font-size:2rem}.pe4-head span{color:#d6152d;font-size:.72rem;font-weight:900;letter-spacing:.12em}.pe4-back{border:1px solid #dbe3eb;border-radius:11px;background:#fff;padding:11px 15px;font-weight:900;cursor:pointer}.pe4-card{background:#fff;border:1px solid #e0e7ee;border-radius:20px;padding:24px;box-shadow:0 14px 40px rgba(7,20,38,.06)}.pe4-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pe4-field{display:grid;gap:7px}.pe4-field.full{grid-column:1/-1}.pe4-field label{font-size:.8rem;font-weight:900;color:#273d53}.pe4-field input,.pe4-field textarea,.pe4-field select{width:100%;border:1px solid #d6e0e9;border-radius:11px;padding:12px 13px;font:inherit;color:#13283c;background:#fff}.pe4-field textarea{min-height:105px;resize:vertical}.pe4-check{display:flex;align-items:center;gap:9px;font-weight:900;color:#273d53}.pe4-check input{width:18px;height:18px}.pe4-preview{margin-top:8px;max-width:360px;border-radius:14px;overflow:hidden;border:1px solid #e1e7ed}.pe4-preview img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}.pe4-actions{display:flex;gap:10px;margin-top:22px}.pe4-save{flex:1;min-height:52px;border:0;border-radius:12px;background:#d6152d;color:#fff;font-weight:950;cursor:pointer}.pe4-save:disabled{opacity:.55}.pe4-cancel{min-height:52px;border:1px solid #dbe3eb;border-radius:12px;background:#fff;padding:0 18px;font-weight:900;cursor:pointer}.pe4-message{margin-bottom:18px;padding:14px 16px;border-radius:12px;font-weight:850}.pe4-message.success{background:#edf8f1;color:#236842;border:1px solid #c8e5d2}.pe4-message.error{background:#fff0f2;color:#a60d25;border:1px solid #f1c8cf}.pe4-help{font-size:.74rem;color:#7b8c9c}.pe4-faq{margin-top:22px;padding-top:20px;border-top:1px solid #e7edf2}.pe4-faq-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.pe4-faq-head label{font-size:.8rem;font-weight:900;color:#273d53}.pe4-faq-add{border:1px solid #d6e0e9;border-radius:10px;background:#fff;padding:8px 12px;font-weight:900;font-size:.8rem;cursor:pointer;color:#13283c}.pe4-faq-item{display:grid;grid-template-columns:1fr 1.4fr auto;gap:10px;align-items:start;margin-bottom:10px}.pe4-faq-item input,.pe4-faq-item textarea{border:1px solid #d6e0e9;border-radius:10px;padding:10px 12px;font:inherit;color:#13283c}.pe4-faq-item textarea{min-height:44px;resize:vertical}.pe4-faq-remove{border:1px solid #f1c8cf;border-radius:10px;background:#fff0f2;color:#a60d25;font-weight:900;font-size:.78rem;padding:0 12px;cursor:pointer;height:44px}@media(max-width:700px){.pe4-faq-item{grid-template-columns:1fr}.pe4-head{align-items:stretch;flex-direction:column}.pe4-grid{grid-template-columns:1fr}.pe4-field.full{grid-column:auto}.pe4-actions{flex-direction:column}.pe4-card{padding:18px}}
       `}</style>
 
       <div className="pe4-head">
@@ -208,8 +242,35 @@ export default function ProductEditorPageV4() {
           <div className="pe4-field"><label>Preço promocional</label><input inputMode="decimal" value={form.promotional_price ?? ""} onChange={(e) => update("promotional_price", e.target.value)} placeholder="0,00" /></div>
           <div className="pe4-field"><label>Ordem de exibição</label><input type="number" min="0" value={form.display_order ?? 0} onChange={(e) => update("display_order", e.target.value)} /></div>
           <div className="pe4-field"><label>Identificador do endereço</label><input value={asText(form.slug)} onChange={(e) => update("slug", e.target.value)} /></div>
+          <div className="pe4-field"><label>Formato</label><input value={asText(form.format)} onChange={(e) => update("format", e.target.value)} placeholder="On-line, Presencial, Híbrido..." /></div>
+          <div className="pe4-field"><label>Duração</label><input value={asText(form.duration)} onChange={(e) => update("duration", e.target.value)} placeholder="Ex: 16h, 4 semanas..." /></div>
+          <div className="pe4-field"><label>Disponibilidade</label><input value={asText(form.availability_status)} onChange={(e) => update("availability_status", e.target.value)} placeholder="Disponível, Em breve, Turmas abertas..." /></div>
           <div className="pe4-field full"><label className="pe4-check"><input type="checkbox" checked={Boolean(form.is_featured)} onChange={(e) => update("is_featured", e.target.checked)} /> Destacar este produto no site</label></div>
         </div>
+
+        <div className="pe4-faq">
+          <div className="pe4-faq-head">
+            <label>Perguntas frequentes deste produto</label>
+            <button type="button" className="pe4-faq-add" onClick={addFaqItem}>+ Adicionar pergunta</button>
+          </div>
+          {form.faq.length === 0 && <span className="pe4-help">Nenhuma pergunta cadastrada ainda.</span>}
+          {form.faq.map((item, index) => (
+            <div className="pe4-faq-item" key={index}>
+              <input
+                placeholder="Pergunta"
+                value={asText(item.question)}
+                onChange={(e) => updateFaqItem(index, "question", e.target.value)}
+              />
+              <textarea
+                placeholder="Resposta"
+                value={asText(item.answer)}
+                onChange={(e) => updateFaqItem(index, "answer", e.target.value)}
+              />
+              <button type="button" className="pe4-faq-remove" onClick={() => removeFaqItem(index)}>Remover</button>
+            </div>
+          ))}
+        </div>
+
         <div className="pe4-actions"><button className="pe4-save" type="submit" disabled={saving}>{saving ? "Salvando no banco..." : "Salvar alterações"}</button><button className="pe4-cancel" type="button" onClick={() => navigate("/admin/produtos")}>Cancelar</button></div>
       </form>
     </section>

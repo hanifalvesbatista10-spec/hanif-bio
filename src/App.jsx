@@ -1,25 +1,45 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import AdminLayout from "./components/admin/AdminLayout";
 import ConversionHomePage from "./pages/public/ConversionHomePage";
+import SobrePage from "./pages/public/SobrePage";
+import ContentListPage from "./pages/public/ContentListPage";
+import ContentDetailPage from "./pages/public/ContentDetailPage";
 import PublicProductPage from "./pages/public/PublicProductPage";
 import MentorshipPage from "./pages/public/MentorshipPage";
 import ThankYouPage from "./pages/public/ThankYouPage";
 import EventBarroPage from "./pages/public/EventBarroPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
 import LoginPage from "./pages/auth/LoginPage";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import FeedbacksPage from "./pages/admin/FeedbacksPage";
-import FeedbackEditorPage from "./pages/admin/FeedbackEditorPage";
-import ProductsPage from "./pages/admin/ProductsPage";
-import ProductEditorPageV4 from "./pages/admin/ProductEditorPageV4";
-import SiteSettingsPage from "./pages/admin/SiteSettingsPage";
-import EventRegistrationsPage from "./pages/admin/EventRegistrationsPage";
-import FormsPage from "./pages/admin/FormsPage";
-import FormBuilderPage from "./pages/admin/FormBuilderPage";
-import FormResultsPage from "./pages/admin/FormResultsPage";
+import StudentLoginPage from "./pages/auth/StudentLoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import BlockedPage from "./pages/auth/BlockedPage";
+import StudentCoursesPage from "./pages/student/StudentCoursesPage";
+import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import "./styles/auth-admin.css";
+
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const FeedbacksPage = lazy(() => import("./pages/admin/FeedbacksPage"));
+const FeedbackEditorPage = lazy(() => import("./pages/admin/FeedbackEditorPage"));
+const ProductsPage = lazy(() => import("./pages/admin/ProductsPage"));
+const ProductEditorPageV4 = lazy(() => import("./pages/admin/ProductEditorPageV4"));
+const SiteSettingsPage = lazy(() => import("./pages/admin/SiteSettingsPage"));
+const EventRegistrationsPage = lazy(() => import("./pages/admin/EventRegistrationsPage"));
+const FormsPage = lazy(() => import("./pages/admin/FormsPage"));
+const FormBuilderPage = lazy(() => import("./pages/admin/FormBuilderPage"));
+const FormResultsPage = lazy(() => import("./pages/admin/FormResultsPage"));
+const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
+const ContentPage = lazy(() => import("./pages/admin/ContentPage"));
+const ContentEditorPage = lazy(() => import("./pages/admin/ContentEditorPage"));
+const LessonsPage = lazy(() => import("./pages/admin/LessonsPage"));
+const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
+const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
+
+function AdminFallback() {
+  return <div className="auth-loading">Carregando painel administrativo...</div>;
+}
 
 export default function App() {
   return (
@@ -27,6 +47,9 @@ export default function App() {
       <AuthProvider>
         <Routes>
           <Route path="/" element={<ConversionHomePage />} />
+          <Route path="/sobre" element={<SobrePage />} />
+          <Route path="/conteudos" element={<ContentListPage />} />
+          <Route path="/conteudos/:slug" element={<ContentDetailPage />} />
           <Route path="/evento/aulao-barro" element={<EventBarroPage />} />
           <Route path="/produto/evento-aulao-barro" element={<EventBarroPage />} />
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
@@ -39,29 +62,194 @@ export default function App() {
             path="/admin"
             element={
               <ProtectedRoute adminOnly>
-                <AdminLayout />
+                <Suspense fallback={<AdminFallback />}>
+                  <AdminLayout />
+                </Suspense>
               </ProtectedRoute>
             }
           >
-            <Route index element={<AdminDashboard />} />
-            <Route path="site" element={<SiteSettingsPage />} />
-            <Route path="feedbacks" element={<FeedbacksPage />} />
-            <Route path="feedbacks/novo" element={<FeedbackEditorPage />} />
-            <Route path="feedbacks/:id" element={<FeedbackEditorPage />} />
-            <Route path="produtos" element={<ProductsPage />} />
-            <Route path="produtos/novo" element={<ProductEditorPageV4 />} />
-            <Route path="produtos/:id" element={<ProductEditorPageV4 />} />
-            <Route path="inscricoes" element={<EventRegistrationsPage />} />
-            <Route path="formularios" element={<FormsPage />} />
-            <Route path="formularios/novo" element={<FormBuilderPage />} />
-            <Route path="formularios/:id" element={<FormBuilderPage />} />
-            <Route path="formularios/:id/resultados" element={<FormResultsPage />} />
+            <Route
+              index
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <AdminDashboard />
+                </Suspense>
+              }
+            />
+            <Route
+              path="site"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <SiteSettingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="feedbacks"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FeedbacksPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="feedbacks/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FeedbackEditorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="feedbacks/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FeedbackEditorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="produtos"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ProductsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="produtos/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ProductEditorPageV4 />
+                </Suspense>
+              }
+            />
+            <Route
+              path="produtos/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ProductEditorPageV4 />
+                </Suspense>
+              }
+            />
+            <Route
+              path="inscricoes"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <EventRegistrationsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="formularios"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FormsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="formularios/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FormBuilderPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="formularios/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FormBuilderPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="formularios/:id/resultados"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FormResultsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="faq"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FaqPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="conteudos"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ContentPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="conteudos/novo"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ContentEditorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="conteudos/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <ContentEditorPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="aulas"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <LessonsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="acessos"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <AccessPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="usuarios"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <UsersPage />
+                </Suspense>
+              }
+            />
           </Route>
 
-          <Route path="/login" element={<Navigate to="/admin/login" replace />} />
-          <Route path="/cadastro" element={<Navigate to="/" replace />} />
-          <Route path="/recuperar-senha" element={<Navigate to="/admin/login" replace />} />
-          <Route path="/minha-area" element={<Navigate to="/" replace />} />
+          <Route path="/login" element={<StudentLoginPage />} />
+          <Route path="/cadastro" element={<RegisterPage />} />
+          <Route path="/bloqueado" element={<BlockedPage />} />
+          <Route path="/recuperar-senha" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/minha-area"
+            element={
+              <ProtectedRoute redirectTo="/login">
+                <StudentCoursesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/minha-area/curso/:productId"
+            element={
+              <ProtectedRoute redirectTo="/login">
+                <CourseLessonsPage />
+              </ProtectedRoute>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

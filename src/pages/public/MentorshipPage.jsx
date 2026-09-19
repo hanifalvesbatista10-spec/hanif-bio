@@ -1,7 +1,7 @@
 import { getProductCheckout } from "../../services/productCheckout";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { mentorshipProduct } from "../../services/productCheckout";
+import { supabase } from "../../services/supabase";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "";
@@ -25,13 +25,51 @@ function CheckoutButton({ href, children, className = "" }) {
 }
 
 export default function MentorshipPage() {
-  const product = mentorshipProduct;
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
     window.scrollTo(0, 0);
     const previous = document.title;
     document.title = "Mentoria de APH | Hanif Alves";
+
+    supabase
+      .from("products")
+      .select("*")
+      .eq("slug", "mentoria-aph")
+      .eq("status", "active")
+      .maybeSingle()
+      .then(({ data }) => {
+        setProduct(data);
+        setLoading(false);
+      });
+
     return () => { document.title = previous; };
   }, []);
+
+  const centeredState = {
+    minHeight: "100vh",
+    display: "grid",
+    placeContent: "center",
+    textAlign: "center",
+    background: "#061426",
+    color: "#fff",
+    padding: 30,
+    gap: 12,
+  };
+
+  if (loading) return <main style={centeredState}>Carregando...</main>;
+
+  if (!product) {
+    return (
+      <main style={centeredState}>
+        <h1>Mentoria indisponível no momento</h1>
+        <p>Este produto pode estar inativo. Volte em breve.</p>
+        <Link to="/" style={{ color: "#ff6676", fontWeight: 900 }}>Voltar para o início</Link>
+      </main>
+    );
+  }
+
   const currentPrice = product.promotional_price ?? product.price;
   const checkout = getProductCheckout(product);
 

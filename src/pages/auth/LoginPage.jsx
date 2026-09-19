@@ -94,7 +94,8 @@ export default function LoginPage() {
         </button>
 
         <div className="auth-links" style={{ justifyContent: "center" }}>
-          <span>Não existe cadastro público neste site.</span>
+          <span>É aluno?</span>
+          <Link to="/login">Acesse sua área aqui</Link>
         </div>
       </form>
     </div>
