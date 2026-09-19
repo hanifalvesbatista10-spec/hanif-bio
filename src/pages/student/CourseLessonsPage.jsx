@@ -1,18 +1,14 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import LessonComments from "../../components/member/LessonComments";
 import { supabase } from "../../services/supabase";
-
-function toEmbedUrl(url = "") {
-  const watchMatch = url.match(/[?&]v=([^&]+)/);
-  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
-  const shortMatch = url.match(/youtu\.be\/([^?&]+)/);
-  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
-  if (url.includes("youtube.com/embed/")) return url;
-  return url;
-}
+import { toEmbedUrl } from "../../services/video";
+import "../../styles/member-area.css";
 
 export default function CourseLessonsPage() {
   const { productId } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedLesson = searchParams.get("aula");
   const [product, setProduct] = useState(null);
   const [lessons, setLessons] = useState([]);
   const [activeLessonId, setActiveLessonId] = useState(null);
@@ -37,11 +33,14 @@ export default function CourseLessonsPage() {
       } else {
         const data = lessonsResult.data || [];
         setLessons(data);
-        if (data.length > 0) setActiveLessonId(data[0].id);
+        if (data.length > 0) {
+          const wanted = data.find((lesson) => lesson.id === requestedLesson);
+          setActiveLessonId((wanted || data[0]).id);
+        }
       }
       setLoading(false);
     });
-  }, [productId]);
+  }, [productId, requestedLesson]);
 
   const activeLesson = lessons.find((lesson) => lesson.id === activeLessonId);
 
@@ -63,14 +62,14 @@ export default function CourseLessonsPage() {
         ) : lessons.length === 0 ? (
           <p className="empty" style={{ marginTop: 24 }}>Nenhuma aula publicada ainda. Volte em breve.</p>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.6fr", gap: 24, marginTop: 24, alignItems: "start" }}>
-            <section className="portal-list">
+          <div className="member-layout">
+            <section className="portal-list member-lessons">
               <h2>Aulas</h2>
               {lessons.map((lesson, index) => (
                 <article
                   key={lesson.id}
+                  className={lesson.id === activeLessonId ? "is-active" : ""}
                   onClick={() => setActiveLessonId(lesson.id)}
-                  style={{ cursor: "pointer", background: lesson.id === activeLessonId ? "#f4f7fb" : "transparent" }}
                 >
                   <div>
                     <strong>{index + 1}. {lesson.title}</strong>
@@ -80,20 +79,20 @@ export default function CourseLessonsPage() {
               ))}
             </section>
 
-            <section className="portal-card">
+            <section className="portal-card member-player">
               {activeLesson && (
                 <>
                   <h2>{activeLesson.title}</h2>
-                  <div style={{ position: "relative", paddingTop: "56.25%", marginTop: 14, borderRadius: 14, overflow: "hidden", background: "#000" }}>
+                  <div className="member-video">
                     <iframe
                       src={toEmbedUrl(activeLesson.video_url)}
                       title={activeLesson.title}
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
-                      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }}
                     />
                   </div>
-                  {activeLesson.description && <p style={{ marginTop: 14 }}>{activeLesson.description}</p>}
+                  {activeLesson.description && <p className="member-description">{activeLesson.description}</p>}
+                  <LessonComments lessonId={activeLesson.id} />
                 </>
               )}
             </section>

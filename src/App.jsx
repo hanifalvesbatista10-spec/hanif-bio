@@ -36,6 +36,9 @@ const ContentEditorPage = lazy(() => import("./pages/admin/ContentEditorPage"));
 const LessonsPage = lazy(() => import("./pages/admin/LessonsPage"));
 const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
+const MemberPreviewPage = lazy(() => import("./pages/admin/MemberPreviewPage"));
+const LessonAuditPage = lazy(() => import("./pages/admin/LessonAuditPage"));
+const CommentsPage = lazy(() => import("./pages/admin/CommentsPage"));
 
 function AdminFallback() {
   return <div className="auth-loading">Carregando painel administrativo...</div>;
@@ -225,6 +228,30 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <UsersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="area-de-membros"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <MemberPreviewPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="auditoria"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <LessonAuditPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="comentarios"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <CommentsPage />
                 </Suspense>
               }
             />

@@ -92,6 +92,24 @@ export const icons = {
       <path d="M3 10h18M8 3v4M16 3v4M8 15h2" />
     </Icon>
   ),
+  preview: (
+    <Icon>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </Icon>
+  ),
+  comments: (
+    <Icon>
+      <path d="M3 6a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H9l-4 3.5V14H5a2 2 0 0 1-2-2V6Z" />
+      <path d="M19 9h0a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2v2.5L15.5 19H12a2 2 0 0 1-1.5-.7" />
+    </Icon>
+  ),
+  audit: (
+    <Icon>
+      <path d="M12 3 4.5 6v5.5c0 4.4 3 7.6 7.5 9.5 4.5-1.9 7.5-5.1 7.5-9.5V6L12 3Z" />
+      <path d="m8.8 12 2.2 2.2 4.2-4.4" />
+    </Icon>
+  ),
   external: (
     <Icon>
       <path d="M14 4h6v6M20 4l-9 9" />

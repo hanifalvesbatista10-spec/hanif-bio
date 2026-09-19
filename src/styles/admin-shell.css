@@ -589,3 +589,412 @@ html.adm-scroll-lock body {
 .adm-note {
   margin: 16px 0 0;
 }
+
+/* ==========================================================================
+   Área de membros no painel: ver como aluno, auditoria e comentários
+   ========================================================================== */
+
+.adm-lead {
+  max-width: 68ch;
+  margin: -6px 0 18px;
+  color: var(--adm-muted);
+  line-height: 1.6;
+}
+
+.adm-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.adm-controls.is-single {
+  grid-template-columns: minmax(0, 360px);
+}
+
+.adm-controls.is-comments {
+  grid-template-columns: auto minmax(0, 260px);
+  justify-content: space-between;
+}
+
+.adm-controls label {
+  display: grid;
+  gap: 6px;
+  color: #26384b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.adm-controls select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--adm-text);
+  font: inherit;
+  font-weight: 500;
+}
+
+.adm-segment {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.adm-segment button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #3d5166;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.adm-segment button.is-active {
+  background: var(--brand-navy, #071426);
+  color: #fff;
+}
+
+.adm-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--brand-red, #d6152d);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.adm-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 22px;
+  margin-bottom: 14px;
+  color: var(--adm-muted);
+  font-size: 0.88rem;
+}
+
+.adm-facts strong {
+  color: var(--adm-text);
+}
+
+.adm-facts a {
+  margin-left: auto;
+  color: var(--brand-red, #d6152d);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+/* Espelho da área do aluno */
+.adm-mirror {
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--adm-line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(7, 20, 38, 0.08);
+}
+
+.adm-mirror.is-mobile {
+  width: min(100%, 390px);
+}
+
+.adm-mirror-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--adm-line);
+  background: #f8fafc;
+}
+
+.adm-mirror-bar span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d5dde6;
+}
+
+.adm-mirror-bar em {
+  margin-left: 10px;
+  color: var(--adm-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.adm-mirror iframe {
+  display: block;
+  width: 100%;
+  height: max(560px, calc(100dvh - 330px));
+  border: 0;
+  background: #f4f7fb;
+}
+
+/* KPI de 4 colunas */
+.adm-stats.is-four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Auditoria */
+.adm-audit-group {
+  margin-bottom: 28px;
+}
+
+.adm-audit-group > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.adm-audit-group h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.adm-audit-group small {
+  color: var(--adm-muted);
+}
+
+.adm-audit-table {
+  min-width: 980px;
+}
+
+.adm-check {
+  display: grid;
+  gap: 2px;
+}
+
+.adm-check strong {
+  font-size: 0.84rem;
+}
+
+.adm-check.is-ok strong {
+  color: #167344;
+}
+
+.adm-check.is-bad strong {
+  color: #a20e20;
+}
+
+.adm-check.is-warn strong {
+  color: #8a5d00;
+}
+
+.adm-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.72rem;
+  word-break: break-all;
+}
+
+.adm-issues {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-issues li {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.adm-issues li.is-bad {
+  color: #a20e20;
+}
+
+.adm-issues li.is-warn {
+  color: #8a5d00;
+}
+
+.adm-audit-table .table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.adm-audit-table .table-actions a,
+.adm-thread-head .table-actions a,
+.adm-thread-head .table-actions button {
+  color: var(--brand-red, #d6152d);
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-decoration: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  min-height: 0;
+}
+
+.adm-thread-head .table-actions button.is-danger,
+.adm-link-danger {
+  color: #8a1024;
+}
+
+/* Comentários */
+.adm-thread-list {
+  display: grid;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-thread {
+  padding: 20px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(7, 20, 38, 0.05);
+}
+
+.adm-thread.is-hidden {
+  opacity: 0.75;
+  background: #fbfbfc;
+}
+
+.adm-thread-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #edf1f4;
+}
+
+.adm-thread-head strong,
+.adm-thread-head small {
+  display: block;
+}
+
+.adm-thread-head small {
+  margin-top: 2px;
+  color: var(--adm-muted);
+}
+
+.adm-thread-head .table-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.adm-thread-body {
+  display: grid;
+  gap: 12px;
+}
+
+.adm-reply {
+  margin-left: 24px;
+  padding-left: 14px;
+  border-left: 2px solid #e5eaf0;
+}
+
+.adm-link-danger {
+  margin: 4px 0 0 50px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.78rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.adm-reply-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #edf1f4;
+}
+
+.adm-reply-form label {
+  display: grid;
+  gap: 6px;
+  color: #26384b;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.adm-reply-form textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #dbe2ea;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 400;
+  resize: vertical;
+}
+
+.adm-reply-form .admin-button {
+  justify-self: start;
+}
+
+@media (max-width: 1100px) {
+  .adm-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-stats.is-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .adm-controls,
+  .adm-controls.is-comments {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-segment {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .adm-segment button {
+    flex: 1 0 auto;
+  }
+
+  .adm-facts a {
+    margin-left: 0;
+  }
+
+  .adm-stats.is-four {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-thread {
+    padding: 16px;
+  }
+
+  .adm-reply {
+    margin-left: 10px;
+  }
+
+  .adm-mirror iframe {
+    height: max(520px, calc(100dvh - 260px));
+  }
+}

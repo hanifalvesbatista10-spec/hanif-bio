@@ -17,7 +17,10 @@ export const adminNavGroups = [
   {
     label: "Área de membros",
     items: [
+      { to: "/admin/area-de-membros", label: "Ver como aluno", icon: "preview" },
       { to: "/admin/aulas", label: "Aulas", icon: "lessons" },
+      { to: "/admin/auditoria", label: "Auditoria das aulas", icon: "audit" },
+      { to: "/admin/comentarios", label: "Comentários", icon: "comments" },
       { to: "/admin/acessos", label: "Acessos dos alunos", icon: "access" },
       { to: "/admin/usuarios", label: "Usuários", icon: "users" },
     ],

@@ -7,7 +7,7 @@ import "../../styles/admin-shell.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function AdminNav({ onNavigate, onExit, onPublicSite }) {
+function AdminNav({ onNavigate, onExit, onPublicSite, onMemberArea }) {
   return (
     <>
       <nav className="adm-nav" aria-label="Navegação do painel administrativo">
@@ -31,6 +31,10 @@ function AdminNav({ onNavigate, onExit, onPublicSite }) {
       </nav>
 
       <div className="adm-nav-foot">
+        <button type="button" className="adm-nav-link" onClick={onMemberArea}>
+          {icons.preview}
+          <span>Ver área de membros</span>
+        </button>
         <button type="button" className="adm-nav-link" onClick={onPublicSite}>
           {icons.external}
           <span>Ver site público</span>
@@ -140,6 +144,11 @@ export default function AdminLayout() {
     navigate("/");
   };
 
+  const goMemberArea = () => {
+    setOpen(false);
+    navigate("/admin/area-de-membros");
+  };
+
   const name = profile?.full_name || "Hanif";
   const initials = name
     .split(" ")
@@ -152,7 +161,7 @@ export default function AdminLayout() {
     <div className="adm-shell">
       <aside className="adm-sidebar" aria-label="Menu do painel">
         <Brand />
-        <AdminNav onExit={exit} onPublicSite={goPublic} />
+        <AdminNav onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} />
       </aside>
 
       <div className="adm-body" ref={bodyRef}>
@@ -208,7 +217,7 @@ export default function AdminLayout() {
             {icons.close}
           </button>
         </div>
-        <AdminNav onNavigate={close} onExit={exit} onPublicSite={goPublic} />
+        <AdminNav onNavigate={close} onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} />
       </aside>
     </div>
   );
