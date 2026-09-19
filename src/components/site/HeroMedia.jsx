@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 const DESKTOP = {
   video: "/media/hero/hero-desktop-hd.mp4",
   poster: "/media/hero/hero-desktop-poster.webp",
-  codec: 'video/mp4; codecs="avc1.640028"',
+  codec: 'video/mp4; codecs="avc1.640032"',
 };
 const MOBILE = {
   video: "/media/hero/hero-mobile.mp4",
