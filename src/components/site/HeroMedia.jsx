@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 
+// No desktop o Hero é uma imagem fixa em alta definição (sem vídeo).
 const DESKTOP = {
-  video: "/media/hero/hero-desktop-hd.mp4",
+  video: null,
   poster: "/media/hero/hero-desktop-poster.webp",
-  codec: 'video/mp4; codecs="avc1.640032"',
+  codec: null,
 };
 const MOBILE = {
   video: "/media/hero/hero-mobile.mp4",
@@ -32,7 +33,7 @@ export default function HeroMedia({ alt, hold = false }) {
 
   const asset = isMobile ? MOBILE : DESKTOP;
   const saveData = Boolean(navigator.connection?.saveData);
-  const canPlay = Boolean(document.createElement("video").canPlayType(asset.codec));
+  const canPlay = Boolean(asset.video && asset.codec && document.createElement("video").canPlayType(asset.codec));
   const showVideo = !reduceMotion && !saveData && canPlay && !failed;
 
   useEffect(() => {
