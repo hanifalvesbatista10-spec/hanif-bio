@@ -682,3 +682,22 @@ body:has(.cert-public) {
   background: #fff;
   font: inherit;
 }
+
+/* Tabela de alunos do curso (emissão a partir da lista de alunos) */
+.cert-cell-input {
+  width: 100%;
+  min-width: 120px;
+  padding: 6px 8px;
+  border: 1px solid var(--admin-border, #d9e1e9);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.cert-cell-photo {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  object-fit: cover;
+  display: block;
+}

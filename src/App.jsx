@@ -18,6 +18,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import BlockedPage from "./pages/auth/BlockedPage";
 import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
+import StudentProfilePage from "./pages/student/StudentProfilePage";
 import "./styles/auth-admin.css";
 
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
@@ -320,6 +321,14 @@ export default function App() {
             element={
               <ProtectedRoute redirectTo="/login">
                 <StudentCoursesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/minha-area/meus-dados"
+            element={
+              <ProtectedRoute redirectTo="/login">
+                <StudentProfilePage />
               </ProtectedRoute>
             }
           />

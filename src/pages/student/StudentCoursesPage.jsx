@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import MyCertificates from "../../components/member/MyCertificates";
 import { supabase } from "../../services/supabase";
+import "../../styles/student-profile.css";
 
 export default function StudentCoursesPage() {
   const { user, profile, signOut } = useAuth();
@@ -32,8 +33,21 @@ export default function StudentCoursesPage() {
             <span>ÁREA DO ALUNO</span>
             <h1>Olá, {profile?.full_name || "aluno"}</h1>
           </div>
-          <button onClick={signOut}>Sair</button>
+          <div className="sp-header-actions">
+            <Link className="sp-header-link" to="/minha-area/meus-dados">Meus dados</Link>
+            <button onClick={signOut}>Sair</button>
+          </div>
         </header>
+
+        {profile && "cpf" in profile && (!profile.cpf || !profile.avatar_url) && (
+          <div className="sp-banner" role="status">
+            <p>
+              <strong>Complete seus dados</strong> ({[!profile.cpf && "CPF", !profile.avatar_url && "foto"].filter(Boolean).join(" e ")}) para que o seu
+              certificado e a sua carteirinha saiam prontos, sem atraso.
+            </p>
+            <Link to="/minha-area/meus-dados">Completar agora</Link>
+          </div>
+        )}
 
         {message && <p className="empty">{message}</p>}
 
