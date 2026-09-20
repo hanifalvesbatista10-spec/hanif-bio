@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 const DESKTOP = {
   video: null,
   poster: "/media/hero/hero-desktop-poster.webp",
+  // Cada tela baixa só o tamanho que precisa (monitor 4K/Retina pega a versão de 3840 px).
+  posterSet: "/media/hero/hero-desktop-poster.webp 1920w, /media/hero/hero-desktop-poster-4k.webp 3840w",
   codec: null,
 };
 const MOBILE = {
@@ -52,6 +54,8 @@ export default function HeroMedia({ alt, hold = false }) {
         <img
           className="site-hero-poster"
           src={asset.poster}
+          srcSet={asset.posterSet}
+          sizes={asset.posterSet ? "100vw" : undefined}
           alt={alt}
           fetchpriority="high"
           decoding="async"
