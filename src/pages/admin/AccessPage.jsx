@@ -18,7 +18,7 @@ export default function AccessPage() {
       supabase.from("products").select("id,title").order("title", { ascending: true }),
       supabase
         .from("user_products")
-        .select("id,access_status,granted_at,user_id,product_id,profile:profiles(full_name,email),product:products(title)")
+        .select("id,access_status,granted_at,user_id,product_id,profile:profiles!user_id(full_name,email),product:products(title)")
         .order("granted_at", { ascending: false }),
     ]);
 
@@ -45,10 +45,11 @@ export default function AccessPage() {
       return;
     }
 
+    const { data: auth } = await supabase.auth.getUser();
     const { error } = await supabase
       .from("user_products")
       .upsert(
-        { user_id: selectedStudent, product_id: selectedProduct, access_status: "active" },
+        { user_id: selectedStudent, product_id: selectedProduct, access_status: "active", granted_by: auth?.user?.id || null },
         { onConflict: "user_id,product_id" }
       );
 
@@ -84,7 +85,7 @@ export default function AccessPage() {
       </div>
 
       <p style={{ color: "#66798c", marginBottom: 18 }}>
-        Não há integração automática com Kiwify/Hotmart ainda — confirme a compra na plataforma de venda e libere o acesso aqui manualmente.
+        Aqui você controla quem acessa cada produto na área de membros. Escolha o aluno e o produto e clique em “Liberar acesso”; para tirar o acesso, use “Revogar”.
       </p>
 
       {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`}>{message}</div>}
