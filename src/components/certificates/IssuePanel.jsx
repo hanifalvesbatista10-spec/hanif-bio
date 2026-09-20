@@ -45,6 +45,9 @@ function initialValues(template, variables) {
 // Campos que pertencem à pessoa (mudam de aluno para aluno). Ao emitir pela lista de alunos, eles são
 // reaproveitados do último certificado do aluno; os demais (curso, data, carga horária...) valem para a turma.
 const PERSONAL_KEYS = ["cpf", "rg", "tipo_sanguineo", "matricula", "nascimento", "telefone"];
+const STUDENT_COLUMNS = "id,full_name,email,avatar_url,phone,cpf,rg,blood_type";
+const STUDENT_COLUMNS_BASIC = "id,full_name,email,avatar_url,phone";
+const normalizeText = (text) => String(text || "").trim().toLowerCase();
 
 export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
   const [templateId, setTemplateId] = useState(initialTemplateId || templates[0]?.id || "");
@@ -79,6 +82,19 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
   const [rosterNonce, setRosterNonce] = useState(0);
   const [useAvatar, setUseAvatar] = useState(true);
   const [saveToProfile, setSaveToProfile] = useState(true);
+  const [source, setSource] = useState("pick"); // product = alunos com acesso a um curso da plataforma | pick = escolher alunos cadastrados
+  const [search, setSearch] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const valuesRef = useRef({});
+  valuesRef.current = values;
+
+  useEffect(() => {
+    // trocar a origem dos alunos começa uma lista nova
+    setRoster([]);
+    setSearch("");
+    setResults([]);
+  }, [source]);
   const course = courses.find((item) => item.id === courseId) || null;
   const personalKeys = useMemo(() => variables.filter((key) => PERSONAL_KEYS.includes(key)), [variables]);
 
@@ -105,14 +121,63 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
 
   // O curso escolhido preenche o campo {curso} do modelo (dá para editar depois).
   useEffect(() => {
-    if (mode !== "students" || !course || !variables.includes("curso")) return;
+    if (mode !== "students" || source !== "product" || !course || !variables.includes("curso")) return;
     setValues((current) => ({ ...current, curso: course.title }));
   }, [mode, courseId, templateId, courses]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Alunos com acesso ativo ao curso + dados que já temos deles (cadastro e certificados anteriores).
+  // Monta as linhas da tabela: dados do perfil (que o aluno preencheu) + o que consta nos certificados anteriores dele.
+  const buildEntries = async (students) => {
+    let certs = [];
+    const ids = students.map((student) => student.id);
+    const emails = students.map((student) => String(student.email || "").toLowerCase()).filter(Boolean);
+    if (ids.length > 0) {
+      const columns = "id,template_id,user_id,recipient_email,data,issued_at,status";
+      const [byUser, byEmail] = await Promise.all([
+        supabase.from("certificates").select(columns).in("user_id", ids).limit(3000),
+        emails.length ? supabase.from("certificates").select(columns).in("recipient_email", emails).limit(3000) : Promise.resolve({ data: [] }),
+      ]);
+      const seen = new Set();
+      certs = [...(byUser.data || []), ...(byEmail.data || [])]
+        .filter((cert) => (seen.has(cert.id) ? false : seen.add(cert.id)))
+        .sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at)));
+    }
+    return students.map((student) => {
+      const email = String(student.email || "").toLowerCase();
+      const own = certs.filter((cert) => cert.user_id === student.id || (email && cert.recipient_email === email));
+      const last = own.find((cert) => cert.status !== "revoked")?.data || {};
+      const mine = own.map((cert) => ({ template_id: cert.template_id, status: cert.status, curso: cert.data?.curso || "" }));
+      // Prioridade: o que o próprio aluno preencheu no perfil > o que consta no último certificado.
+      const fromProfile = { cpf: student.cpf, rg: student.rg, tipo_sanguineo: student.blood_type, telefone: student.phone };
+      const personal = {};
+      const saved = {}; // o que já está no perfil (para saber o que vale gravar depois)
+      PERSONAL_KEYS.forEach((key) => {
+        saved[key] = String(fromProfile[key] || "").trim();
+        personal[key] = saved[key] || last[key] || "";
+      });
+      const already = mine.some(
+        (cert) =>
+          cert.template_id === template?.id &&
+          cert.status === "valid" &&
+          (!variables.includes("curso") || normalizeText(cert.curso) === normalizeText(valuesRef.current.curso))
+      );
+      return {
+        uid: student.id,
+        nome: student.full_name || student.email || "",
+        email: student.email || "",
+        foto: student.avatar_url || last.foto || "",
+        personal,
+        saved,
+        mine,
+        hasProfileData: "cpf" in student,
+        selected: !already, // quem já tem este certificado (do mesmo curso) começa desmarcado, para não duplicar
+      };
+    });
+  };
+
+  // Alunos com acesso ativo a um produto/curso da plataforma.
   useEffect(() => {
-    if (mode !== "students" || !courseId || !template) {
-      setRoster([]);
+    if (mode !== "students" || source !== "product" || !courseId || !template) {
+      if (source === "product") setRoster([]);
       return undefined;
     }
     let active = true;
@@ -120,8 +185,8 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
       setRosterState("loading");
       setRosterError("");
       // cpf/rg/blood_type existem depois da migration 18; sem ela, cai para o cadastro básico.
-      const withStudentData = "user_id,profile:profiles!user_id(id,full_name,email,avatar_url,phone,cpf,rg,blood_type)";
-      const basic = "user_id,profile:profiles!user_id(id,full_name,email,avatar_url,phone)";
+      const withStudentData = `user_id,profile:profiles!user_id(${STUDENT_COLUMNS})`;
+      const basic = `user_id,profile:profiles!user_id(${STUDENT_COLUMNS_BASIC})`;
       let { data: grants, error } = await supabase.from("user_products").select(withStudentData).eq("product_id", courseId).eq("access_status", "active");
       if (error && /cpf|rg|blood_type/.test(error.message || "")) {
         ({ data: grants, error } = await supabase.from("user_products").select(basic).eq("product_id", courseId).eq("access_status", "active"));
@@ -137,55 +202,59 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
         .filter(Boolean)
         .sort((a, b) => String(a.full_name || a.email).localeCompare(String(b.full_name || b.email), "pt-BR"));
 
-      let certs = [];
-      const ids = students.map((student) => student.id);
-      const emails = students.map((student) => String(student.email || "").toLowerCase()).filter(Boolean);
-      if (ids.length > 0) {
-        const columns = "id,template_id,user_id,recipient_email,data,issued_at,status";
-        const [byUser, byEmail] = await Promise.all([
-          supabase.from("certificates").select(columns).in("user_id", ids).limit(3000),
-          emails.length ? supabase.from("certificates").select(columns).in("recipient_email", emails).limit(3000) : Promise.resolve({ data: [] }),
-        ]);
-        const seen = new Set();
-        certs = [...(byUser.data || []), ...(byEmail.data || [])]
-          .filter((cert) => (seen.has(cert.id) ? false : seen.add(cert.id)))
-          .sort((a, b) => String(b.issued_at).localeCompare(String(a.issued_at)));
-      }
+      const entries = await buildEntries(students);
       if (!active) return;
-
-      setRoster(
-        students.map((student) => {
-          const email = String(student.email || "").toLowerCase();
-          const mine = certs.filter((cert) => cert.user_id === student.id || (email && cert.recipient_email === email));
-          const last = mine.find((cert) => cert.status !== "revoked")?.data || {};
-          const has = mine.some((cert) => cert.template_id === template.id && cert.status === "valid");
-          // Prioridade: o que o próprio aluno preencheu no perfil > o que consta no último certificado.
-          const fromProfile = { cpf: student.cpf, rg: student.rg, tipo_sanguineo: student.blood_type, telefone: student.phone };
-          const personal = {};
-          const saved = {}; // o que já está no perfil (para saber o que vale gravar depois)
-          PERSONAL_KEYS.forEach((key) => {
-            saved[key] = String(fromProfile[key] || "").trim();
-            personal[key] = saved[key] || last[key] || "";
-          });
-          return {
-            uid: student.id,
-            nome: student.full_name || student.email || "",
-            email: student.email || "",
-            foto: student.avatar_url || last.foto || "",
-            personal,
-            saved,
-            hasProfileData: "cpf" in student,
-            selected: !has, // quem já tem este certificado começa desmarcado, para não duplicar
-            has,
-          };
-        })
-      );
+      setRoster(entries);
       setRosterState("idle");
     })();
     return () => {
       active = false;
     };
-  }, [mode, courseId, templateId, rosterNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [mode, source, courseId, templateId, rosterNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Busca de qualquer aluno cadastrado (nome ou e-mail), para cursos que não têm aula na plataforma.
+  useEffect(() => {
+    if (mode !== "students" || source !== "pick") return undefined;
+    const term = search.replace(/[,()%*\\]/g, " ").trim();
+    if (term.length < 2) {
+      setResults([]);
+      return undefined;
+    }
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      const run = (columns) =>
+        supabase.from("profiles").select(columns).or(`full_name.ilike.%${term}%,email.ilike.%${term}%`).order("full_name", { ascending: true }).limit(12);
+      let { data, error } = await run(STUDENT_COLUMNS);
+      if (error && /cpf|rg|blood_type/.test(error.message || "")) ({ data, error } = await run(STUDENT_COLUMNS_BASIC));
+      if (!active) return;
+      setResults(error ? [] : data || []);
+      setSearching(false);
+    }, 300);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [search, mode, source]);
+
+  const addStudents = async (students) => {
+    const fresh = students.filter((student) => !roster.some((item) => item.uid === student.id));
+    if (fresh.length === 0) return;
+    const entries = await buildEntries(fresh);
+    setRoster((current) => [...current, ...entries]);
+    setSearch("");
+    setResults([]);
+  };
+  const removeFromRoster = (uid) => setRoster((current) => current.filter((item) => item.uid !== uid));
+
+  // Já tem este certificado? Vale o mesmo modelo e, se o modelo tem o campo {curso}, o mesmo curso.
+  const hasCert = (item) =>
+    item.mine.some(
+      (cert) =>
+        cert.template_id === template?.id &&
+        cert.status === "valid" &&
+        (!variables.includes("curso") || normalizeText(cert.curso) === normalizeText(values.curso))
+    );
 
   const selectedRoster = roster.filter((item) => item.selected);
   const rosterIssueRows = selectedRoster.map((item) => ({
@@ -351,12 +420,14 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
     if (sourceRows.length > BATCH_LIMIT) return notify("error", `Emita no máximo ${BATCH_LIMIT} certificados por vez. ${fromStudents ? "Desmarque alguns alunos e emita em mais de um lote." : "Divida a lista."}`);
     if (includedPages.length === 0) return notify("error", "Marque ao menos uma página para emitir.");
     if (fromStudents) {
+      const duplicated = selectedRoster.filter(hasCert);
+      if (duplicated.length > 0 && !window.confirm(`${duplicated.length} aluno(s) marcado(s) já têm este certificado${variables.includes("curso") ? " deste curso" : ""}. Emitir de novo mesmo assim?`)) return;
       const lacking = selectedRoster.filter((item) => missingOf(item).length > 0);
       if (lacking.length > 0 && !window.confirm(`${lacking.length} aluno(s) estão sem ${personalKeys.map(humanize).join("/")}. O certificado sai com esse campo vazio. Emitir mesmo assim?`)) return;
     } else if (rows.length !== validRows.length && !window.confirm(`${rows.length - validRows.length} linha(s) com problema serão ignoradas. Continuar com ${validRows.length}?`)) return;
     setBusy(true);
     setMessage("");
-    const label = batchLabel.trim() || (fromStudents && course ? `${course.title} — ${formatDatePt()}` : `Lote ${formatDatePt()} (${sourceRows.length})`);
+    const label = batchLabel.trim() || (fromStudents && (course?.title || values.curso) ? `${course?.title || values.curso} — ${formatDatePt()}` : `Lote ${formatDatePt()} (${sourceRows.length})`);
     try {
       const base = cleanValues();
       const records = sourceRows.map((row) => {
@@ -445,7 +516,7 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
         <div className="adm-segment" role="group" aria-label="Tipo de emissão">
           <button type="button" className={mode === "single" ? "is-active" : ""} aria-pressed={mode === "single"} onClick={() => setMode("single")}>Emitir um</button>
           <button type="button" className={mode === "bulk" ? "is-active" : ""} aria-pressed={mode === "bulk"} onClick={() => setMode("bulk")}>Emissão em massa</button>
-          <button type="button" className={mode === "students" ? "is-active" : ""} aria-pressed={mode === "students"} onClick={() => setMode("students")}>Alunos do curso</button>
+          <button type="button" className={mode === "students" ? "is-active" : ""} aria-pressed={mode === "students"} onClick={() => setMode("students")}>Alunos cadastrados</button>
         </div>
 
         {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`} role="status">{message}</div>}
@@ -479,24 +550,64 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
         ) : mode === "students" ? (
           <div className="cert-form">
             <p className="adm-hint">
-              Escolha o curso: aparecem os alunos com acesso ativo a ele. Nome, e-mail, foto, CPF, RG e tipo sanguíneo vêm do perfil que o próprio aluno preencheu
-              em “Meus dados” (na falta deles, do último certificado dele), e o curso preenche o campo do certificado. É só completar o que faltar.
+              Nome, e-mail, foto, CPF, RG e tipo sanguíneo vêm do perfil que o próprio aluno preencheu em “Meus dados” (na falta deles, do último certificado dele).
+              O aluno só precisa estar cadastrado na plataforma: o curso pode ser presencial, sem nenhuma aula aqui dentro.
             </p>
-            <label className="cert-field">Curso
-              <select value={courseId} onChange={(e) => setCourseId(e.target.value)} disabled={busy}>
-                <option value="">Selecione o curso…</option>
-                {courses.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
-              </select>
-            </label>
+            <div className="adm-segment" role="group" aria-label="Quem vai receber">
+              <button type="button" className={source === "pick" ? "is-active" : ""} aria-pressed={source === "pick"} onClick={() => setSource("pick")} disabled={busy}>Escolher alunos cadastrados</button>
+              <button type="button" className={source === "product" ? "is-active" : ""} aria-pressed={source === "product"} onClick={() => setSource("product")} disabled={busy}>Alunos de um curso da plataforma</button>
+            </div>
+
+            {source === "product" ? (
+              <label className="cert-field">Curso da plataforma
+                <select value={courseId} onChange={(e) => setCourseId(e.target.value)} disabled={busy}>
+                  <option value="">Selecione o curso…</option>
+                  {courses.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                </select>
+                <small>Lista os alunos com acesso ativo a esse curso e preenche o campo {"{curso}"} do certificado.</small>
+              </label>
+            ) : (
+              <div className="cert-field">
+                <label htmlFor="cert-student-search">Buscar aluno cadastrado</label>
+                <input id="cert-student-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Digite parte do nome ou do e-mail…" autoComplete="off" disabled={busy} />
+                <small>
+                  Escreva o nome do curso no campo “Curso” abaixo (ex.: curso presencial). Você pode misturar alunos de turmas diferentes.
+                  {!variables.includes("curso") && " Este modelo não tem o campo {curso}; se quiser, adicione um texto com {curso} no modelo."}
+                </small>
+                {searching && <small>Buscando…</small>}
+                {results.length > 0 && (
+                  <ul className="cert-search-results" role="listbox" aria-label="Alunos encontrados">
+                    {results.map((student) => {
+                      const already = roster.some((item) => item.uid === student.id);
+                      return (
+                        <li key={student.id}>
+                          <span><strong>{student.full_name || "Sem nome"}</strong><small>{student.email}</small></span>
+                          <button type="button" className="adm-action is-primary" onClick={() => addStudents([student])} disabled={already || busy}>{already ? "Já na lista" : "Adicionar"}</button>
+                        </li>
+                      );
+                    })}
+                    {results.some((student) => !roster.some((item) => item.uid === student.id)) && (
+                      <li className="cert-search-all">
+                        <button type="button" className="adm-action" onClick={() => addStudents(results)} disabled={busy}>Adicionar todos os {results.length} resultados</button>
+                      </li>
+                    )}
+                  </ul>
+                )}
+                {search.trim().length >= 2 && !searching && results.length === 0 && <small>Nenhum aluno encontrado. O aluno precisa ter criado a conta na plataforma.</small>}
+              </div>
+            )}
 
             {variables.filter((key) => !PERSONAL_KEYS.includes(key)).length > 0 && (
               <fieldset className="cert-common">
                 <legend>Valores iguais para a turma</legend>
                 {variables.filter((key) => !PERSONAL_KEYS.includes(key)).map((key) => (
                   <label className="cert-field" key={key}>{humanize(key)}
-                    <input value={values[key] || ""} onChange={(e) => setValues((current) => ({ ...current, [key]: e.target.value }))} disabled={busy} />
+                    <input value={values[key] || ""} onChange={(e) => setValues((current) => ({ ...current, [key]: e.target.value }))} list={key === "curso" ? "cert-course-list" : undefined} disabled={busy} />
                   </label>
                 ))}
+                <datalist id="cert-course-list">
+                  {courses.map((item) => <option key={item.id} value={item.title} />)}
+                </datalist>
               </fieldset>
             )}
             {pagePicker}
@@ -513,12 +624,12 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
               </label>
             )}
             <label className="cert-field">Lote / etiqueta (opcional)
-              <input value={batchLabel} onChange={(e) => setBatchLabel(e.target.value)} placeholder={course ? `${course.title} — ${formatDatePt()}` : "Ex.: Turma 12 — outubro"} disabled={busy} />
+              <input value={batchLabel} onChange={(e) => setBatchLabel(e.target.value)} placeholder={course?.title || values.curso ? `${course?.title || values.curso} — ${formatDatePt()}` : "Ex.: Turma 12 — outubro"} disabled={busy} />
             </label>
 
-            {rosterState === "loading" && <p className="adm-hint">Carregando alunos…</p>}
-            {rosterState === "error" && <div className="admin-alert error" role="alert">Não foi possível carregar os alunos: {rosterError}</div>}
-            {courseId && rosterState === "idle" && roster.length === 0 && (
+            {source === "product" && rosterState === "loading" && <p className="adm-hint">Carregando alunos…</p>}
+            {source === "product" && rosterState === "error" && <div className="admin-alert error" role="alert">Não foi possível carregar os alunos: {rosterError}</div>}
+            {source === "product" && courseId && rosterState === "idle" && roster.length === 0 && (
               <div className="admin-empty">Nenhum aluno com acesso ativo a este curso. Libere o acesso em “Acessos dos alunos”.</div>
             )}
 
@@ -526,11 +637,11 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
               <div className="cert-preview-table" aria-label="Alunos do curso">
                 <p className="cert-preview-summary">
                   <strong>{selectedRoster.length}</strong> de {roster.length} selecionado(s)
-                  {roster.some((item) => item.has) && <> · <span className="is-warn">{roster.filter((item) => item.has).length} já têm este modelo (desmarcados)</span></>}
+                  {roster.some(hasCert) && <> · <span className="is-warn">{roster.filter(hasCert).length} já têm este certificado{variables.includes("curso") ? " deste curso" : ""}</span></>}
                 </p>
                 <div className="cert-row-actions">
                   <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: true })))} disabled={busy}>Marcar todos</button>
-                  <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: !item.has })))} disabled={busy}>Só quem ainda não tem</button>
+                  <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: !hasCert(item) })))} disabled={busy}>Só quem ainda não tem</button>
                   <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: false })))} disabled={busy}>Desmarcar</button>
                 </div>
                 <div className="admin-table-wrap">
@@ -557,7 +668,8 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
                             ))}
                             {hasPhoto && <td>{useAvatar && item.foto ? <img className="cert-cell-photo" src={item.foto} alt="" /> : "—"}</td>}
                             <td>
-                              {item.has ? <span className="is-warn">já emitido</span> : missing.length ? <span className="is-warn">falta {missing.map(humanize).join(", ")}</span> : "ok"}
+                              {hasCert(item) ? <span className="is-warn">já emitido</span> : missing.length ? <span className="is-warn">falta {missing.map(humanize).join(", ")}</span> : "ok"}
+                              {source === "pick" && <button type="button" className="cert-remove" onClick={() => removeFromRoster(item.uid)} disabled={busy} aria-label={`Tirar ${item.nome} da lista`}>Tirar</button>}
                             </td>
                           </tr>
                         );
@@ -569,7 +681,7 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
             )}
 
             <button type="button" className="admin-button primary" onClick={issueBulk} disabled={busy || selectedRoster.length === 0}>
-              {busy ? "Emitindo..." : selectedRoster.length ? `Emitir ${selectedRoster.length} certificado(s) e baixar ZIP` : "Selecione o curso e os alunos"}
+              {busy ? "Emitindo..." : selectedRoster.length ? `Emitir ${selectedRoster.length} certificado(s) e baixar ZIP` : source === "pick" ? "Busque e adicione os alunos" : "Selecione o curso e os alunos"}
             </button>
           </div>
         ) : (

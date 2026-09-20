@@ -701,3 +701,53 @@ body:has(.cert-public) {
   object-fit: cover;
   display: block;
 }
+
+/* Busca de alunos cadastrados (emissão para qualquer aluno, sem depender de acesso a produto) */
+.cert-search-results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 4px 0;
+  border: 1px solid var(--admin-border, #d9e1e9);
+  border-radius: 12px;
+  background: #fff;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.cert-search-results li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-top: 1px solid #edf1f5;
+}
+
+.cert-search-results li:first-child {
+  border-top: 0;
+}
+
+.cert-search-results li span {
+  display: grid;
+  min-width: 0;
+}
+
+.cert-search-results li small {
+  color: #66798c;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cert-search-all {
+  justify-content: flex-end;
+}
+
+.cert-remove {
+  margin-left: 8px;
+  border: 0;
+  background: none;
+  color: #a20e20;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 2px 4px;
+}
