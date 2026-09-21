@@ -250,10 +250,10 @@ export default function ProductEditorPageV4() {
             <label>Como este produto é vendido</label>
             <select value={form.checkout_mode} onChange={(e) => update("checkout_mode", e.target.value)}>
               <option value="external">Link de venda externo (Hotmart, Kiwify ou outro)</option>
-              <option value="internal">Checkout do próprio site (Pix, boleto e cartão)</option>
+              <option value="internal">Checkout do próprio site (Pix, cartão e boleto)</option>
             </select>
             {form.checkout_mode === "internal" ? (
-              <span className="pe4-help">O comprador paga no seu site e o acesso é liberado sozinho quando o pagamento é confirmado. Exige o preço abaixo e o Asaas configurado (veja docs/checkout-asaas.md). O preço cobrado é o promocional, se houver, ou o normal.</span>
+              <span className="pe4-help">O comprador paga no seu site e o acesso é liberado sozinho quando o pagamento é confirmado. Exige o preço abaixo e a InfinitePay configurada (veja docs/checkout.md). O preço cobrado é o promocional, se houver, ou o normal.</span>
             ) : (
               <span className="pe4-help">O botão Comprar leva para o link abaixo, e o acesso do aluno continua sendo liberado por você em Acessos dos alunos.</span>
             )}

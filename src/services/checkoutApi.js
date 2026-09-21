@@ -23,8 +23,10 @@ export async function createCheckout(payload) {
   return parse(response);
 }
 
-export async function fetchOrderStatus(orderId) {
-  const response = await fetch(`/api/checkout-status?order=${encodeURIComponent(orderId)}`, { cache: "no-store" });
+export async function fetchOrderStatus(orderId, returned = {}) {
+  // transaction_nsu e slug voltam da InfinitePay na URL de retorno: o servidor confere o pagamento na hora
+  const extra = ["transaction_nsu", "slug"].filter((key) => returned[key]).map((key) => `&${key}=${encodeURIComponent(returned[key])}`).join("");
+  const response = await fetch(`/api/checkout-status?order=${encodeURIComponent(orderId)}${extra}`, { cache: "no-store" });
   return parse(response);
 }
 

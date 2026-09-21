@@ -32,6 +32,10 @@ export function checkoutHandler(methods, fn) {
   };
 }
 
+export function sendJsonNoStore(res, status, body) {
+  sendJson(res, status, body);
+}
+
 export function checkoutConfig() {
   const asaasKey = process.env.ASAAS_API_KEY || "";
   // Chaves do ambiente de testes (sandbox) do Asaas têm "hmlg" no início; ASAAS_ENV força o ambiente.
@@ -42,6 +46,8 @@ export function checkoutConfig() {
     asaasEnv,
     asaasUrl: ASAAS_URLS[asaasEnv],
     webhookToken: process.env.ASAAS_WEBHOOK_TOKEN || "",
+    // InfiniteTag (o nome do app, sem o $): identifica a sua conta no Checkout Integrado da InfinitePay
+    infinitepayHandle: String(process.env.INFINITEPAY_HANDLE || "").trim().replace(/^[$]/, ""),
     serviceKey: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
   };
 }
@@ -52,6 +58,7 @@ export function requireCheckoutConfig(keys) {
   const names = {
     asaasKey: "ASAAS_API_KEY",
     webhookToken: "ASAAS_WEBHOOK_TOKEN",
+    infinitepayHandle: "INFINITEPAY_HANDLE",
     serviceKey: "SUPABASE_SERVICE_ROLE_KEY",
   };
   const missing = keys.filter((key) => !config[key]).map((key) => names[key]);
@@ -137,7 +144,23 @@ export function brDate(daysAhead = 0, now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" }).format(base);
 }
 
+// Formas de pagamento do checkout: "online" = Pix ou cartão na página da InfinitePay; "boleto" = Asaas.
+export const PROVIDER_BY_METHOD = { online: "infinitepay", boleto: "asaas" };
 export const METHODS = { pix: "PIX", boleto: "BOLETO", card: "CREDIT_CARD" };
+
+// Aceita os nomes antigos (pix/card) como "online".
+export function normalizeMethod(value) {
+  const method = String(value || "").trim();
+  if (method === "pix" || method === "card") return "online";
+  return PROVIDER_BY_METHOD[method] ? method : "";
+}
+
+// Endereço público do site (retorno e aviso de pagamento). SITE_URL tem prioridade.
+export function siteUrl(req) {
+  const origin = process.env.SITE_URL || req?.headers?.origin || "";
+  return /^https?:\/\//.test(origin) ? origin.replace(/\/$/, "") : "";
+}
+
 export const METHOD_BY_BILLING = { PIX: "pix", BOLETO: "boleto", CREDIT_CARD: "card" };
 
 // ---------------------------------------------------------------- validações

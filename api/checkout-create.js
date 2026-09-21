@@ -1,20 +1,24 @@
 // POST /api/checkout-create
-// Cria o pedido e a cobrança no Asaas (Pix, boleto ou cartão) e devolve o que o navegador precisa mostrar:
-// QR code do Pix, linha digitável do boleto ou o link seguro do Asaas para pagar com cartão.
+// Cria o pedido e a cobrança e devolve o que o navegador precisa para o comprador pagar:
+//  - method "online": link da InfinitePay, onde o comprador escolhe Pix ou cartão (e as parcelas);
+//  - method "boleto": boleto do Asaas (linha digitável e PDF).
 // O VALOR sai do banco, nunca do navegador.
 import { HttpError, readBody } from "./_lib/mux.js";
 import {
-  METHODS,
+  PROVIDER_BY_METHOD,
   asaas,
   brDate,
   checkoutHandler,
   isValidCpf,
   isValidEmail,
+  normalizeMethod,
   optionalUserId,
   priceInCents,
   requireCheckoutConfig,
   sb,
+  siteUrl,
 } from "./_lib/checkout.js";
+import { createCheckoutLink } from "./_lib/infinitepay.js";
 
 const now = () => new Date().toISOString();
 
@@ -29,26 +33,20 @@ async function ensureCustomer({ name, email, cpf, phone }) {
   return created.id;
 }
 
-// A cobrança de cartão redireciona de volta ao site depois de paga (o domínio precisa estar
-// cadastrado na conta do Asaas; se o Asaas recusar o retorno, criamos a cobrança sem ele).
-function returnUrl(req, orderId) {
-  const origin = process.env.SITE_URL || req.headers.origin || "";
-  return /^https?:\/\//.test(origin) ? `${origin.replace(/\/$/, "")}/checkout/obrigado?order=${orderId}` : "";
-}
-
 export default checkoutHandler(["POST"], async (req, res) => {
-  requireCheckoutConfig(["asaasKey", "serviceKey"]);
   const body = readBody(req);
+  const method = normalizeMethod(body.method);
+  if (!method) throw new HttpError(400, "invalid_method", "Escolha a forma de pagamento.");
+  // cada forma de pagamento exige as variáveis do seu provedor
+  requireCheckoutConfig(method === "online" ? ["infinitepayHandle", "serviceKey"] : ["asaasKey", "serviceKey"]);
 
   const slug = String(body.slug || "").trim();
-  const method = String(body.method || "").trim();
   const name = String(body.name || "").trim().replace(/\s+/g, " ");
   const email = String(body.email || "").trim().toLowerCase();
   const cpf = String(body.cpf || "").replace(/\D/g, "");
   const phone = String(body.phone || "").replace(/[^\d+]/g, "").slice(0, 20);
 
   if (!slug) throw new HttpError(400, "invalid_product", "Produto não informado.");
-  if (!METHODS[method]) throw new HttpError(400, "invalid_method", "Escolha a forma de pagamento.");
   if (name.length < 3) throw new HttpError(400, "invalid_name", "Informe seu nome completo.");
   if (!isValidEmail(email)) throw new HttpError(400, "invalid_email", "Informe um e-mail válido.");
   if (!isValidCpf(cpf)) throw new HttpError(400, "invalid_cpf", "O CPF informado não é válido.");
@@ -63,6 +61,11 @@ export default checkoutHandler(["POST"], async (req, res) => {
   }
   const amount = priceInCents(product);
   if (amount < 500) throw new HttpError(409, "invalid_price", "O preço deste produto não está configurado.");
+
+  const base = siteUrl(req);
+  if (method === "online" && !base) {
+    throw new HttpError(503, "checkout_not_configured", "Checkout ainda não configurado no servidor (faltam: SITE_URL).");
+  }
 
   const userId = await optionalUserId(req);
 
@@ -79,54 +82,56 @@ export default checkoutHandler(["POST"], async (req, res) => {
       amount_cents: amount,
       currency: "brl",
       status: "pending",
-      payment_method: method,
-      provider: "asaas",
+      // "online" (Pix ou cartão) só se sabe qual foi depois de pago; o aviso de pagamento preenche
+      payment_method: method === "boleto" ? "boleto" : null,
+      provider: PROVIDER_BY_METHOD[method],
     },
   });
   const order = created?.[0];
   if (!order) throw new HttpError(500, "order_failed", "Não foi possível registrar o pedido.");
 
-  let payment;
   let result;
+  let providerPaymentId = null;
+  let paymentUrl = null;
   try {
-    const customer = await ensureCustomer({ name, email, cpf, phone });
-    const charge = {
-      customer,
-      billingType: METHODS[method],
-      value: amount / 100,
-      dueDate: brDate(method === "boleto" ? 3 : 0),
-      description: product.title.slice(0, 500),
-      externalReference: order.id,
-    };
-    const back = method === "card" ? returnUrl(req, order.id) : "";
-    try {
-      payment = await asaas("/payments", { method: "POST", body: back ? { ...charge, callback: { successUrl: back, autoRedirect: true } } : charge });
-    } catch (error) {
-      // domínio do retorno não cadastrado no Asaas: cria sem o retorno automático
-      if (!back || !/callback|successUrl|dom[ií]nio|domain/i.test(error.message)) throw error;
-      payment = await asaas("/payments", { method: "POST", body: charge });
-    }
-
-    if (method === "pix") {
-      const qr = await asaas(`/payments/${payment.id}/pixQrCode`);
-      result = { pix: { qrImage: qr.encodedImage, payload: qr.payload, expiresAt: qr.expirationDate } };
-    } else if (method === "boleto") {
-      const line = await asaas(`/payments/${payment.id}/identificationField`);
-      result = { boleto: { line: line.identificationField, url: payment.bankSlipUrl || payment.invoiceUrl, dueDate: payment.dueDate } };
+    if (method === "online") {
+      paymentUrl = await createCheckoutLink({
+        order,
+        title: product.title,
+        name,
+        email,
+        redirectUrl: `${base}/checkout/obrigado?order=${order.id}`,
+        webhookUrl: `${base}/api/infinitepay-webhook`,
+      });
+      result = { online: { url: paymentUrl } };
     } else {
-      if (!payment.invoiceUrl) throw new Error("O Asaas não devolveu o link de pagamento.");
-      result = { card: { url: payment.invoiceUrl } };
+      const customer = await ensureCustomer({ name, email, cpf, phone });
+      const payment = await asaas("/payments", {
+        method: "POST",
+        body: {
+          customer,
+          billingType: "BOLETO",
+          value: amount / 100,
+          dueDate: brDate(3),
+          description: product.title.slice(0, 500),
+          externalReference: order.id,
+        },
+      });
+      const line = await asaas(`/payments/${payment.id}/identificationField`);
+      providerPaymentId = payment.id;
+      paymentUrl = payment.bankSlipUrl || payment.invoiceUrl || null;
+      result = { boleto: { line: line.identificationField, url: paymentUrl, dueDate: payment.dueDate } };
     }
   } catch (error) {
     await sb(`orders?id=eq.${order.id}`, { method: "PATCH", body: { status: "failed", updated_at: now() } }).catch(() => null);
-    console.error("asaas error:", error.status || "", error.message);
+    // o motivo real vai para o log da Vercel e para o teste de conexão do painel (Pedidos → Testar conexão)
+    console.error(`${PROVIDER_BY_METHOD[method]} error:`, error.status || "", error.message);
     throw new HttpError(502, "gateway_error", "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.");
   }
 
-  const paymentUrl = result.boleto?.url || result.card?.url || null;
   await sb(`orders?id=eq.${order.id}`, {
     method: "PATCH",
-    body: { provider_payment_id: payment.id, payment_url: paymentUrl, updated_at: now() },
+    body: { provider_payment_id: providerPaymentId, payment_url: paymentUrl, updated_at: now() },
   });
 
   res.status(201).setHeader("Cache-Control", "no-store").json({

@@ -2,14 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
-import { createCheckout, fetchOrderStatus, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
+import { createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
 import { formatCpf, isValidCpf } from "../../services/studentData";
 import "../../styles/checkout.css";
 
 const METHODS = [
-  { id: "pix", title: "Pix", note: "Aprovação na hora", cta: "Gerar Pix" },
+  {
+    id: "online",
+    title: "Pix ou cartão",
+    note: "Pix na hora, ou cartão em até 12x. Você escolhe na página segura da InfinitePay",
+    cta: "Pagar",
+  },
   { id: "boleto", title: "Boleto", note: "Compensa em até 2 dias úteis", cta: "Gerar boleto" },
-  { id: "card", title: "Cartão de crédito", note: "Pagamento na página segura do Asaas", cta: "Pagar com cartão" },
 ];
 
 async function copyText(text) {
@@ -19,61 +23,6 @@ async function copyText(text) {
   } catch {
     return false;
   }
-}
-
-// Depois de gerar o Pix, acompanha o pagamento e leva para a confirmação quando cair.
-function PixPanel({ pix, orderId, amount }) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    let active = true;
-    let timer;
-    const tick = async () => {
-      try {
-        const data = await fetchOrderStatus(orderId);
-        if (!active) return;
-        if (data.status === "paid") {
-          window.location.assign(`/checkout/obrigado?order=${orderId}`);
-          return;
-        }
-        if (["failed", "canceled", "refunded"].includes(data.status)) return;
-      } catch {
-        /* tenta de novo */
-      }
-      timer = window.setTimeout(tick, 3000);
-    };
-    timer = window.setTimeout(tick, 3000);
-    return () => {
-      active = false;
-      window.clearTimeout(timer);
-    };
-  }, [orderId]);
-
-  return (
-    <div className="ck-method-panel">
-      <h3>Pague {formatMoneyCents(amount)} com Pix</h3>
-      <ol className="ck-steps">
-        <li>Abra o app do seu banco e escolha pagar com Pix.</li>
-        <li>Escaneie o QR code ou use o “Pix copia e cola”.</li>
-        <li>Pronto: esta página confirma sozinha assim que o pagamento cair.</li>
-      </ol>
-      {pix.qrImage && <img className="ck-qr" src={`data:image/png;base64,${pix.qrImage}`} alt="QR code do Pix" />}
-      <label className="ck-copy">
-        Pix copia e cola
-        <textarea readOnly rows={3} value={pix.payload} onFocus={(e) => e.target.select()} />
-      </label>
-      <button
-        type="button"
-        className="ck-primary"
-        onClick={async () => {
-          setCopied(await copyText(pix.payload));
-          window.setTimeout(() => setCopied(false), 2500);
-        }}
-      >
-        {copied ? "Código copiado!" : "Copiar código Pix"}
-      </button>
-      <p className="ck-note" role="status">Aguardando o pagamento…</p>
-    </div>
-  );
 }
 
 function BoletoPanel({ boleto, orderId, amount }) {
@@ -112,7 +61,7 @@ export default function CheckoutPage() {
   const { user, profile } = useAuth();
   const [product, setProduct] = useState(undefined); // undefined = carregando, null = não encontrado
   const [form, setForm] = useState({ name: "", email: "", cpf: "", phone: "" });
-  const [method, setMethod] = useState("pix");
+  const [method, setMethod] = useState("online");
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -174,9 +123,9 @@ export default function CheckoutPage() {
     setSubmitting(true);
     try {
       const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone });
-      if (result.card?.url) {
-        // cartão: segue para a página segura do Asaas (volta para cá depois de pago)
-        window.location.assign(result.card.url);
+      if (result.online?.url) {
+        // Pix ou cartão: segue para a página segura da InfinitePay (volta para cá depois de pago)
+        window.location.assign(result.online.url);
         return;
       }
       setPayment(result);
@@ -274,7 +223,7 @@ export default function CheckoutPage() {
                 {submitting ? "Preparando o pagamento..." : `${chosen.cta} · ${formatMoneyCents(price)}`}
               </button>
               {price === 0 && <p className="ck-error">O preço deste produto ainda não foi configurado.</p>}
-              <p className="ck-secure">Pagamento processado com segurança pelo Asaas. Nós não guardamos dados de cartão.</p>
+              <p className="ck-secure">Pagamento processado com segurança. Nós não guardamos dados de cartão.</p>
             </form>
           ) : (
             <div ref={panelRef}>
@@ -282,7 +231,6 @@ export default function CheckoutPage() {
                 <div><strong>{form.name}</strong><span>{form.email}</span></div>
                 <button type="button" className="ck-link-button" onClick={() => setPayment(null)}>Alterar</button>
               </div>
-              {payment.pix && <PixPanel pix={payment.pix} orderId={payment.orderId} amount={payment.amount} />}
               {payment.boleto && <BoletoPanel boleto={payment.boleto} orderId={payment.orderId} amount={payment.amount} />}
             </div>
           )}
@@ -302,7 +250,7 @@ export default function CheckoutPage() {
             <div className="ck-total"><dt>Total</dt><dd>{formatMoneyCents(price)}</dd></div>
           </dl>
           <ul className="ck-perks">
-            <li>Pix, boleto ou cartão de crédito</li>
+            <li>Pix, cartão de crédito (parcelado) ou boleto</li>
             <li>Acesso liberado automaticamente após a confirmação</li>
           </ul>
           <Link className="ck-back" to={`/produto/${product.slug}`}>← Voltar ao produto</Link>

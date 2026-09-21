@@ -374,7 +374,7 @@ body:has(.ck-page) {
 /* Escolha da forma de pagamento e painéis de Pix / boleto */
 .ck-methods {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 10px;
   margin-top: 8px;
 }

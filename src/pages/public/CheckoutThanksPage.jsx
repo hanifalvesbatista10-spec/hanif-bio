@@ -12,6 +12,8 @@ export default function CheckoutThanksPage() {
   const [params] = useSearchParams();
   const orderId = params.get("order") || "";
   const redirectStatus = params.get("redirect_status") || "";
+  // a InfinitePay devolve estes dados na volta; com eles o servidor confere o pagamento na hora
+  const returned = { transaction_nsu: params.get("transaction_nsu") || "", slug: params.get("slug") || "" };
   const { user } = useAuth();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState("");
@@ -24,7 +26,7 @@ export default function CheckoutThanksPage() {
     let timer;
     const tick = async () => {
       try {
-        const data = await fetchOrderStatus(orderId);
+        const data = await fetchOrderStatus(orderId, returned);
         if (!active) return;
         setOrder(data);
         setError("");
@@ -49,7 +51,7 @@ export default function CheckoutThanksPage() {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [orderId]);
+  }, [orderId, returned.transaction_nsu, returned.slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const status = order?.status;
   const failedRedirect = redirectStatus === "failed";

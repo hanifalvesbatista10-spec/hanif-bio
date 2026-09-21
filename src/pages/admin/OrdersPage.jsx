@@ -16,6 +16,44 @@ const maskCpf = (cpf) => {
   return digits.length === 11 ? `•••.•••.•••-${digits.slice(9)}` : "—";
 };
 
+// Traduz o retorno de /api/checkout-diagnose em um texto que diz o que fazer.
+function describeDiagnosis(d) {
+  const lines = [];
+  let ok = true;
+
+  // Pix e cartão: InfinitePay (não usa chave, só a InfiniteTag)
+  if (!d.variables.SUPABASE_SERVICE_ROLE_KEY) {
+    ok = false;
+    lines.push("Falta a variável SUPABASE_SERVICE_ROLE_KEY na Vercel.");
+  }
+  if (d.variables.INFINITEPAY_HANDLE) {
+    lines.push(`Pix e cartão: InfinitePay configurada (InfiniteTag ${d.infinitepayHandle}).${d.variables.SITE_URL ? "" : " Sugestão: crie também a variável SITE_URL com o endereço do site."}`);
+  } else {
+    ok = false;
+    lines.push("Pix e cartão: falta a variável INFINITEPAY_HANDLE na Vercel (a sua InfiniteTag, sem o $).");
+  }
+
+  // Boleto: Asaas (opcional; sem ele o boleto some da escolha do comprador só ao tentar)
+  const env = d.envUsed === "sandbox" ? "testes (sandbox)" : "produção";
+  if (!d.variables.ASAAS_API_KEY) {
+    lines.push("Boleto: Asaas não configurado (faltam ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN). Sem isso o boleto não funciona.");
+  } else if (d.asaas?.ok) {
+    lines.push(`Boleto: conexão com o Asaas OK, no ambiente de ${env}.${d.envUsed === "production" ? " Atenção: aqui cobra de verdade." : ""}`);
+  } else if (d.otherEnv?.ok) {
+    ok = false;
+    const other = d.otherEnv.env === "sandbox" ? "testes (sandbox)" : "produção";
+    lines.push(`Boleto: a chave do Asaas é do ambiente de ${other}, mas o site usa o de ${env}. Crie a variável ASAAS_ENV com o valor ${d.otherEnv.env} e faça um redeploy.`);
+  } else {
+    ok = false;
+    lines.push(`Boleto: o Asaas recusou a chave (ambiente de ${env}): ${d.asaas?.message || "sem detalhes"} (código ${d.asaas?.status}).`);
+  }
+  if (d.variables.ASAAS_API_KEY && !d.variables.ASAAS_WEBHOOK_TOKEN) {
+    ok = false;
+    lines.push("Boleto: falta a variável ASAAS_WEBHOOK_TOKEN (sem ela o pagamento do boleto não é confirmado).");
+  }
+  return { ok, text: lines.join(" ") };
+}
+
 const dateTime = (value) =>
   new Date(value).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
 
@@ -33,6 +71,7 @@ export default function OrdersPage() {
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
   const [busyId, setBusyId] = useState("");
+  const [testing, setTesting] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -77,6 +116,46 @@ export default function OrdersPage() {
       return [order.buyer_name, order.buyer_email, order.product?.title].some((field) => String(field || "").toLowerCase().includes(term));
     });
   }, [orders, filter, query]);
+
+  const testConnection = async () => {
+    setTesting(true);
+    setMessage("");
+    try {
+      const { data } = await supabase.auth.getSession();
+      const response = await fetch("/api/checkout-diagnose", { headers: { Authorization: `Bearer ${data?.session?.access_token || ""}` }, cache: "no-store" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.message || `Erro ${response.status}`);
+      const result = describeDiagnosis(body);
+      setMessageType(result.ok ? "success" : "error");
+      setMessage(result.text);
+    } catch (error) {
+      setMessageType("error");
+      setMessage(`Não foi possível testar: ${error.message}`);
+    }
+    setTesting(false);
+  };
+
+  // Estorno de Pix/cartão é feito no app da InfinitePay (que não avisa o site): aqui você registra e tira o acesso.
+  const markRefunded = async (order) => {
+    if (!window.confirm(`Marcar o pedido de ${order.buyer_name} como reembolsado e tirar o acesso a “${order.product?.title}”? Faça o estorno no app da InfinitePay (ou no Asaas) antes.`)) return;
+    setBusyId(order.id);
+    setMessage("");
+    try {
+      const { error } = await supabase.from("orders").update({ status: "refunded", refunded_at: new Date().toISOString() }).eq("id", order.id);
+      if (error) throw error;
+      if (order.user_id) {
+        const { error: accessError } = await supabase.from("user_products").update({ access_status: "revoked" }).eq("user_id", order.user_id).eq("product_id", order.product_id);
+        if (accessError) throw accessError;
+      }
+      setMessageType("success");
+      setMessage(`Pedido de ${order.buyer_name} marcado como reembolsado${order.user_id ? " e acesso removido" : ""}.`);
+      load();
+    } catch (error) {
+      setMessageType("error");
+      setMessage(`Não foi possível registrar o reembolso: ${error.message}`);
+    }
+    setBusyId("");
+  };
 
   const grantNow = async (order) => {
     setBusyId(order.id);
@@ -133,12 +212,15 @@ export default function OrdersPage() {
           <span>VENDAS</span>
           <h2>Pedidos do checkout</h2>
         </div>
-        <a className="admin-button" href="https://www.asaas.com/" target="_blank" rel="noreferrer">Abrir o Asaas ↗</a>
+        <div className="cert-head-actions">
+          <button type="button" className="admin-button" onClick={testConnection} disabled={testing}>{testing ? "Testando..." : "Testar conexão"}</button>
+          <a className="admin-button" href="https://app.infinitepay.io/" target="_blank" rel="noreferrer">Abrir a InfinitePay ↗</a>
+        </div>
       </div>
 
       <p className="adm-hint">
         Aqui aparecem as compras feitas no checkout do site. O acesso do aluno é liberado sozinho quando o pagamento é confirmado.
-        Estornos são feitos no painel do Asaas; o site marca o pedido como reembolsado e tira o acesso automaticamente.
+        Pix e cartão são pagos na InfinitePay; o boleto, no Asaas. Estornos de boleto (Asaas) tiram o acesso sozinhos. Estornos de Pix e cartão você faz no app da InfinitePay e depois usa “Marcar como reembolsado” aqui para tirar o acesso.
       </p>
 
       {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`} role="status">{message}</div>}
@@ -186,6 +268,7 @@ export default function OrdersPage() {
                       {order.status === "paid" && (
                         <div className="table-actions">
                           <button type="button" onClick={() => grantNow(order)} disabled={busyId === order.id}>{busyId === order.id ? "..." : "Liberar acesso"}</button>
+                          <button type="button" onClick={() => markRefunded(order)} disabled={busyId === order.id}>Marcar como reembolsado</button>
                         </div>
                       )}
                     </td>
