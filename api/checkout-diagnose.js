@@ -2,7 +2,8 @@
 // Testa a configuração do checkout: quais variáveis existem e, para o boleto, se o Asaas aceita a chave
 // (e em que ambiente). Só faz uma leitura inofensiva. Nunca devolve as chaves.
 import { requireAdmin } from "./_lib/mux.js";
-import { checkoutConfig, checkoutHandler, sendJsonNoStore } from "./_lib/checkout.js";
+import { checkoutConfig, checkoutHandler, sendJsonNoStore, siteUrl } from "./_lib/checkout.js";
+import { testConnection } from "./_lib/infinitepay.js";
 
 const URLS = { production: "https://api.asaas.com/v3", sandbox: "https://api-sandbox.asaas.com/v3" };
 
@@ -33,6 +34,7 @@ export default checkoutHandler(["GET"], async (req, res) => {
       ASAAS_WEBHOOK_TOKEN: Boolean(config.webhookToken),
     },
     infinitepayHandle: config.infinitepayHandle || null,
+    infinitepay: config.infinitepayHandle ? await testConnection(siteUrl(req)) : null,
     envUsed: config.asaasEnv,
     envForced: Boolean(process.env.ASAAS_ENV),
     asaas: null,

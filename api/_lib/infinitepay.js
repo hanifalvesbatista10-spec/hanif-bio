@@ -14,9 +14,16 @@ async function post(path, body) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  const data = await response.json().catch(() => ({}));
+  const raw = await response.text();
+  let data = {};
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    data = { message: raw.slice(0, 200) };
+  }
   if (!response.ok) {
-    const error = new Error(data?.message || data?.error || `InfinitePay ${response.status}`);
+    const detail = typeof data?.message === "string" ? data.message : typeof data?.error === "string" ? data.error : JSON.stringify(data).slice(0, 300);
+    const error = new Error(`InfinitePay ${response.status}: ${detail || "sem detalhes"}`);
     error.status = response.status;
     throw error;
   }
@@ -26,14 +33,22 @@ async function post(path, body) {
 // Cria o link de pagamento (a página deles oferece Pix e cartão, com escolha de parcelas).
 export async function createCheckoutLink({ order, title, name, email, redirectUrl, webhookUrl }) {
   const { infinitepayHandle } = checkoutConfig();
-  const data = await post("/links", {
+  const payload = {
     handle: infinitepayHandle,
     order_nsu: order.id,
     redirect_url: redirectUrl,
     webhook_url: webhookUrl,
     items: [{ quantity: 1, price: order.amount_cents, description: String(title).slice(0, 200) }],
-    customer: { name, email },
-  });
+  };
+  let data;
+  try {
+    // nome e e-mail só pré-preenchem a página; se a InfinitePay recusar esses campos, tenta sem eles
+    data = await post("/links", { ...payload, customer: { name, email } });
+  } catch (error) {
+    if (![400, 422].includes(error.status)) throw error;
+    console.error("infinitepay: link recusado com customer, tentando sem:", error.message);
+    data = await post("/links", payload);
+  }
   const url = data?.url || data?.link || data?.checkout_url;
   if (!url || !/^https:\/\//.test(url)) throw new Error("A InfinitePay não devolveu o link de pagamento.");
   return url;
@@ -65,4 +80,25 @@ export async function confirmOrder(order, ids) {
   const result = await verifyPayment(order, ids);
   if (result.paid) await markOrderPaid(order, result.method);
   return result;
+}
+
+// Cria um link de teste (sem cobrança, sem pedido) só para saber se a InfiniteTag e o Checkout Integrado
+// estão certos. Devolve o motivo exato quando a InfinitePay recusa.
+export async function testConnection(baseUrl) {
+  const { infinitepayHandle } = checkoutConfig();
+  if (!infinitepayHandle) return { ok: false, message: "INFINITEPAY_HANDLE não configurada." };
+  const base = baseUrl || "https://example.com";
+  try {
+    const data = await post("/links", {
+      handle: infinitepayHandle,
+      order_nsu: crypto.randomUUID(),
+      redirect_url: `${base}/checkout/obrigado`,
+      webhook_url: `${base}/api/infinitepay-webhook`,
+      items: [{ quantity: 1, price: 500, description: "Teste de conexão (pode ignorar)" }],
+    });
+    const url = data?.url || data?.link || data?.checkout_url;
+    return url ? { ok: true, message: "" } : { ok: false, message: `A InfinitePay respondeu sem o link: ${JSON.stringify(data).slice(0, 200)}` };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
 }

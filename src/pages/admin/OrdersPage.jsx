@@ -27,7 +27,12 @@ function describeDiagnosis(d) {
     lines.push("Falta a variável SUPABASE_SERVICE_ROLE_KEY na Vercel.");
   }
   if (d.variables.INFINITEPAY_HANDLE) {
-    lines.push(`Pix e cartão: InfinitePay configurada (InfiniteTag ${d.infinitepayHandle}).${d.variables.SITE_URL ? "" : " Sugestão: crie também a variável SITE_URL com o endereço do site."}`);
+    if (d.infinitepay?.ok) {
+      lines.push(`Pix e cartão: conexão com a InfinitePay OK (InfiniteTag ${d.infinitepayHandle}).${d.variables.SITE_URL ? "" : " Sugestão: crie também a variável SITE_URL com o endereço do site."}`);
+    } else {
+      ok = false;
+      lines.push(`Pix e cartão: a InfinitePay recusou o teste (InfiniteTag ${d.infinitepayHandle}): ${d.infinitepay?.message || "sem detalhes"}`);
+    }
   } else {
     ok = false;
     lines.push("Pix e cartão: falta a variável INFINITEPAY_HANDLE na Vercel (a sua InfiniteTag, sem o $).");
