@@ -1,4 +1,4 @@
-import { getProductCheckout } from "../../services/productCheckout";
+import { checkoutLinkProps, getProductCheckout } from "../../services/productCheckout";
 import Accent from "../ui/Accent";
 import Button from "../ui/Button";
 import Container from "../ui/Container";
@@ -70,7 +70,7 @@ export default function FeaturedProduct({ product, settings }) {
               {isMentorship ? "Conhecer a mentoria" : "Conhecer a formação"}
             </Button>
             {checkout && (
-              <Button href={checkout} variant="secondary" external>
+              <Button href={checkout} variant="secondary" external={Boolean(checkoutLinkProps(checkout).target)}>
                 Quero acessar agora
               </Button>
             )}

@@ -40,6 +40,9 @@ const ContentPage = lazy(() => import("./pages/admin/ContentPage"));
 const ContentEditorPage = lazy(() => import("./pages/admin/ContentEditorPage"));
 const LessonsPage = lazy(() => import("./pages/admin/LessonsPage"));
 const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
+const OrdersPage = lazy(() => import("./pages/admin/OrdersPage"));
+const CheckoutPage = lazy(() => import("./pages/public/CheckoutPage"));
+const CheckoutThanksPage = lazy(() => import("./pages/public/CheckoutThanksPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
 const MemberPreviewPage = lazy(() => import("./pages/admin/MemberPreviewPage"));
 const LessonAuditPage = lazy(() => import("./pages/admin/LessonAuditPage"));
@@ -55,6 +58,10 @@ function AdminFallback() {
   return <div className="auth-loading">Carregando painel administrativo...</div>;
 }
 
+function CheckoutFallback() {
+  return <div className="auth-loading">Carregando...</div>;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
@@ -67,6 +74,8 @@ export default function App() {
           <Route path="/evento/aulao-barro" element={<LegacyEventRedirect />} />
           <Route path="/produto/evento-aulao-barro" element={<LegacyEventRedirect />} />
           <Route path="/evento/:slug" element={<EventPage />} />
+          <Route path="/checkout/obrigado" element={<Suspense fallback={<CheckoutFallback />}><CheckoutThanksPage /></Suspense>} />
+          <Route path="/checkout/:slug" element={<Suspense fallback={<CheckoutFallback />}><CheckoutPage /></Suspense>} />
           <Route path="/certificado" element={<CertificateVerifyPage />} />
           <Route path="/certificado/:code" element={<CertificateVerifyPage />} />
           <Route path="/produto/mentoria-aph" element={<MentorshipPage />} />
@@ -275,6 +284,14 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <AccessPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="pedidos"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <OrdersPage />
                 </Suspense>
               }
             />

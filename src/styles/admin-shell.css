@@ -1732,3 +1732,47 @@ html.adm-scroll-lock body {
     flex: 1 1 100%;
   }
 }
+
+/* Pedidos do checkout próprio */
+.ord-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.ord-stats div {
+  background: #fff;
+  border: 1px solid var(--adm-border, #e3e9f0);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 2px;
+}
+
+.ord-stats strong {
+  font-size: 1.35rem;
+  color: #071426;
+}
+
+.ord-stats span {
+  color: #66798c;
+  font-size: 0.85rem;
+}
+
+.ord-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ord-search {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #d3dce6;
+  border-radius: 10px;
+  font: inherit;
+}

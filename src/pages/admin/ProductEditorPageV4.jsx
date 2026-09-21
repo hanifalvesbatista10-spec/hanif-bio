@@ -12,6 +12,7 @@ const emptyForm = {
   price: "",
   promotional_price: "",
   checkout_url: "",
+  checkout_mode: "external",
   status: "active",
   is_featured: true,
   display_order: 0,
@@ -36,6 +37,8 @@ function normalizeProduct(data = {}) {
     price: data.price ?? "",
     promotional_price: data.promotional_price ?? "",
     checkout_url: asText(data.checkout_url),
+    checkout_mode: data.checkout_mode === "internal" ? "internal" : "external",
+    has_checkout_mode: "checkout_mode" in data, // false = o SQL 19 ainda não foi executado
     status: asText(data.status) || "active",
     is_featured: Boolean(data.is_featured),
     display_order: data.display_order ?? 0,
@@ -157,7 +160,11 @@ export default function ProductEditorPageV4() {
 
       if (!title) throw new Error("Informe o título do produto.");
       if (!shortDescription) throw new Error("Informe a descrição curta.");
-      if (!checkoutUrl) throw new Error("Informe o link de venda da Hotmart.");
+      const internal = form.checkout_mode === "internal";
+      if (internal && !((parseMoney(form.promotional_price) || 0) > 0 || (parseMoney(form.price) || 0) > 0)) {
+        throw new Error("Para usar o checkout do site, informe o preço do produto (mínimo R$ 5,00).");
+      }
+      if (!internal && !checkoutUrl) throw new Error("Informe o link de venda (Hotmart, Kiwify ou outro) ou escolha o checkout do site.");
 
       const slug = slugify(asText(form.slug) || title);
       if (!slug) throw new Error("Informe um identificador válido para o endereço.");
@@ -175,7 +182,9 @@ export default function ProductEditorPageV4() {
         availability_status: asText(form.availability_status).trim() || null,
         price: parseMoney(form.price),
         promotional_price: parseMoney(form.promotional_price),
-        checkout_url: checkoutUrl,
+        checkout_url: checkoutUrl || null,
+        // só envia o campo se o banco já o tem (evita quebrar o salvamento antes do SQL 19)
+        ...(internal || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : "external" } : {}),
         status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
@@ -205,6 +214,8 @@ export default function ProductEditorPageV4() {
       setMessage(
         text.includes("row-level security") || text.includes("permission denied")
           ? "O Supabase bloqueou a gravação por permissão. Execute o arquivo 06_v4_fix_products_permissions.sql no SQL Editor e tente novamente."
+          : text.includes("checkout_mode")
+          ? "O banco ainda não tem o checkout próprio. Execute supabase/19_checkout_proprio.sql no SQL Editor e tente novamente."
           : text.includes("column") && text.includes("does not exist")
           ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
           : text
@@ -235,7 +246,21 @@ export default function ProductEditorPageV4() {
           <div className="pe4-field full"><label>Descrição curta *</label><textarea value={asText(form.short_description)} onChange={(e) => update("short_description", e.target.value)} required /></div>
           <div className="pe4-field full"><label>Descrição completa</label><textarea value={asText(form.full_description)} onChange={(e) => update("full_description", e.target.value)} /></div>
           <div className="pe4-field full"><label>Imagem de capa</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /><span className="pe4-help">JPG, PNG ou WEBP. Máximo 5 MB.</span>{preview && <div className="pe4-preview"><img src={preview} alt="Prévia da capa" /></div>}</div>
-          <div className="pe4-field full"><label>Link de venda Hotmart *</label><input type="url" value={asText(form.checkout_url)} onChange={(e) => update("checkout_url", e.target.value)} placeholder="https://pay.hotmart.com/..." required /></div>
+          <div className="pe4-field full">
+            <label>Como este produto é vendido</label>
+            <select value={form.checkout_mode} onChange={(e) => update("checkout_mode", e.target.value)}>
+              <option value="external">Link de venda externo (Hotmart, Kiwify ou outro)</option>
+              <option value="internal">Checkout do próprio site (Pix, boleto e cartão)</option>
+            </select>
+            {form.checkout_mode === "internal" ? (
+              <span className="pe4-help">O comprador paga no seu site e o acesso é liberado sozinho quando o pagamento é confirmado. Exige o preço abaixo e o Asaas configurado (veja docs/checkout-asaas.md). O preço cobrado é o promocional, se houver, ou o normal.</span>
+            ) : (
+              <span className="pe4-help">O botão Comprar leva para o link abaixo, e o acesso do aluno continua sendo liberado por você em Acessos dos alunos.</span>
+            )}
+          </div>
+          {form.checkout_mode !== "internal" && (
+            <div className="pe4-field full"><label>Link de venda *</label><input type="url" value={asText(form.checkout_url)} onChange={(e) => update("checkout_url", e.target.value)} placeholder="https://pay.hotmart.com/..." /></div>
+          )}
           <div className="pe4-field"><label>Categoria</label><input value={asText(form.category)} onChange={(e) => update("category", e.target.value)} placeholder="E-book, curso, mentoria..." /></div>
           <div className="pe4-field"><label>Status</label><select value={asText(form.status) || "active"} onChange={(e) => update("status", e.target.value)}><option value="active">Ativo — aparece no site</option><option value="draft">Rascunho</option><option value="inactive">Inativo</option><option value="archived">Arquivado</option></select></div>
           <div className="pe4-field"><label>Preço normal</label><input inputMode="decimal" value={form.price ?? ""} onChange={(e) => update("price", e.target.value)} placeholder="0,00" /></div>

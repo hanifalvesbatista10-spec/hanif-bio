@@ -110,6 +110,13 @@ export const icons = {
       <path d="m8.8 12 2.2 2.2 4.2-4.4" />
     </Icon>
   ),
+  orders: (
+    <Icon>
+      <path d="M4 5h2l1.6 9.2a1 1 0 0 0 1 .8h8.1a1 1 0 0 0 1-.8L19 8H7" />
+      <circle cx="9.5" cy="19" r="1.3" />
+      <circle cx="16.5" cy="19" r="1.3" />
+    </Icon>
+  ),
   certificate: (
     <Icon>
       <rect x="3" y="4" width="18" height="13" rx="2" />

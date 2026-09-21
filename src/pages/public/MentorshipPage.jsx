@@ -1,4 +1,4 @@
-import { getProductCheckout } from "../../services/productCheckout";
+import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -16,8 +16,7 @@ function CheckoutButton({ href, children, className = "" }) {
     <a
       className={`hem-cta ${className}`}
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      {...checkoutLinkProps(href)}
     >
       {children}
     </a>
@@ -95,7 +94,7 @@ export default function MentorshipPage() {
             HANIF ALVES
             <small>APH • URGÊNCIA • EMERGÊNCIA</small>
           </Link>
-          <a className="hem-mini-cta" href={checkout} target="_blank" rel="noreferrer">Adquirir agora</a>
+          <a className="hem-mini-cta" href={checkout} {...checkoutLinkProps(checkout)}>Adquirir agora</a>
         </div>
       </header>
 
@@ -123,7 +122,7 @@ export default function MentorshipPage() {
               {product.cover_url && <img className="hem-cover" style={{aspectRatio: "auto", height: "auto"}} src={product.cover_url} alt={`Capa de ${product.title}`} />}
               <div className="hem-offer">
                 <small>Mentoria de APH</small>
-                <p className="hem-hero-copy">Confira o valor e as condições na Kiwify.</p>
+                <p className="hem-hero-copy">{usesInternalCheckout(product) ? "Pagamento seguro com Pix, cartão ou boleto." : "Confira o valor e as condições na Kiwify."}</p>
                 {currentPrice !== null && currentPrice !== undefined && (
                   <div className="hem-price">
                     <strong>{formatPrice(currentPrice)}</strong>
@@ -140,7 +139,7 @@ export default function MentorshipPage() {
           <div className="hem-container hem-strip-inner">
             <div className="hem-strip-item">Mentoria teórica • Urgência e emergência</div>
             <div className="hem-strip-item">10 anos de linha de frente em urgências e emergências</div>
-            <div className="hem-strip-item">Compra processada no checkout da Kiwify</div>
+            <div className="hem-strip-item">{usesInternalCheckout(product) ? "Pagamento seguro: Pix, cartão ou boleto" : "Compra processada no checkout da Kiwify"}</div>
           </div>
         </section>
 
@@ -215,7 +214,7 @@ export default function MentorshipPage() {
                   </div>
                 )}
                 <CheckoutButton href={checkout}>Adquirir agora</CheckoutButton>
-                <p className="hem-buybox-note">Confira o valor, os itens incluídos e as condições da oferta no checkout da Kiwify.</p>
+                <p className="hem-buybox-note">{usesInternalCheckout(product) ? "Pagamento seguro com Pix, cartão ou boleto. O acesso é liberado automaticamente após a confirmação." : "Confira o valor, os itens incluídos e as condições da oferta no checkout da Kiwify."}</p>
               </div>
             </div>
           </div>
@@ -226,10 +225,10 @@ export default function MentorshipPage() {
             <span className="hem-eyebrow">DÚVIDAS FREQUENTES</span>
             <h2>Antes de adquirir.</h2>
             <div className="hem-faq">
-              <details><summary>Como encontro as orientações de acesso?</summary><p>A compra é concluída na Kiwify. As instruções de acesso são fornecidas pela própria plataforma após a confirmação da compra.</p></details>
+              <details><summary>Como encontro as orientações de acesso?</summary><p>{usesInternalCheckout(product) ? "A compra é concluída aqui no site. Depois da confirmação do pagamento, o acesso é liberado na sua conta (use o mesmo e-mail da compra)." : "A compra é concluída na Kiwify. As instruções de acesso são fornecidas pela própria plataforma após a confirmação da compra."}</p></details>
               <details><summary>Quais assuntos a mentoria aborda?</summary><p>Emergências traumáticas, clínicas e psiquiátricas, afogamento e assuntos de urgência e emergência no contexto do APH.</p></details>
               <details><summary>A mentoria é prática?</summary><p>Não. A mentoria é teórica, destinada a profissionais e estudantes da saúde que desejam ingressar na área ou aprimorar seus conhecimentos.</p></details>
-              <details><summary>Onde vejo o valor e o que está incluído?</summary><p>Consulte o checkout da Kiwify para conferir as informações da oferta, o valor e as condições de pagamento antes de concluir a compra.</p></details>
+              <details><summary>Onde vejo o valor e o que está incluído?</summary><p>{usesInternalCheckout(product) ? "O valor e o que está incluído aparecem no checkout antes de você concluir a compra." : "Consulte o checkout da Kiwify para conferir as informações da oferta, o valor e as condições de pagamento antes de concluir a compra."}</p></details>
               <details><summary>A mentoria substitui treinamento prático ou protocolo institucional?</summary><p>Não. O conteúdo é educacional e deve ser utilizado em conjunto com treinamento, protocolos, legislação e atribuições profissionais aplicáveis.</p></details>
             </div>
           </div>

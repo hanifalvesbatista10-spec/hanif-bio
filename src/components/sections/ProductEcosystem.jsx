@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { getProductCheckout } from "../../services/productCheckout";
+import { checkoutLinkProps, getProductCheckout } from "../../services/productCheckout";
 import Accent from "../ui/Accent";
 import Container from "../ui/Container";
 import GlowCard from "../ui/GlowCard";
@@ -39,7 +39,7 @@ function ProductTile({ product, number, settings }) {
         <div className="hx-actions">
           <Link className="hx-btn is-secondary" to={`/produto/${product.slug}`}>Ver detalhes</Link>
           {checkout && (
-            <a className="hx-btn is-primary" href={checkout} target="_blank" rel="noreferrer">Quero acessar agora</a>
+            <a className="hx-btn is-primary" href={checkout} {...checkoutLinkProps(checkout)}>Quero acessar agora</a>
           )}
         </div>
       </div>

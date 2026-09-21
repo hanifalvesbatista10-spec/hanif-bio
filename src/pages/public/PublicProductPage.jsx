@@ -1,4 +1,4 @@
-import { getProductCheckout } from "../../services/productCheckout";
+import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -16,8 +16,7 @@ function CheckoutButton({ href, children, className = "" }) {
     <a
       className={`hem-cta ${className}`}
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      {...checkoutLinkProps(href)}
     >
       {children}
     </a>
@@ -26,7 +25,7 @@ function CheckoutButton({ href, children, className = "" }) {
 
 function HemorrhageLanding({ product }) {
   const currentPrice = product.promotional_price ?? product.price;
-  const checkout = product.checkout_url || "#";
+  const checkout = getProductCheckout(product) || "#";
 
   return (
     <div className="hem-page">
@@ -50,7 +49,7 @@ function HemorrhageLanding({ product }) {
             HANIF ALVES
             <small>APH • URGÊNCIA • EMERGÊNCIA</small>
           </Link>
-          <a className="hem-mini-cta" href={checkout} target="_blank" rel="noreferrer">Comprar agora</a>
+          <a className="hem-mini-cta" href={checkout} {...checkoutLinkProps(checkout)}>Comprar agora</a>
         </div>
       </header>
 
@@ -94,7 +93,7 @@ function HemorrhageLanding({ product }) {
           <div className="hem-container hem-strip-inner">
             <div className="hem-strip-item">Material digital • acesso pela plataforma de venda</div>
             <div className="hem-strip-item">Conteúdo focado em APH e controle de hemorragias</div>
-            <div className="hem-strip-item">Compra processada no checkout da Hotmart</div>
+            <div className="hem-strip-item">{usesInternalCheckout(product) ? "Pagamento seguro: Pix, cartão ou boleto" : "Compra processada no checkout da Hotmart"}</div>
           </div>
         </section>
 
@@ -168,7 +167,7 @@ function HemorrhageLanding({ product }) {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
-                <CheckoutButton href={checkout}>Comprar agora na Hotmart</CheckoutButton>
+                <CheckoutButton href={checkout}>{usesInternalCheckout(product) ? "Comprar agora" : "Comprar agora na Hotmart"}</CheckoutButton>
                 <p className="hem-buybox-note">Você será direcionado para o checkout seguro cadastrado para este produto.</p>
               </div>
             </div>
@@ -180,7 +179,7 @@ function HemorrhageLanding({ product }) {
             <span className="hem-eyebrow">DÚVIDAS FREQUENTES</span>
             <h2>Antes de adquirir.</h2>
             <div className="hem-faq">
-              <details><summary>Como recebo o material?</summary><p>A compra é concluída na Hotmart. As instruções de acesso são fornecidas pela própria plataforma após a confirmação da compra.</p></details>
+              <details><summary>Como recebo o material?</summary><p>{usesInternalCheckout(product) ? "A compra é concluída aqui no site. Depois da confirmação do pagamento, o acesso é liberado na sua conta (use o mesmo e-mail da compra)." : "A compra é concluída na Hotmart. As instruções de acesso são fornecidas pela própria plataforma após a confirmação da compra."}</p></details>
               <details><summary>É um conteúdo voltado para APH?</summary><p>Sim. A proposta do material é educacional e direcionada ao estudo do controle de hemorragias dentro do contexto do atendimento pré-hospitalar.</p></details>
               <details><summary>Posso acessar novamente depois?</summary><p>O acesso e as condições de disponibilidade seguem o que estiver configurado para o produto na plataforma de venda.</p></details>
               <details><summary>O material substitui treinamento prático ou protocolo institucional?</summary><p>Não. O conteúdo é educacional e deve ser utilizado em conjunto com treinamento, protocolos, legislação e atribuições profissionais aplicáveis.</p></details>
@@ -287,7 +286,7 @@ export default function PublicProductPage() {
                   {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                 </div>
               )}
-              <a className="public-product-button" href={getProductCheckout(product)} target="_blank" rel="noreferrer">Comprar agora</a>
+              <a className="public-product-button" href={getProductCheckout(product)} {...checkoutLinkProps(getProductCheckout(product))}>Comprar agora</a>
               <p className="public-product-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
             </aside>
           </div>
