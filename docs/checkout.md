@@ -44,7 +44,7 @@ com o preço do curso (o valor pago a mais é o juro).
 
 ## Passo a passo para ligar
 
-1. **SQL**: no Supabase, SQL Editor, rode `supabase/19_checkout_proprio.sql` (se ainda não rodou).
+1. **SQL**: no Supabase, SQL Editor, rode `supabase/19_checkout_proprio.sql` (e `supabase/20_cupons.sql`, se for usar cupons).
 2. **InfinitePay**: no app, ative o **Checkout Integrado** (Vendas → Checkout → Configurações) e a opção de
    repassar as taxas ao cliente. Anote a sua **InfiniteTag** (o nome que aparece no app, sem o `$`).
 3. **Variáveis na Vercel** (*Settings → Environment Variables*), depois um **redeploy**:
@@ -81,6 +81,26 @@ A InfinitePay não tem ambiente de testes: o teste é uma **compra real de valor
 4. Peça o estorno no app da InfinitePay e use **Marcar como reembolsado** em *Pedidos*.
 5. Desative ou apague o produto de teste.
 
+## Cupons de desconto
+
+Em **Cupons** (menu do painel) você cria códigos para o checkout do site. Antes, rode `supabase/20_cupons.sql` no Supabase.
+
+- **Desconto:** em porcentagem (1 a 100%) ou valor fixo em R$.
+- **Vale para:** todos os produtos com checkout do site, ou um produto só.
+- **Prazo:** data de início e de fim (opcionais). O cupom vale até o fim do dia escolhido, no horário de Brasília.
+- **Limite:** número total de usos (opcional) e "cada pessoa usa uma vez" (por e-mail ou CPF, ligado por padrão).
+- **Link pronto:** em cupons de um produto, o botão **Copiar link** gera `/checkout/<produto>?cupom=CODIGO`, que já abre com o desconto aplicado.
+- **Cupom de 100%:** libera o acesso **na hora, sem cobrança** (bom para presentear alunos). Quem tem o código tem o curso, então
+  use sempre o **limite de usos** e a data final, e desative o cupom quando terminar.
+
+Como funciona por dentro: o comprador digita o código e vê a prévia do desconto, mas o valor de verdade é **recalculado no
+servidor** quando ele paga (mexer na tela não muda o preço). O pedido guarda o cupom, o desconto e o preço de tabela, e
+aparece em *Pedidos* como "cupom CODIGO (−R$ ...)". Um pedido "aguardando" segura o cupom por 1 hora; pedido que falhou não conta.
+
+Regras que o site impõe: o valor final não pode ficar entre R$ 0,01 e R$ 4,99 (o gateway não aceita cobranças tão baixas;
+ou é grátis ou pelo menos R$ 5,00). O desconto de um cupom fixo maior que o preço vira grátis. O parcelamento com juros do
+cartão continua funcionando por cima do valor já com desconto.
+
 ## Estorno e reembolso
 
 - **Pix e cartão (InfinitePay):** faça o estorno no app da InfinitePay. Ela não avisa o site, então use
@@ -92,7 +112,7 @@ A InfinitePay não tem ambiente de testes: o teste é uma **compra real de valor
 - **Nota fiscal e impostos**: converse com o seu contador sobre a emissão para vendas no seu CPF/CNPJ.
 - **Política de reembolso e termos de compra**: em compras online vale o direito de arrependimento em 7 dias
   (Código de Defesa do Consumidor); vale ter uma página com a sua política e a de privacidade (LGPD).
-- **Afiliados, cupons, order bump e assinaturas**: não fazem parte desta primeira versão.
+- **Afiliados, order bump e assinaturas**: não fazem parte desta primeira versão.
 - **Carrinho abandonado**: pedidos "Aguardando" que nunca pagam ficam listados em Pedidos. Hoje não há e-mail
   automático de recuperação.
 

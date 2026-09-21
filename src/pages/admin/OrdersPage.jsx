@@ -263,7 +263,7 @@ export default function OrdersPage() {
                     <td>{dateTime(order.created_at)}</td>
                     <td><strong>{order.buyer_name}</strong><small>{order.buyer_email}</small><small>CPF {maskCpf(order.buyer_cpf)}</small></td>
                     <td>{order.product?.title || "—"}</td>
-                    <td>{formatMoneyCents(order.amount_cents)}</td>
+                    <td>{formatMoneyCents(order.amount_cents)}{order.coupon_code && <small>cupom {order.coupon_code}{order.discount_cents ? ` (−${formatMoneyCents(order.discount_cents)})` : ""}</small>}</td>
                     <td>{METHOD[order.payment_method] || "—"}</td>
                     <td>
                       <span className={`status-badge ${status.tone}`}>{status.label}</span>

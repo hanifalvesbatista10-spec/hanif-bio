@@ -455,3 +455,52 @@ body:has(.ck-page) {
     grid-template-columns: 1fr;
   }
 }
+
+/* Cupom de desconto */
+.ck-coupon {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.ck-coupon input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid #d3dce6;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ck-coupon .ck-secondary {
+  margin-top: 0;
+  min-height: 0;
+  padding: 0 20px;
+  cursor: pointer;
+}
+
+.ck-coupon-applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #ebfff3;
+  border: 1px solid #b6e6c9;
+  color: #116d3b;
+}
+
+.ck-coupon-applied div {
+  display: grid;
+}
+
+.ck-coupon-applied span {
+  font-size: 0.85rem;
+}
+
+.ck-discount {
+  color: #1a8f4a;
+}

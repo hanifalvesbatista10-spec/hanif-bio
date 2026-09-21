@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
-import { createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
+import { checkCoupon, createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
 import { formatCpf, isValidCpf } from "../../services/studentData";
 import "../../styles/checkout.css";
 
@@ -58,6 +58,7 @@ function BoletoPanel({ boleto, orderId, amount }) {
 
 export default function CheckoutPage() {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [product, setProduct] = useState(undefined); // undefined = carregando, null = não encontrado
   const [form, setForm] = useState({ name: "", email: "", cpf: "", phone: "" });
@@ -67,6 +68,13 @@ export default function CheckoutPage() {
   const [apiError, setApiError] = useState("");
   const [payment, setPayment] = useState(null); // resposta de /api/checkout-create
   const panelRef = useRef(null);
+
+  // Cupom de desconto: o site só mostra a prévia; o desconto de verdade é recalculado no servidor ao pagar.
+  const [couponCode, setCouponCode] = useState((searchParams.get("cupom") || "").toUpperCase());
+  const [coupon, setCoupon] = useState(null); // { code, label, discountCents, finalCents, free }
+  const [couponError, setCouponError] = useState("");
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const autoApplied = useRef(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -107,6 +115,37 @@ export default function CheckoutPage() {
 
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
+  const applyCoupon = async (codeOverride) => {
+    const code = String(codeOverride ?? couponCode).trim();
+    if (!code) return;
+    setCheckingCoupon(true);
+    setCouponError("");
+    try {
+      setCoupon(await checkCoupon({ slug, code, email: form.email, cpf: form.cpf }));
+    } catch (error) {
+      setCoupon(null);
+      setCouponError(error.message);
+    }
+    setCheckingCoupon(false);
+  };
+
+  const removeCoupon = () => {
+    setCoupon(null);
+    setCouponCode("");
+    setCouponError("");
+  };
+
+  // link com cupom (/checkout/curso?cupom=CODIGO) já aplica ao abrir
+  useEffect(() => {
+    if (product && product.checkout_mode === "internal" && couponCode && !autoApplied.current) {
+      autoApplied.current = true;
+      applyCoupon(couponCode);
+    }
+  }, [product]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const total = coupon ? coupon.finalCents : price;
+  const isFree = Boolean(coupon) && coupon.finalCents === 0;
+
   const validate = () => {
     const next = {};
     if (form.name.trim().split(/\s+/).filter(Boolean).length < 2) next.name = "Informe seu nome completo.";
@@ -122,7 +161,12 @@ export default function CheckoutPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone });
+      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone, coupon: coupon?.code || "" });
+      if (result.free) {
+        // cupom de 100%: acesso liberado na hora
+        window.location.assign(`/checkout/obrigado?order=${result.orderId}`);
+        return;
+      }
       if (result.online?.url) {
         // Pix ou cartão: segue para a página segura da InfinitePay (volta para cá depois de pago)
         window.location.assign(result.online.url);
@@ -131,6 +175,7 @@ export default function CheckoutPage() {
       setPayment(result);
     } catch (error) {
       setApiError(error.message);
+      if (String(error.code || "").startsWith("coupon") || error.code === "invalid_coupon") setCoupon(null);
     }
     setSubmitting(false);
   };
@@ -218,9 +263,36 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              <h2>3. Cupom de desconto</h2>
+              {coupon ? (
+                <div className="ck-coupon-applied" role="status">
+                  <div>
+                    <strong>Cupom {coupon.code} aplicado</strong>
+                    <span>{coupon.free ? "Acesso grátis" : `Você economiza ${formatMoneyCents(coupon.discountCents)}`}</span>
+                  </div>
+                  <button type="button" className="ck-link-button" onClick={removeCoupon}>Remover</button>
+                </div>
+              ) : (
+                <div className="ck-coupon">
+                  <input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyCoupon(); } }}
+                    placeholder="Digite o código do cupom"
+                    aria-label="Código do cupom"
+                    autoCapitalize="characters"
+                    autoComplete="off"
+                  />
+                  <button type="button" className="ck-secondary" onClick={() => applyCoupon()} disabled={checkingCoupon || !couponCode.trim()}>
+                    {checkingCoupon ? "Verificando..." : "Aplicar"}
+                  </button>
+                </div>
+              )}
+              {couponError && <small className="ck-error" role="alert">{couponError}</small>}
+
               {apiError && <div className="ck-alert" role="alert">{apiError}</div>}
               <button className="ck-primary" type="submit" disabled={submitting || price === 0}>
-                {submitting ? "Preparando o pagamento..." : `${chosen.cta} · ${formatMoneyCents(price)}`}
+                {submitting ? "Preparando o pagamento..." : isFree ? "Liberar meu acesso grátis" : `${chosen.cta} · ${formatMoneyCents(total)}`}
               </button>
               {price === 0 && <p className="ck-error">O preço deste produto ainda não foi configurado.</p>}
               <p className="ck-secure">Pagamento processado com segurança. Nós não guardamos dados de cartão.</p>
@@ -247,7 +319,8 @@ export default function CheckoutPage() {
           </div>
           <dl>
             {original > 0 && <div><dt>Valor</dt><dd><del>{formatMoneyCents(original)}</del></dd></div>}
-            <div className="ck-total"><dt>Total</dt><dd>{formatMoneyCents(price)}</dd></div>
+            {coupon && coupon.discountCents > 0 && <div><dt>Cupom {coupon.code}</dt><dd className="ck-discount">− {formatMoneyCents(coupon.discountCents)}</dd></div>}
+            <div className="ck-total"><dt>Total</dt><dd>{formatMoneyCents(total)}</dd></div>
           </dl>
           <ul className="ck-perks">
             <li>Pix, cartão de crédito (parcelado) ou boleto</li>

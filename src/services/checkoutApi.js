@@ -41,3 +41,13 @@ export function formatPhone(value) {
   if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
+
+// Prévia do desconto de um cupom (o valor de verdade é recalculado no servidor ao pagar).
+export async function checkCoupon(payload) {
+  const response = await fetch("/api/coupon-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parse(response);
+}

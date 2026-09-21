@@ -117,6 +117,12 @@ export const icons = {
       <circle cx="16.5" cy="19" r="1.3" />
     </Icon>
   ),
+  coupon: (
+    <Icon>
+      <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z" />
+      <path d="m9.5 14.5 5-5M9.7 9.7h.01M14.3 14.3h.01" />
+    </Icon>
+  ),
   certificate: (
     <Icon>
       <rect x="3" y="4" width="18" height="13" rx="2" />

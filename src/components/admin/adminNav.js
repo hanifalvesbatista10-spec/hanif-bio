@@ -10,6 +10,7 @@ export const adminNavGroups = [
       { to: "/admin/site", label: "Conteúdo do site", icon: "site" },
       { to: "/admin/produtos", label: "Produtos", icon: "products" },
       { to: "/admin/pedidos", label: "Pedidos", icon: "orders" },
+      { to: "/admin/cupons", label: "Cupons", icon: "coupon" },
       { to: "/admin/conteudos", label: "Conteúdos e materiais", icon: "content" },
       { to: "/admin/faq", label: "Perguntas frequentes", icon: "faq" },
       { to: "/admin/feedbacks", label: "Feedbacks", icon: "feedbacks" },

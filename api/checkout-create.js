@@ -19,6 +19,8 @@ import {
   siteUrl,
 } from "./_lib/checkout.js";
 import { createCheckoutLink } from "./_lib/infinitepay.js";
+import { resolveCoupon } from "./_lib/coupons.js";
+import { markOrderPaid } from "./_lib/orders.js";
 
 const now = () => new Date().toISOString();
 
@@ -37,8 +39,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
   const body = readBody(req);
   const method = normalizeMethod(body.method);
   if (!method) throw new HttpError(400, "invalid_method", "Escolha a forma de pagamento.");
-  // cada forma de pagamento exige as variáveis do seu provedor
-  requireCheckoutConfig(method === "online" ? ["infinitepayHandle", "serviceKey"] : ["asaasKey", "serviceKey"]);
+  requireCheckoutConfig(["serviceKey"]);
 
   const slug = String(body.slug || "").trim();
   const name = String(body.name || "").trim().replace(/\s+/g, " ");
@@ -59,8 +60,23 @@ export default checkoutHandler(["POST"], async (req, res) => {
   if (product.checkout_mode !== "internal") {
     throw new HttpError(409, "checkout_disabled", "Este produto não usa o checkout do site.");
   }
-  const amount = priceInCents(product);
-  if (amount < 500) throw new HttpError(409, "invalid_price", "O preço deste produto não está configurado.");
+  const listCents = priceInCents(product);
+  if (listCents < 500) throw new HttpError(409, "invalid_price", "O preço deste produto não está configurado.");
+
+  // Cupom: o desconto é recalculado aqui, no servidor (o navegador só manda o código).
+  let amount = listCents;
+  let coupon = null;
+  let discountCents = 0;
+  if (String(body.coupon || "").trim()) {
+    const applied = await resolveCoupon({ code: body.coupon, product, listCents, email, cpf });
+    coupon = applied.coupon;
+    discountCents = applied.discountCents;
+    amount = applied.finalCents;
+  }
+  const free = amount === 0;
+
+  // cada forma de pagamento exige as variáveis do seu provedor (pedido grátis não passa pelo gateway)
+  if (!free) requireCheckoutConfig(method === "online" ? ["infinitepayHandle"] : ["asaasKey"]);
 
   const base = siteUrl(req);
   if (method === "online" && !base) {
@@ -83,12 +99,21 @@ export default checkoutHandler(["POST"], async (req, res) => {
       currency: "brl",
       status: "pending",
       // "online" (Pix ou cartão) só se sabe qual foi depois de pago; o aviso de pagamento preenche
-      payment_method: method === "boleto" ? "boleto" : null,
-      provider: PROVIDER_BY_METHOD[method],
+      payment_method: method === "boleto" && !free ? "boleto" : null,
+      provider: free ? "coupon" : PROVIDER_BY_METHOD[method],
+      // campos do cupom só entram quando há cupom (assim o checkout continua igual antes do SQL 20)
+      ...(coupon ? { coupon_id: coupon.id, coupon_code: coupon.code.toUpperCase(), discount_cents: discountCents, list_price_cents: listCents } : {}),
     },
   });
   const order = created?.[0];
   if (!order) throw new HttpError(500, "order_failed", "Não foi possível registrar o pedido.");
+
+  // Cupom de 100%: acesso liberado na hora, sem cobrança.
+  if (free) {
+    await markOrderPaid(order, null);
+    res.status(201).setHeader("Cache-Control", "no-store").json({ orderId: order.id, method: "free", free: true, amount: 0, productTitle: product.title });
+    return;
+  }
 
   let result;
   let providerPaymentId = null;
