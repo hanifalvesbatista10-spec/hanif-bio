@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
+import { friendlyAuthError } from "../../services/authErrors";
+import "../../styles/auth-extra.css";
 
 export default function LoginPage() {
   const { user, isAdmin, loading, signOut } = useAuth();
@@ -27,11 +29,7 @@ export default function LoginPage() {
 
     if (error) {
       setSubmitting(false);
-      setMessage(
-        error.message === "Invalid login credentials"
-          ? "E-mail ou senha incorretos."
-          : error.message
-      );
+      setMessage(friendlyAuthError(error));
       return;
     }
 
@@ -86,6 +84,8 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
         </label>
+
+        <Link className="auth-forgot" to="/recuperar-senha">Esqueci minha senha</Link>
 
         {message && <div className="auth-message error">{message}</div>}
 

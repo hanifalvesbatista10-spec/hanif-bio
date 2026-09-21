@@ -19,6 +19,8 @@ import BlockedPage from "./pages/auth/BlockedPage";
 import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
+import RecoverPasswordPage from "./pages/auth/RecoverPasswordPage";
+import UpdatePasswordPage from "./pages/auth/UpdatePasswordPage";
 import "./styles/auth-admin.css";
 
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
@@ -341,7 +343,8 @@ export default function App() {
           <Route path="/login" element={<StudentLoginPage />} />
           <Route path="/cadastro" element={<RegisterPage />} />
           <Route path="/bloqueado" element={<BlockedPage />} />
-          <Route path="/recuperar-senha" element={<Navigate to="/login" replace />} />
+          <Route path="/recuperar-senha" element={<RecoverPasswordPage />} />
+          <Route path="/atualizar-senha" element={<UpdatePasswordPage />} />
           <Route
             path="/minha-area"
             element={

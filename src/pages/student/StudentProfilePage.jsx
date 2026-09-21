@@ -11,6 +11,7 @@ import {
   removeStudentPhoto,
   uploadStudentPhoto,
 } from "../../services/studentData";
+import SecurityCard from "../../components/member/SecurityCard";
 import "../../styles/student-profile.css";
 
 export default function StudentProfilePage() {
@@ -159,6 +160,8 @@ export default function StudentProfilePage() {
 
           <button className="auth-primary" type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar meus dados"}</button>
         </form>
+
+        <SecurityCard />
       </div>
     </div>
   );

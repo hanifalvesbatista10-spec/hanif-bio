@@ -1,0 +1,172 @@
+/* Extras das telas de login, cadastro e recuperação de senha */
+.auth-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 16px;
+}
+
+.auth-card .auth-field > label {
+  margin-top: 0;
+}
+
+.auth-password {
+  position: relative;
+}
+
+.auth-card .auth-password input {
+  padding-right: 92px;
+}
+
+.auth-eye {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: none;
+  color: #52667b;
+  font-weight: 800;
+  font-size: 0.82rem;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.auth-eye:hover {
+  background: #f1f4f8;
+}
+
+.auth-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-strength span {
+  display: flex;
+  gap: 4px;
+}
+
+.auth-strength i {
+  width: 34px;
+  height: 5px;
+  border-radius: 3px;
+  background: #e1e7ee;
+}
+
+.auth-strength.is-0 i:nth-child(1) {
+  background: #d6152d;
+}
+
+.auth-strength.is-1 i:nth-child(-n + 2) {
+  background: #e0a100;
+}
+
+.auth-strength.is-2 i {
+  background: #1a8f4a;
+}
+
+.auth-strength small {
+  color: #52667b;
+  font-weight: 700;
+}
+
+.auth-message.info {
+  background: #eef5ff;
+  color: #17457a;
+}
+
+.auth-check {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: flex-start;
+  gap: 10px;
+  font-weight: 600 !important;
+  font-size: 0.86rem !important;
+  line-height: 1.45;
+  color: #33475c !important;
+}
+
+.auth-card .auth-check input {
+  width: auto;
+  margin-top: 3px;
+}
+
+.auth-secondary {
+  width: 100%;
+  margin-top: 12px;
+  min-height: 46px;
+  border: 1px solid #cdd7e2;
+  border-radius: 13px;
+  background: #fff;
+  color: #071426;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-secondary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-forgot {
+  display: block;
+  margin-top: 10px;
+  text-align: right;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--ha-red, #d6152d);
+}
+
+.auth-hint {
+  margin: 8px 0 0;
+  font-size: 0.85rem;
+  color: #66798c;
+  line-height: 1.5;
+}
+
+.auth-card .auth-cta-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  margin-top: 18px;
+  min-height: 52px;
+  border-radius: 13px;
+  background: linear-gradient(135deg, var(--ha-red, #d6152d), #ff3d52);
+  color: #fff;
+  font-weight: 900;
+}
+
+.auth-cta-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* Cartão "Segurança" na área do aluno */
+.sec-card {
+  margin-top: 20px;
+}
+
+.sec-card h2 {
+  margin: 0 0 6px;
+}
+
+.sec-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0 18px;
+}
+
+.sec-divider {
+  border: 0;
+  border-top: 1px solid #edf0f3;
+  margin: 24px 0 16px;
+}
+
+.auth-card .auth-back {
+  display: block;
+  width: fit-content;
+}
