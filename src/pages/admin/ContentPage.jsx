@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 
 const statusLabels = { draft: "Rascunho", review: "Em análise", published: "Publicado", hidden: "Oculto", archived: "Arquivado" };
 const typeLabels = { artigo: "Conteúdo gratuito", material: "Material para download" };
@@ -78,10 +79,11 @@ export default function ContentPage() {
                   <td><span className={`status-badge ${row.status}`}>{statusLabels[row.status] || row.status}</span></td>
                   <td>{row.display_order}</td>
                   <td>
-                    <div className="table-actions">
-                      <button onClick={() => navigate(`/admin/conteudos/${row.id}`)}>Editar</button>
-                      <button onClick={() => removeRow(row)}>Excluir</button>
-                    </div>
+                    <RowActions
+                      label={`Ações de ${row.title}`}
+                      primary={{ label: "Editar", onClick: () => navigate(`/admin/conteudos/${row.id}`) }}
+                      items={[{ label: "Excluir conteúdo", danger: true, onClick: () => removeRow(row) }]}
+                    />
                   </td>
                 </tr>
               ))}

@@ -77,16 +77,16 @@ Sem isso, o link do e-mail leva à página errada ou é recusado.
 - **Cadastro:** confere nome completo, senha (mín. 8, com letras e números, sem senhas óbvias) e aceite; avisa quando o e-mail
   já tem conta; mostra a tela "confirme o seu e-mail" com botão para reenviar.
 - **Login:** mensagens em português, mostrar/ocultar senha, reenviar confirmação, pausa de 30 s depois de 5 erros seguidos.
-- **Área do aluno → Meus dados → Segurança:** trocar a senha (pede a atual) e **sair de todos os aparelhos**.
+- **Área do aluno → Configurações → Segurança:** botão **Alterar senha** (pede a atual) e **Sair de todos os aparelhos**. O menu da conta (canto superior direito) também tem o atalho "Alterar senha".
   Trocar ou redefinir a senha desconecta os outros aparelhos.
 - **Se o perfil não carregar:** em vez de voltar ao login sem explicação, mostra o erro com "Tentar de novo".
-- **Painel → Usuários:** busca, **Link de nova senha** e **Reenviar confirmação** para ajudar quem não consegue entrar.
+- **Painel → Usuários:** busca e, no menu **⋯** de cada linha, **Enviar link de nova senha** e **Reenviar e-mail de confirmação**.
 
 ## Aluno que não conseguia entrar (agora)
 
 Depois de configurar o SMTP:
-1. Peça para o aluno usar **Esqueci minha senha** na tela de login, ou use **Painel → Usuários → Link de nova senha**.
-2. Se a conta nunca foi confirmada, use **Reenviar confirmação** (ou, no Supabase, *Authentication → Users → ⋯ → Send
+1. Peça para o aluno usar **Esqueci minha senha** na tela de login, ou use **Painel → Usuários → ⋯ → Enviar link de nova senha**.
+2. Se a conta nunca foi confirmada, use **⋯ → Reenviar e-mail de confirmação** (ou, no Supabase, *Authentication → Users → ⋯ → Send
    password recovery*).
 
 ## Como testar
@@ -94,7 +94,7 @@ Depois de configurar o SMTP:
 1. Crie uma conta de teste com um e-mail seu (que **não** seja da equipe do Supabase) e confirme que o e-mail de confirmação chega.
 2. Entre, saia e use **Esqueci minha senha** com esse e-mail: o link deve chegar em poucos minutos e abrir a tela de nova senha.
 3. Abra o mesmo link uma segunda vez: deve aparecer "link vencido ou já usado", com botão para pedir outro.
-4. Em **Meus dados → Segurança**, troque a senha e entre de novo com a nova.
+4. Em **Configurações → Segurança**, troque a senha e entre de novo com a nova.
 
 ## Problemas comuns
 

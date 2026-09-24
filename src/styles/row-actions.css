@@ -1,0 +1,129 @@
+/* Ações de linha das tabelas do painel: ação principal à vista + menu "⋯" */
+.ra {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ra-primary,
+.ra-trigger {
+  min-height: 40px;
+  border: 1px solid #d7dfe8;
+  border-radius: 10px;
+  background: #fff;
+  color: #17324f;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.ra-primary {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.ra-trigger {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  padding: 0;
+  color: #52667b;
+}
+
+.ra-primary:hover,
+.ra-trigger:hover {
+  background: #f1f5f9;
+  border-color: #c3cfdb;
+}
+
+.ra-trigger.is-open {
+  background: #eaf0f6;
+  border-color: #b8c6d5;
+  color: #071426;
+}
+
+.ra-primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ra-primary:focus-visible,
+.ra-trigger:focus-visible,
+.ra-item:focus-visible {
+  outline: 2px solid #d6152d;
+  outline-offset: 2px;
+}
+
+.ra-menu {
+  position: fixed;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  z-index: 1000;
+  display: grid;
+  padding: 6px;
+  border: 1px solid #e0e6ed;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(7, 20, 38, 0.16), 0 2px 6px rgba(7, 20, 38, 0.08);
+  transform-origin: top right;
+  animation: ra-in 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ra-menu.is-up {
+  transform-origin: bottom right;
+}
+
+@keyframes ra-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+.ra-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #17324f;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ra-item:hover,
+.ra-item:focus-visible {
+  background: #f1f5f9;
+}
+
+.ra-item.is-danger {
+  color: #b3122a;
+}
+
+.ra-item.is-danger:hover,
+.ra-item.is-danger:focus-visible {
+  background: #fff0f2;
+}
+
+.ra-item:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-menu {
+    animation: none;
+  }
+}

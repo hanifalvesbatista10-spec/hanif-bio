@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 import { formatMoneyCents } from "../../services/checkoutApi";
 
 const emptyForm = {
@@ -260,12 +261,15 @@ export default function CouponsPage() {
                     </td>
                     <td><span className={`status-badge ${status.tone}`}>{status.label}</span></td>
                     <td>
-                      <div className="table-actions">
-                        <button type="button" onClick={() => copy(coupon.code, "Código")}>Copiar código</button>
-                        {product && <button type="button" onClick={() => copy(`${window.location.origin}/checkout/${product.slug}?cupom=${coupon.code}`, "Link com o cupom")}>Copiar link</button>}
-                        <button type="button" onClick={() => toggle(coupon)}>{coupon.active ? "Desativar" : "Ativar"}</button>
-                        <button type="button" onClick={() => remove(coupon)}>Excluir</button>
-                      </div>
+                      <RowActions
+                        label={`Ações do cupom ${coupon.code}`}
+                        primary={{ label: "Copiar código", onClick: () => copy(coupon.code, "Código") }}
+                        items={[
+                          { label: "Copiar link com o cupom", hidden: !product, onClick: () => copy(`${window.location.origin}/checkout/${product.slug}?cupom=${coupon.code}`, "Link com o cupom") },
+                          { label: coupon.active ? "Desativar cupom" : "Ativar cupom", onClick: () => toggle(coupon) },
+                          { label: "Excluir cupom", danger: true, onClick: () => remove(coupon) },
+                        ]}
+                      />
                     </td>
                   </tr>
                 );

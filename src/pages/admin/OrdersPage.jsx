@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 import { formatMoneyCents } from "../../services/checkoutApi";
 
 const STATUS = {
@@ -271,10 +272,13 @@ export default function OrdersPage() {
                     </td>
                     <td>
                       {order.status === "paid" && (
-                        <div className="table-actions">
-                          <button type="button" onClick={() => grantNow(order)} disabled={busyId === order.id}>{busyId === order.id ? "..." : "Liberar acesso"}</button>
-                          <button type="button" onClick={() => markRefunded(order)} disabled={busyId === order.id}>Marcar como reembolsado</button>
-                        </div>
+                        <RowActions
+                          label={`Ações do pedido de ${order.buyer_name}`}
+                          items={[
+                            { label: "Liberar acesso", onClick: () => grantNow(order), disabled: busyId === order.id },
+                            { label: "Marcar como reembolsado", onClick: () => markRefunded(order), disabled: busyId === order.id, danger: true },
+                          ]}
+                        />
                       )}
                     </td>
                   </tr>

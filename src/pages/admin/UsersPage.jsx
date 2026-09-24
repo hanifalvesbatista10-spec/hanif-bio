@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../../services/supabase";
 import { friendlyAuthError } from "../../services/authErrors";
+import RowActions from "../../components/admin/RowActions";
 
 export default function UsersPage() {
   const [rows, setRows] = useState([]);
@@ -69,7 +70,7 @@ export default function UsersPage() {
       </div>
 
       <p className="adm-hint">
-        Aluno sem conseguir entrar? Use <strong>Link de nova senha</strong>: ele recebe por e-mail um link para criar outra senha.
+        Aluno sem conseguir entrar? No menu <strong>⋯</strong> da linha, use <strong>Enviar link de nova senha</strong>: ele recebe por e-mail um link para criar outra senha.
         Se o e-mail não chegar, confira se o envio de e-mails do Supabase está configurado (veja docs/login-e-emails.md).
       </p>
 
@@ -88,7 +89,7 @@ export default function UsersPage() {
       <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
-            <tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Status</th><th>Cadastro</th><th>Ajuda com o login</th></tr>
+            <tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Status</th><th>Cadastro</th><th><span className="ra-th">Ações</span></th></tr>
           </thead>
           <tbody>
             {shown.map((row) => (
@@ -111,10 +112,13 @@ export default function UsersPage() {
                 </td>
                 <td>{new Date(row.created_at).toLocaleDateString("pt-BR")}</td>
                 <td>
-                  <div className="table-actions">
-                    <button type="button" onClick={() => sendReset(row)} disabled={busyId === row.id}>Link de nova senha</button>
-                    <button type="button" onClick={() => resendConfirmation(row)} disabled={busyId === row.id}>Reenviar confirmação</button>
-                  </div>
+                  <RowActions
+                    label={`Ações para ${row.full_name || row.email}`}
+                    items={[
+                      { label: "Enviar link de nova senha", onClick: () => sendReset(row), disabled: busyId === row.id },
+                      { label: "Reenviar e-mail de confirmação", onClick: () => resendConfirmation(row), disabled: busyId === row.id },
+                    ]}
+                  />
                 </td>
               </tr>
             ))}

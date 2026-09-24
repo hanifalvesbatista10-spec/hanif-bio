@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 
 const statusLabels = { draft: "Rascunho", review: "Em análise", published: "Publicado", hidden: "Oculto", archived: "Arquivado" };
 
@@ -39,6 +40,6 @@ export default function FeedbacksPage() {
       <button onClick={load}>Pesquisar</button>
     </div>
     {message && <div className="admin-alert">{message}</div>}
-    {loading ? <div className="admin-empty">Carregando...</div> : rows.length === 0 ? <div className="admin-empty">Nenhum feedback encontrado.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Aluno</th><th>Produto</th><th>Nota</th><th>Status</th><th>Público</th><th>Ações</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td><strong>{row.student_name}</strong><small>{row.title || "Sem título"}</small></td><td>{row.product?.title || "—"}</td><td>{"★".repeat(row.rating || 0)}</td><td><span className={`status-badge ${row.status}`}>{statusLabels[row.status] || row.status}</span></td><td>{row.publication_authorized ? "Sim" : "Não"}{row.is_featured ? " • Destaque" : ""}</td><td><div className="table-actions"><Link to={`/admin/feedbacks/${row.id}`}>Editar</Link><button onClick={()=>remove(row.id)}>Excluir</button></div></td></tr>)}</tbody></table></div>}
+    {loading ? <div className="admin-empty">Carregando...</div> : rows.length === 0 ? <div className="admin-empty">Nenhum feedback encontrado.</div> : <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Aluno</th><th>Produto</th><th>Nota</th><th>Status</th><th>Público</th><th>Ações</th></tr></thead><tbody>{rows.map(row=><tr key={row.id}><td><strong>{row.student_name}</strong><small>{row.title || "Sem título"}</small></td><td>{row.product?.title || "—"}</td><td>{"★".repeat(row.rating || 0)}</td><td><span className={`status-badge ${row.status}`}>{statusLabels[row.status] || row.status}</span></td><td>{row.publication_authorized ? "Sim" : "Não"}{row.is_featured ? " • Destaque" : ""}</td><td><RowActions label={`Ações do feedback de ${row.student_name}`} primary={{label:"Editar",to:`/admin/feedbacks/${row.id}`}} items={[{label:"Excluir feedback",danger:true,onClick:()=>remove(row.id)}]} /></td></tr>)}</tbody></table></div>}
   </section>;
 }

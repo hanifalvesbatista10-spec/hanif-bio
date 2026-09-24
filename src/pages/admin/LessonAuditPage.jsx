@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 import { checkYoutubeVideo, toEmbedUrl, watchUrl, youtubeId } from "../../services/video";
 
 const muxLabels = {
@@ -216,13 +217,14 @@ export default function LessonAuditPage() {
                             )}
                           </td>
                           <td>
-                            <div className="table-actions">
-                              <Link to={`/admin/area-de-membros?produto=${product.id}&aula=${lesson.id}`}>Ver como aluno</Link>
-                              {youtubeId(lesson.video_url) && (
-                                <a href={watchUrl(lesson.video_url)} target="_blank" rel="noreferrer">YouTube</a>
-                              )}
-                              <Link to="/admin/aulas">Editar</Link>
-                            </div>
+                            <RowActions
+                              label={`Ações da aula ${lesson.title}`}
+                              primary={{ label: "Ver como aluno", to: `/admin/area-de-membros?produto=${product.id}&aula=${lesson.id}` }}
+                              items={[
+                                { label: "Abrir no YouTube", hidden: !youtubeId(lesson.video_url), href: watchUrl(lesson.video_url) },
+                                { label: "Editar aula", to: "/admin/aulas" },
+                              ]}
+                            />
                           </td>
                         </tr>
                       );

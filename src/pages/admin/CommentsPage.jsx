@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { Comment, isMissingCommentsTable } from "../../components/member/LessonComments";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 import "../../styles/member-area.css";
 
 const tabs = [
@@ -185,15 +185,14 @@ export default function CommentsPage() {
                       <strong>{root.lesson?.title || "Aula removida"}</strong>
                       <small>{root.lesson?.product?.title}</small>
                     </div>
-                    <div className="table-actions">
-                      {root.lesson?.product?.id && (
-                        <Link to={`/admin/area-de-membros?produto=${root.lesson.product.id}&aula=${root.lesson_id}`}>Ver na aula</Link>
-                      )}
-                      <button type="button" disabled={busyId === root.id} onClick={() => toggleHidden(root)}>
-                        {root.status === "hidden" ? "Mostrar" : "Ocultar"}
-                      </button>
-                      <button type="button" className="is-danger" disabled={busyId === root.id} onClick={() => remove(root)}>Excluir</button>
-                    </div>
+                    <RowActions
+                      label="Ações do comentário"
+                      primary={root.lesson?.product?.id ? { label: "Ver na aula", to: `/admin/area-de-membros?produto=${root.lesson.product.id}&aula=${root.lesson_id}` } : undefined}
+                      items={[
+                        { label: root.status === "hidden" ? "Mostrar para os alunos" : "Ocultar dos alunos", disabled: busyId === root.id, onClick: () => toggleHidden(root) },
+                        { label: "Excluir comentário", danger: true, disabled: busyId === root.id, onClick: () => remove(root) },
+                      ]}
+                    />
                   </header>
 
                   <div className="adm-thread-body">

@@ -19,6 +19,8 @@ import BlockedPage from "./pages/auth/BlockedPage";
 import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
+import StudentCertificatesPage from "./pages/student/StudentCertificatesPage";
+import MemberLayout from "./components/member/MemberLayout";
 import RecoverPasswordPage from "./pages/auth/RecoverPasswordPage";
 import UpdatePasswordPage from "./pages/auth/UpdatePasswordPage";
 import "./styles/auth-admin.css";
@@ -349,26 +351,16 @@ export default function App() {
             path="/minha-area"
             element={
               <ProtectedRoute redirectTo="/login">
-                <StudentCoursesPage />
+                <MemberLayout />
               </ProtectedRoute>
             }
-          />
-          <Route
-            path="/minha-area/meus-dados"
-            element={
-              <ProtectedRoute redirectTo="/login">
-                <StudentProfilePage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/minha-area/curso/:productId"
-            element={
-              <ProtectedRoute redirectTo="/login">
-                <CourseLessonsPage />
-              </ProtectedRoute>
-            }
-          />
+          >
+            <Route index element={<StudentCoursesPage />} />
+            <Route path="certificados" element={<StudentCertificatesPage />} />
+            <Route path="configuracoes" element={<StudentProfilePage />} />
+            <Route path="meus-dados" element={<Navigate to="/minha-area/configuracoes?aba=dados" replace />} />
+            <Route path="curso/:productId" element={<CourseLessonsPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

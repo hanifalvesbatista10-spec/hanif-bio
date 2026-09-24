@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../services/supabase";
+import RowActions from "../../components/admin/RowActions";
 
 export default function AccessPage() {
   const [students, setStudents] = useState([]);
@@ -141,9 +142,10 @@ export default function AccessPage() {
                   <td>{grant.product?.title}</td>
                   <td><span className={`status-badge ${grant.access_status === "active" ? "published" : "draft"}`}>{grant.access_status}</span></td>
                   <td>
-                    <div className="table-actions">
-                      <button onClick={() => revokeAccess(grant)}>Revogar</button>
-                    </div>
+                    <RowActions
+                      label={`Ações do acesso de ${grant.profile?.full_name || grant.profile?.email}`}
+                      items={[{ label: "Revogar acesso", danger: true, onClick: () => revokeAccess(grant) }]}
+                    />
                   </td>
                 </tr>
               ))}

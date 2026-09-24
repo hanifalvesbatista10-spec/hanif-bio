@@ -1839,3 +1839,32 @@ html.adm-scroll-lock body {
 .cp-form .admin-button {
   justify-self: start;
 }
+
+/* Coluna "Ações" das tabelas com menu de três pontos */
+.adm-content .admin-table th:has(.ra-th) {
+  text-align: right;
+}
+
+.adm-content .admin-table td:has(.ra) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.adm-content .adm-thread-head .ra {
+  flex: none;
+}
+
+/* No celular a tabela rola de lado: a coluna de ações fica sempre à vista */
+@media (max-width: 767px) {
+  .adm-content .admin-table :is(th, td):has(.ra, .ra-th) {
+    position: sticky;
+    right: 0;
+    z-index: 1;
+    background: #fff;
+    box-shadow: -8px 0 10px -8px rgba(7, 20, 38, 0.18);
+  }
+
+  .adm-content .admin-table th:has(.ra-th) {
+    background: #f8fafc;
+  }
+}
