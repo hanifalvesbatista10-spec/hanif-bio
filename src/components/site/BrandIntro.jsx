@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 const SESSION_KEY = "ha_intro_seen";
-const INTRO_SRC = "/media/hero/brand-intro-optimized.mp4";
+const INTRO_SRC = "/media/hero/brand-intro-fast.mp4";
 const INTRO_CODEC = 'video/mp4; codecs="avc1.640028"';
 const START_TIMEOUT_MS = 3500;
 const HARD_TIMEOUT_MS = 9000;
-const FADE_MS = 700;
-const PLAYBACK_RATE = 1.8; // a abertura tem 4 s; acelerada termina em cerca de 2,2 s
+const FADE_MS = 500;
+// brand-intro-fast.mp4 é a abertura original (4 s) já acelerada: dura cerca de 1,8 s em qualquer navegador
 
 export function shouldPlayIntro() {
   if (typeof window === "undefined") return false;
@@ -51,8 +51,6 @@ export default function BrandIntro({ onFinish }) {
       if (video && video.currentTime === 0) finish();
     }, START_TIMEOUT_MS);
     const hardTimer = window.setTimeout(finish, HARD_TIMEOUT_MS);
-
-    if (video) video.playbackRate = PLAYBACK_RATE;
     const attempt = video?.play?.();
     if (attempt && typeof attempt.catch === "function") attempt.catch(finish);
 
@@ -83,7 +81,6 @@ export default function BrandIntro({ onFinish }) {
         autoPlay
         playsInline
         preload="auto"
-        onLoadedMetadata={(event) => { event.currentTarget.playbackRate = PLAYBACK_RATE; }}
         onEnded={finish}
         onError={finish}
       />

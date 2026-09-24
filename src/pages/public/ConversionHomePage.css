@@ -220,7 +220,7 @@
   overflow: hidden;
   background: #010a1d;
   opacity: 1;
-  transition: opacity 0.7s var(--ease-standard);
+  transition: opacity 0.5s var(--ease-standard);
 }
 
 .brand-intro.is-leaving {
