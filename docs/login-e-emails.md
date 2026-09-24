@@ -30,9 +30,9 @@ Escolha um provedor de e-mail transacional e copie os dados SMTP dele (servidor,
 
 *Authentication → URL Configuration.*
 
-- **Site URL:** `https://hanifalves.vercel.app` (ou o seu domínio próprio, quando tiver).
+- **Site URL:** `https://www.aphhardcore.com` (o domínio principal do site).
 - **Redirect URLs** (lista de permitidos), adicione:
-  - `https://hanifalves.vercel.app/**`
+  - `https://www.aphhardcore.com/**`
   - `http://localhost:5173/**` (só se for testar no seu computador)
 
 Sem isso, o link do e-mail leva à página errada ou é recusado.

@@ -52,7 +52,7 @@ com o preço do curso (o valor pago a mais é o juro).
    | Variável | Valor |
    | --- | --- |
    | `INFINITEPAY_HANDLE` | a sua InfiniteTag, sem o `$` (não é segredo) |
-   | `SITE_URL` | o endereço do site, ex.: `https://hanifalves.vercel.app` |
+   | `SITE_URL` | o endereço do site, ex.: `https://www.aphhardcore.com` |
    | `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API → `service_role` (só na Vercel, nunca em conversa) |
    | `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `ASAAS_ENV` | só para o **boleto** (veja `Boleto` abaixo) |
 
