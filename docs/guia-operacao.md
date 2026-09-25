@@ -43,6 +43,18 @@ Uma aula pode aparecer em vários cursos (rode `supabase/22_aulas_compartilhadas
 - Quem tem acesso a **qualquer** curso da aula assiste. Os **comentários** ficam na aula, então os alunos de todos os cursos veem os mesmos.
 - Apagar um curso não apaga aulas que estão em outros cursos.
 
+## Depoimentos por link
+
+Em **Feedbacks → Pedir depoimento por link** (rode `supabase/24_depoimentos_por_link.sql` uma vez):
+1. Escolha o curso e, se quiser, o **nome do aluno** (link pessoal: já vem com o nome e vale uma vez). Sem nome, o link é geral (várias pessoas, ex.: uma turma).
+   Dá para limitar por dias. Clique em **Criar link e copiar mensagem** e cole no WhatsApp.
+2. O aluno abre a página, coloca nome, nota de 1 a 5 estrelas, o depoimento (mínimo de 20 letras), foto e, se quiser, resultado e vídeo. Marca se **autoriza** a publicação.
+3. O depoimento chega em **Feedbacks** como **Em análise**, com a etiqueta "Recebido pelo link". Nada aparece no site sozinho.
+4. Clique em **Revisar** (ajuste o texto se precisar) e **Publicar no site**. Se o aluno não marcou a autorização, o painel avisa antes de publicar.
+- No menu **⋯** do link: copiar só o link, enviar pelo WhatsApp, desligar, excluir. O link vale enquanto estiver ligado, dentro do prazo e sem passar do limite de usos.
+- A foto do aluno só é aceita com um link ativo, até 1 MB e só imagem. Depoimentos e fotos enviados por link nunca entram no site antes de você publicar.
+- A página do aluno não aparece no Google (`noindex`).
+
 ## Onde olhar quando algo der errado
 
 | Sintoma | Onde ver |
@@ -65,7 +77,7 @@ e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos)
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

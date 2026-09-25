@@ -1,0 +1,125 @@
+/* Página pública do depoimento por link (/depoimento/...) */
+.fb-form .fx-card h2 {
+  margin-top: 0;
+}
+
+.fb-label {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.fb-label small {
+  font-weight: 500;
+}
+
+.fb-photo-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.fb-photo-row .fx-hint {
+  margin: 0;
+}
+
+.fb-photo {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 96px;
+  height: 128px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px dashed #9fb0c2;
+  border-radius: 14px;
+  background: #eef2f7;
+  color: #53677b;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+  cursor: pointer;
+}
+
+.fb-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.fb-photo:focus-visible {
+  outline: 2px solid #d6152d;
+  outline-offset: 2px;
+}
+
+.fb-stars {
+  display: flex;
+  gap: 4px;
+}
+
+.fb-stars button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.fb-stars button svg {
+  fill: #e1e7ee;
+  stroke: #c2ceda;
+  stroke-width: 1;
+  stroke-linejoin: round;
+  transition: fill 0.14s ease;
+}
+
+.fb-stars button.is-on svg {
+  fill: #f2b01e;
+  stroke: #d99a0b;
+}
+
+.fb-stars button:focus-visible {
+  outline: 2px solid #d6152d;
+  outline-offset: 2px;
+}
+
+.fb-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-weight: 600;
+  line-height: 1.55;
+  cursor: pointer;
+}
+
+.fb-consent input {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: #d6152d;
+}
+
+.fb-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (max-width: 650px) {
+  .fb-photo-row {
+    align-items: flex-start;
+  }
+}

@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /depoimento/
+Disallow: /minha-area
 
 Sitemap: https://www.aphhardcore.com/sitemap.xml

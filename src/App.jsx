@@ -12,6 +12,7 @@ import ThankYouPage from "./pages/public/ThankYouPage";
 import EventPage from "./pages/public/EventPage";
 import CertificateVerifyPage from "./pages/public/CertificateVerifyPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
+import FeedbackLinkPage from "./pages/public/FeedbackLinkPage";
 import LoginPage from "./pages/auth/LoginPage";
 import StudentLoginPage from "./pages/auth/StudentLoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
+          <Route path="/depoimento/:token" element={<FeedbackLinkPage />} />
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route
