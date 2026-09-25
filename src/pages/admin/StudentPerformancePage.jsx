@@ -2,17 +2,28 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { formatDateTime, formatScore, typeLabel } from "../../services/forms";
-import { INACTIVE_DAYS, LEVEL_LABEL, WEAK_BELOW, computeStudentPerformance, riskSignals, summaryText } from "../../services/performance";
+import { fetchLessonsAndLinks } from "../../services/lessons";
+import { INACTIVE_DAYS, LEVEL_LABEL, WEAK_BELOW, computeStudentPerformance, lessonsForTopic, riskSignals, summaryText } from "../../services/performance";
 import "../../styles/forms-admin.css";
 
 const LEVEL_TONE = { weak: "is-bad", mid: "is-review", strong: "is-published", few: "is-draft" };
 
-async function inChunks(table, select, column, ids, size = 60) {
+// O Supabase devolve no máximo 1000 linhas por consulta: lê em páginas até acabar.
+async function fetchAll(make) {
   const out = [];
-  for (let i = 0; i < ids.length; i += size) {
-    const { data, error } = await supabase.from(table).select(select).in(column, ids.slice(i, i + size));
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await make().order("id").range(from, from + 999);
     if (error) throw error;
     out.push(...(data || []));
+    if (!data || data.length < 1000) break;
+  }
+  return out;
+}
+
+async function inChunks(table, select, column, ids, size = 30) {
+  const out = [];
+  for (let i = 0; i < ids.length; i += size) {
+    out.push(...(await fetchAll(() => supabase.from(table).select(select).in(column, ids.slice(i, i + size)))));
   }
   return out;
 }
@@ -25,12 +36,15 @@ function Bar({ percent, level }) {
   );
 }
 
-function TopicRow({ item, sub = false, active, onFocus }) {
+function TopicRow({ item, sub = false, active, onFocus, lessons = [] }) {
   return (
     <div className={`fa-perf-row${sub ? " is-sub" : ""}${active ? " is-active" : ""}`}>
       <div className="fa-perf-name">
         <strong>{item.label}</strong>
         <small>{item.answered} {item.answered === 1 ? "resposta" : "respostas"} · errou {item.wrong}</small>
+        {(item.level === "weak" || item.level === "mid") && lessons.length > 0 && (
+          <small className="fa-perf-lessons">Aula para indicar: {lessons.map((lesson) => lesson.title).join(" · ")}</small>
+        )}
       </div>
       <Bar percent={item.percent} level={item.level} />
       <div className="fa-perf-end">
@@ -50,6 +64,7 @@ export default function StudentPerformancePage() {
   const [profile, setProfile] = useState(null);
   const [raw, setRaw] = useState({ submissions: [], answers: [], blocks: [], keys: [] });
   const [pendingForms, setPendingForms] = useState([]);
+  const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -78,9 +93,7 @@ export default function StudentPerformancePage() {
         let blocks = [];
         let answers = [];
         if (formIds.length) {
-          const { data: blockRows, error: blockError } = await supabase.from("form_blocks").select("*,key:form_block_keys(*)").in("form_id", formIds);
-          if (blockError) throw blockError;
-          blocks = blockRows || [];
+          blocks = await inChunks("form_blocks", "*,key:form_block_keys(*)", "form_id", formIds, 20);
           answers = await inChunks("form_answers", "submission_id,block_id,answer,is_correct,points_awarded,needs_review", "submission_id", submissions.map((item) => item.id));
         }
         const keys = blocks.map((block) => block.key).filter(Boolean);
@@ -94,7 +107,10 @@ export default function StudentPerformancePage() {
         const done = new Set(formIds);
         const open = (forms || []).filter((form) => !done.has(form.id) && (!form.product_id || owned.has(form.product_id)) && (!form.ends_at || new Date(form.ends_at) > new Date()));
 
+        const lessonData = await fetchLessonsAndLinks();
+
         if (!alive) return;
+        setLessons(lessonData.lessons || []);
         setProfile(person);
         setRaw({ submissions, answers, blocks, keys });
         setPendingForms(open);
@@ -158,7 +174,7 @@ export default function StudentPerformancePage() {
         <div className="fa-top-actions">
           <Link className="fa-btn is-ghost" to="/admin/usuarios">Voltar aos usuários</Link>
           {perf.topics.length > 0 && (
-            <button type="button" className="fa-btn is-ghost" onClick={() => copy(summaryText(profile.full_name, perf), "Resumo copiado. Cole numa conversa com o aluno.")}>Copiar resumo</button>
+            <button type="button" className="fa-btn is-ghost" onClick={() => copy(summaryText(profile.full_name, perf, (topic, sub) => lessonsForTopic(lessons, topic, sub)), "Resumo copiado. Cole numa conversa com o aluno.")}>Copiar resumo</button>
           )}
           {whatsappUrl && <a className="fa-btn" href={whatsappUrl} target="_blank" rel="noreferrer">Chamar no WhatsApp</a>}
         </div>
@@ -216,12 +232,12 @@ export default function StudentPerformancePage() {
                           {hasSubs ? (
                             <button type="button" className="fa-perf-toggle" aria-expanded={expanded} aria-label={`${expanded ? "Recolher" : "Abrir"} subtemas de ${topic.label}`} onClick={() => setOpen((current) => ({ ...current, [topic.key]: !expanded }))}>{expanded ? "−" : "+"}</button>
                           ) : <span className="fa-perf-toggle is-empty" />}
-                          <TopicRow item={topic} active={focus?.topic === topic.key && !focus.sub} onFocus={() => setFocus(focus?.topic === topic.key && !focus.sub ? null : { topic: topic.key, sub: null })} />
+                          <TopicRow item={topic} lessons={lessonsForTopic(lessons, topic.label)} active={focus?.topic === topic.key && !focus.sub} onFocus={() => setFocus(focus?.topic === topic.key && !focus.sub ? null : { topic: topic.key, sub: null })} />
                         </div>
                         {hasSubs && expanded && (
                           <div className="fa-perf-subs">
                             {topic.subtopics.map((sub) => (
-                              <TopicRow key={sub.key} item={sub} sub active={focus?.topic === topic.key && focus.sub === sub.key} onFocus={() => setFocus(focus?.topic === topic.key && focus.sub === sub.key ? null : { topic: topic.key, sub: sub.key })} />
+                              <TopicRow key={sub.key} item={sub} sub lessons={lessonsForTopic(lessons, topic.label, sub.label)} active={focus?.topic === topic.key && focus.sub === sub.key} onFocus={() => setFocus(focus?.topic === topic.key && focus.sub === sub.key ? null : { topic: topic.key, sub: sub.key })} />
                             ))}
                           </div>
                         )}

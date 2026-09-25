@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import { formatDateTime, formatScore, friendlyFormError, typeLabel } from "../../services/forms";
 import { supabase } from "../../services/supabase";
+import { ActivityTabs } from "./StudentMyPerformancePage";
 
 export function activityStatus(item) {
   const last = item.last;
@@ -51,6 +52,8 @@ export default function StudentActivitiesPage() {
         <h1>Atividades</h1>
         <p>Provas, simulados e tarefas dos seus cursos. A nota e os comentários aparecem quando o instrutor liberar.</p>
       </div>
+
+      <ActivityTabs current="activities" />
 
       {error && <div className="mb-alert is-error" role="alert">{error}</div>}
 

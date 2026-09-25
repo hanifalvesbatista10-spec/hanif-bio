@@ -20,6 +20,11 @@ function Icon({ children, size = 20 }) {
 }
 
 export const icons = {
+  chart: (
+    <Icon>
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </Icon>
+  ),
   dashboard: (
     <Icon>
       <rect x="3" y="3" width="7" height="9" rx="1.5" />

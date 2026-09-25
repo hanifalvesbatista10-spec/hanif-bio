@@ -19,7 +19,7 @@ const MAX_FILE_GB = 5;
 
 function emptyLesson(productId, position) {
   return {
-    id: null, product_id: productId, product_ids: [productId], title: "", description: "", video_url: "", duration: "",
+    id: null, product_id: productId, product_ids: [productId], topics_text: "", title: "", description: "", video_url: "", duration: "",
     status: "draft", position, video_provider: "youtube",
   };
 }
@@ -162,6 +162,17 @@ function LessonDialog({ lesson, products, sharing, currentProductId, saving, pha
             )}
 
             <label>Descrição<textarea rows={3} value={draft.description || ""} onChange={(e) => set("description", e.target.value)} disabled={saving} /></label>
+            <label>
+              Temas que esta aula ensina (um por linha, opcional)
+              <textarea
+                rows={3}
+                value={draft.topics_text || ""}
+                onChange={(e) => set("topics_text", e.target.value)}
+                placeholder={"Trauma\nTrauma > B - Respiração"}
+                disabled={saving}
+              />
+              <small className="adm-hint">Quando o aluno for mal num tema, o site indica esta aula para ele rever. Use os mesmos nomes de Tema e Subtema das perguntas. Um tema inteiro ("Trauma") ou uma parte ("Trauma &gt; B - Respiração").</small>
+            </label>
             <div className="form-grid three">
               <label>Duração<input value={draft.duration || ""} onChange={(e) => set("duration", e.target.value)} placeholder={mux ? "Automática ao ficar pronto" : "Ex: 12min"} disabled={saving} /></label>
               <label>
@@ -421,7 +432,7 @@ export default function LessonsPage() {
 
   const openEdit = (lesson) => {
     setDialogError("");
-    setEditing({ ...lesson, position: lesson.position ?? 0, product_ids: coursesOf(lesson.id) });
+    setEditing({ ...lesson, position: lesson.position ?? 0, product_ids: coursesOf(lesson.id), topics_text: (lesson.topics || []).join("\n") });
   };
 
   const saveLesson = async (row, file) => {
@@ -461,6 +472,8 @@ export default function LessonsPage() {
       video_provider: mux ? "mux" : "youtube",
     };
     if (!row.id) payload.product_id = selected.includes(productId) ? productId : selected[0];
+    const topics = (row.topics_text || "").split("\n").map((line) => line.trim()).filter(Boolean);
+    if (topics.length || (original && "topics" in original)) payload.topics = topics;
 
     let replacedAssetId = null;
 
@@ -497,7 +510,9 @@ export default function LessonsPage() {
       if (result.error) {
         const text = result.error.message || "";
         throw new Error(
-          text.includes("mux_") || text.includes("video_source") || text.includes("provider_check") || text.includes("null value")
+          text.includes("topics")
+            ? "O banco ainda não tem os temas das aulas. Execute supabase/26_desempenho_turma_e_aluno.sql no Supabase e salve de novo."
+            : text.includes("mux_") || text.includes("video_source") || text.includes("provider_check") || text.includes("null value")
             ? "O banco ainda não está pronto para o Mux. Execute supabase/14_mux_video.sql no SQL Editor do Supabase e tente de novo."
             : `Erro ao salvar: ${text}`
         );
@@ -740,6 +755,7 @@ export default function LessonsPage() {
                       <span className={`adm-provider-tag is-${lesson.mux_status || "none"}`}>{muxStatusLabels[lesson.mux_status] || "Mux"}</span>
                     ) : id ? "Vídeo do YouTube" : "Link fora do padrão do YouTube"}
                   </small>
+                  {(lesson.topics || []).length > 0 && <small className="adm-shared-tag" style={{ background: "#eef6ee", color: "#1d5b32" }}>Ensina: {lesson.topics.join(" · ")}</small>}
                   {others.length > 0 && (
                     <small className="adm-shared-tag" title="Esta aula é uma só: editar ou tirar do ar vale para todos os cursos">
                       Também em: {others.map(titleOf).join(", ")}

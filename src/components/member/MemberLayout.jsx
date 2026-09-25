@@ -7,7 +7,7 @@ import "../../styles/member-shell.css";
 
 const NAV = [
   { to: "/minha-area", label: "Meus cursos", icon: "courses", match: (path) => path === "/minha-area" || path.startsWith("/minha-area/curso") },
-  { to: "/minha-area/atividades", label: "Atividades", icon: "activities", match: (path) => path.startsWith("/minha-area/atividades") },
+  { to: "/minha-area/atividades", label: "Atividades", icon: "activities", match: (path) => path.startsWith("/minha-area/atividades") || path.startsWith("/minha-area/desempenho") },
   { to: "/minha-area/certificados", label: "Certificados", icon: "certificate", match: (path) => path.startsWith("/minha-area/certificados") },
   { to: "/minha-area/configuracoes", label: "Configurações", icon: "settings", match: (path) => path.startsWith("/minha-area/configuracoes") },
 ];

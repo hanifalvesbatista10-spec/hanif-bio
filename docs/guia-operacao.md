@@ -67,6 +67,21 @@ Em **Feedbacks → Pedir depoimento por link** (rode `supabase/24_depoimentos_po
 
 **Para a ficha ficar rica**, preencha **Tema** e **Subtema** nas perguntas (ao importar com IA use `TEMA:` e `SUBTEMA:`; o botão "Copiar instruções para a IA" já pede isso). Use sempre a mesma grafia: o editor sugere os nomes já usados. Ignora questões anuladas, sem pontos e discursivas ainda sem nota. Só entram alunos que responderam logados.
 
+## Desempenho da turma e "Meu desempenho" do aluno
+
+Rode `supabase/26_desempenho_turma_e_aluno.sql` uma vez.
+
+**Desempenho da turma** (menu Engajamento → Desempenho da turma). Escolha a turma (todos os alunos ou os alunos de um curso):
+- **Cartões:** quantos alunos já responderam, média da turma, aprovação e quantos precisam de atenção.
+- **Onde a turma está errando:** temas e subtemas do mais fraco ao mais forte, com "N de M alunos erraram". "Ver questões" filtra as perguntas daquele assunto.
+- **Questões que mais derrubam a turma** (mínimo de 3 respostas): % que errou, a resposta errada mais marcada, o gabarito e a explicação. Se quase todo mundo erra (70% ou mais), o site sugere rever a aula ou conferir o enunciado e o gabarito.
+- **Alunos:** situação de cada um (em dia, média baixa, parado há mais de 14 dias, nenhuma prova ainda) e o link para a ficha.
+- **Comparação entre provas:** a média de cada prova, da mais antiga para a mais nova.
+
+**Ligar assunto a aula.** No cadastro da aula, o campo **Temas que esta aula ensina** (um por linha): `Trauma` ou `Trauma > B - Respiração`, com os mesmos nomes de Tema e Subtema das perguntas. Com isso o painel mostra **"Aula para indicar/reforçar"** ao lado dos assuntos fracos (na turma e na ficha do aluno) e o resumo copiável inclui "Vale rever".
+
+**Meu desempenho (aluno)**: na área do aluno, aba **Atividades → Meu desempenho**. Mostra a média, o que precisa reforçar (abaixo de 60%, com o botão para rever a aula ligada ao assunto), os pontos fortes (80% ou mais) e todos os assuntos. Conta **só provas com resultado já liberado**, então nada aparece antes da sua liberação. Assuntos precisam de pelo menos 3 respostas para entrar como ponto fraco.
+
 ## Onde olhar quando algo der errado
 
 | Sintoma | Onde ver |
@@ -89,7 +104,7 @@ e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos)
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

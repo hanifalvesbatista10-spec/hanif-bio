@@ -179,6 +179,21 @@ export function computeStudentPerformance({ submissions = [], answers = [], bloc
   };
 }
 
+// Aulas que ensinam um tema. A aula é marcada com linhas como "Trauma" ou "Trauma > B - Respiração".
+// Tema inteiro: vale "Trauma" e qualquer "Trauma > ...". Subtema: só "Trauma > B - Respiração" (ou só "B - Respiração").
+export function lessonsForTopic(lessons, topic, subtopic = null) {
+  const wantTopic = norm(topic);
+  const wantSub = subtopic ? norm(subtopic) : null;
+  return lessons.filter((lesson) => {
+    if (lesson.status && lesson.status !== "published") return false;
+    return (lesson.topics || []).some((entry) => {
+      const text = norm(entry);
+      if (!wantSub) return norm(String(entry).split(">")[0]) === wantTopic;
+      return text === norm(`${topic} > ${subtopic}`) || text === wantSub;
+    });
+  });
+}
+
 // Sinais de atenção para o instrutor
 export function riskSignals(perf, { hasPendingForms = false } = {}) {
   const signals = [];
@@ -189,7 +204,7 @@ export function riskSignals(perf, { hasPendingForms = false } = {}) {
 }
 
 // Resumo em texto para copiar e usar numa conversa com o aluno
-export function summaryText(name, perf) {
+export function summaryText(name, perf, findLessons = null) {
   const first = String(name || "").trim().split(/\s+/)[0] || "aluno";
   const lines = [`Resumo de desempenho de ${first}`];
   if (perf.overall.avg !== null) lines.push(`Média geral: ${perf.overall.avg}% em ${perf.overall.attempts} ${perf.overall.attempts === 1 ? "envio" : "envios"}.`);
@@ -199,6 +214,8 @@ export function summaryText(name, perf) {
     weak.forEach((topic) => {
       const parts = topic.subtopics.filter((sub) => (sub.level === "weak" || sub.level === "mid") && sub.key !== "sem subtema").slice(0, 3);
       lines.push(`- ${topic.label} (${topic.percent}%)${parts.length ? `: ${parts.map((sub) => `${sub.label} ${sub.percent}%`).join(", ")}` : ""}`);
+      const found = findLessons ? findLessons(topic.label, null) : [];
+      if (found.length) lines.push(`  Vale rever: ${found.slice(0, 2).map((lesson) => lesson.title).join(", ")}`);
     });
   }
   const strong = perf.topics.filter((topic) => topic.level === "strong").slice(0, 3);

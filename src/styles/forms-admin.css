@@ -1026,3 +1026,32 @@ textarea.fa-input {
     min-width: 270px;
   }
 }
+
+.fa-perf-lessons {
+  color: #17457a !important;
+  font-weight: 600;
+}
+
+.fa-perf-row.is-plain {
+  padding: 10px 14px;
+  border: 1px solid var(--fa-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.fa-mini-avg {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 150px;
+}
+
+.fa-mini-avg .fa-perf-bar {
+  flex: 1;
+}
+
+.fa-mini-avg span {
+  min-width: 40px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
