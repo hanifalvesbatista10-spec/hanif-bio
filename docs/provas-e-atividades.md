@@ -4,7 +4,7 @@ Painel: **Provas e atividades** (menu lateral). Aluno: aba **Atividades** na Ár
 
 ## Antes de usar (uma vez)
 
-Rode `supabase/21_provas_e_atividades.sql` no SQL Editor do Supabase (pode rodar mais de uma vez). Ele:
+Rode `supabase/21_provas_e_atividades.sql` e depois `supabase/23_fechar_funcoes_internas.sql` no SQL Editor do Supabase (podem rodar mais de uma vez). O 21:
 - tira o **gabarito** da tabela pública e o guarda numa tabela privada (antes qualquer visitante conseguia ler as respostas certas);
 - cria tentativas, cronômetro, correção manual, liberação de nota e as funções usadas pelo site.
 Depois de rodar, faça o deploy do site. Provas e pesquisas que você já tinha continuam funcionando (gabaritos são migrados sozinhos).
