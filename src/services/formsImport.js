@@ -40,7 +40,8 @@ export function emptyBlock(type = "choice") {
 }
 
 const toNumber = (value, fallback = 0) => {
-  const parsed = Number(String(value ?? "").replace(",", "."));
+  if (value === undefined || value === null || String(value).trim() === "") return fallback;
+  const parsed = Number(String(value).replace(",", "."));
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
@@ -90,7 +91,7 @@ function fromJsonItem(item) {
     required: item.required !== false && item.obrigatoria !== false,
     points: toNumber(item.points ?? item.pontos, 1),
     topic: String(item.topic || item.tema || "").trim(),
-    feedback: String(item.feedback || item.comentario || item.comentário || "").trim(),
+    feedback: String(item.feedback || item.comentario || item.comentário || item.explicacao || item.explicação || "").trim(),
     tolerance: item.tolerance ?? item.tolerancia ?? "",
     partial_credit: Boolean(item.partial_credit ?? item.nota_parcial ?? false),
   };
@@ -99,30 +100,90 @@ function fromJsonItem(item) {
   return block;
 }
 
-function fromTextChunk(chunk) {
-  const lines = chunk.split("\n").map((line) => line.trim()).filter(Boolean);
+// Linhas do tipo "CORRETA: C", "EXPLICAÇÃO: ...", "PONTOS: 2" (rótulo seguido de dois-pontos)
+const LABEL = /^(tipo|type|pergunta|quest[aã]o|question|enunciado|corretas?|resposta correta|gabarito|correct|coment[aá]rio|explica[cç][aã]o|feedback|pontos|pontua[cç][aã]o|points|tema|assunto|topic|obrigat[oó]ria|required|toler[aâ]ncia|nota parcial|parcial)\s*:/i;
+// "QUESTÃO 12" sozinho na linha (ou "Pergunta 3: texto")
+const QUESTION_HEADER = /^(quest[aã]o|pergunta)\s*\d+\s*[:.)\-]?\s*(.*)$/i;
+// Alternativas: "A) texto", "b. texto", "- texto"
+const OPTION = /^([A-Ha-h][)\.\-:]|[-•])\s+/;
+// Título de módulo: "### MÓDULO: Nome" ou "MÓDULO: Nome"
+const MODULE_LINE = /^(#{1,6}\s*|m[oó]dulo\s*:\s*)(.*)$/i;
+
+function cleanModule(line) {
+  return line
+    .replace(/^#{1,6}\s*/, "")
+    .replace(/^m[oó]dulo\s*:\s*/i, "")
+    .replace(/^(\*\*|__)|(\*\*|__)$/g, "")
+    .trim();
+}
+
+// Um trecho separado por --- vira uma pergunta. Títulos "### MÓDULO: ..." viram uma seção
+// e também o tema das perguntas que vêm depois (até o próximo módulo).
+function fromTextChunk(chunk, state) {
+  const all = chunk.split("\n").map((line) => line.trim()).filter(Boolean);
+  const result = [];
+  const lines = [];
+  all.forEach((line) => {
+    if (MODULE_LINE.test(line) && !LABEL.test(line)) {
+      const name = cleanModule(line);
+      if (name) {
+        state.module = name;
+        result.push({ ...emptyBlock("heading"), title: name, required: false, points: 0 });
+      }
+    } else {
+      lines.push(line);
+    }
+  });
+  if (!lines.length) return result;
+
   const get = (labels) => {
     const line = lines.find((entry) => labels.some((label) => entry.toLowerCase().startsWith(label)));
     return line ? line.slice(line.indexOf(":") + 1).trim() : "";
   };
   const typeRaw = get(["tipo:", "type:"]).toLowerCase();
   const type = TYPE_ALIASES[typeRaw] || "choice";
-  const optionLines = lines.filter((entry) => /^[A-Ha-h][)\.\-:]\s+/.test(entry) || /^[-•]\s+/.test(entry));
-  const options = optionLines.map((entry) => entry.replace(/^[A-Ha-h][)\.\-:]\s+/, "").replace(/^[-•]\s+/, "").trim());
-  const question = get(["pergunta:", "questao:", "questão:", "question:", "enunciado:"]) || lines[0].replace(/^\d+[)\.\-\s]+/, "");
+
+  const firstOption = lines.findIndex((entry) => OPTION.test(entry) && !LABEL.test(entry));
+  const options = [];
+  const statement = [];
+  lines.forEach((entry, index) => {
+    if (LABEL.test(entry)) {
+      if (/^(pergunta|quest[aã]o|question|enunciado)\s*:/i.test(entry)) {
+        const value = entry.slice(entry.indexOf(":") + 1).trim();
+        if (value) statement.push(value);
+      }
+      return;
+    }
+    const header = entry.match(QUESTION_HEADER);
+    if (header) {
+      if (header[2]) statement.push(header[2]);
+      return;
+    }
+    if (firstOption >= 0 && index >= firstOption && OPTION.test(entry)) {
+      options.push(entry.replace(OPTION, "").trim());
+      return;
+    }
+    if (firstOption >= 0 && index > firstOption && options.length) {
+      options[options.length - 1] += ` ${entry}`; // continuação da alternativa em outra linha
+      return;
+    }
+    statement.push(entry);
+  });
+
   const requiredRaw = get(["obrigatoria:", "obrigatória:", "required:"]).toLowerCase();
   const block = {
     ...emptyBlock(type),
-    title: question.trim(),
+    title: statement.join("\n").trim(),
     options: hasOptions(type) ? options : [],
     required: requiredRaw ? !["nao", "não", "false", "0"].includes(requiredRaw) : true,
     points: toNumber(get(["pontos:", "pontuacao:", "pontuação:", "points:"]), 1),
-    topic: get(["tema:", "assunto:", "topic:"]),
+    topic: get(["tema:", "assunto:", "topic:"]) || state.module || "",
     feedback: get(["comentario:", "comentário:", "explicacao:", "explicação:", "feedback:"]),
     tolerance: get(["tolerancia:", "tolerância:"]),
     partial_credit: /^(sim|s|true|1)/i.test(get(["nota parcial:", "parcial:"])),
   };
-  return applyCorrect(block, get(["correta:", "corretas:", "resposta correta:", "gabarito:", "correct:"]));
+  result.push(applyCorrect(block, get(["correta:", "corretas:", "resposta correta:", "gabarito:", "correct:"])));
+  return result;
 }
 
 export function parseImport(text) {
@@ -142,7 +203,8 @@ export function parseImport(text) {
     blocks = items.map(fromJsonItem);
   } else {
     const chunks = clean.split(/\n\s*---+\s*\n/g).map((part) => part.trim()).filter(Boolean);
-    blocks = chunks.map(fromTextChunk);
+    const state = { module: "" };
+    blocks = chunks.flatMap((chunk) => fromTextChunk(chunk, state));
   }
 
   blocks = blocks.filter((block) => block.title);

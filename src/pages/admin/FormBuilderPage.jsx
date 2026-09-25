@@ -449,28 +449,30 @@ export default function FormBuilderPage() {
         {showImport && (
           <div className="fa-import">
             <p>
-              Peça a uma IA para escrever as perguntas no formato abaixo, cole aqui e importe. Também aceita JSON.{" "}
+              Peça a uma IA para escrever as questões comentadas neste formato, cole aqui e importe. Sem a linha PONTOS, cada questão vale 1. Também aceita JSON.{" "}
               <button type="button" className="fa-link-btn" onClick={copyPrompt}>Copiar instruções para a IA</button>
             </p>
-            <pre>{`TIPO: múltipla escolha
-PERGUNTA: Qual a frequência das compressões na RCP do adulto?
-A) 60 a 80/min
-B) 80 a 100/min
-C) 100 a 120/min
-D) 120 a 140/min
+            <pre>{`### MÓDULO: Biossegurança e Avaliação da Cena
+
+QUESTÃO 1
+Antes de tocar em qualquer vítima, a primeira atitude do socorrista é:
+A) Realizar a abertura de vias aéreas.
+B) Avaliar o nível de consciência da vítima.
+C) Garantir a segurança da cena e a sua própria segurança.
+D) Ligar imediatamente para o serviço de emergência.
 CORRETA: C
-COMENTÁRIO: A diretriz recomenda de 100 a 120 compressões por minuto.
-PONTOS: 1
-TEMA: RCP
+EXPLICAÇÃO: A segurança da cena é prioridade no APH: evita novas vítimas.
+
 ---
+
+QUESTÃO 2
 TIPO: várias corretas
-PERGUNTA: Quais são sinais de choque?
+Quais são sinais de choque?
 A) Palidez
 B) Taquicardia
 C) Bradicardia
 D) Sudorese
 CORRETA: A, B, D
-NOTA PARCIAL: sim
 PONTOS: 2`}</pre>
             <textarea className="fa-input" rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="Cole aqui as perguntas..." />
             <div className="fa-actions">

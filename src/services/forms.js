@@ -145,21 +145,36 @@ export function friendlyFormError(error) {
   return text || "Algo deu errado. Tente de novo.";
 }
 
-// Texto para copiar e colar em qualquer IA para gerar as perguntas no formato de importação
-export const AI_PROMPT = `Crie perguntas de prova para importar no meu site. Use EXATAMENTE este formato, separando cada pergunta com uma linha contendo apenas ---
+// Texto para copiar e colar em qualquer IA para gerar as questões comentadas no formato de importação
+export const AI_PROMPT = `Crie questões de prova COMENTADAS para eu importar no meu site. Use EXATAMENTE este formato, sem mudar as palavras em maiúsculas:
 
-TIPO: múltipla escolha
-PERGUNTA: (enunciado)
-A) (alternativa)
-B) (alternativa)
-C) (alternativa)
-D) (alternativa)
-CORRETA: B
-COMENTÁRIO: (explicação da resposta certa, que o aluno lê depois da correção)
-PONTOS: 1
-TEMA: (assunto, ex.: RCP)
+### MÓDULO: Nome do módulo
+
+QUESTÃO 1
+Enunciado da questão:
+A) Alternativa
+B) Alternativa
+C) Alternativa
+D) Alternativa
+CORRETA: C
+EXPLICAÇÃO: Comentário que o aluno lê depois da correção, explicando por que a alternativa certa está certa.
+
 ---
 
-Tipos aceitos em TIPO: múltipla escolha, várias corretas (em CORRETA use as letras separadas por vírgula, ex.: A, C), verdadeiro ou falso (CORRETA: Verdadeiro ou Falso), sim ou não, resposta curta (em CORRETA, as respostas aceitas separadas por ponto e vírgula), numérica (CORRETA: 75 e TOLERÂNCIA: 5), discursiva (sem CORRETA; o comentário vira a resposta esperada), escala.
+QUESTÃO 2
+Enunciado da questão:
+A) Alternativa
+B) Alternativa
+C) Alternativa
+D) Alternativa
+CORRETA: B
+EXPLICAÇÃO: Comentário da questão.
 
-Quantidade: [NÚMERO] perguntas sobre [ASSUNTO]. Nível: [BÁSICO/INTERMEDIÁRIO/AVANÇADO]. Não escreva nada além das perguntas.`;
+Regras:
+- Coloque uma linha com apenas --- entre uma questão e a próxima.
+- A linha "### MÓDULO: ..." é opcional. Use quando quiser separar por assunto; ela vira uma seção e o tema das questões seguintes.
+- Cada questão tem 4 alternativas (A a D) e uma única correta. Em CORRETA escreva só a letra.
+- A EXPLICAÇÃO deve ser objetiva e, quando ajudar, dizer por que as outras alternativas estão erradas.
+- Não escreva nada além das questões (sem introdução nem conclusão).
+
+Pedido: [NÚMERO] questões sobre [ASSUNTO]. Nível: [BÁSICO, INTERMEDIÁRIO OU AVANÇADO].`;

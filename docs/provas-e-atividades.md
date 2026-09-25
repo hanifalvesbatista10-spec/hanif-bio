@@ -40,10 +40,33 @@ Depois de rodar, faça o deploy do site. Provas e pesquisas que você já tinha 
 Cada pergunta tem: **pontos**, **tema** (para o desempenho por tema), **comentário da questão** (com imagem, aparece depois da liberação),
 **obrigatória** e **anular questão** (todos ganham os pontos).
 
-## Importar várias perguntas
+## Importar várias perguntas (questões comentadas)
 
-Em Perguntas → **Importar várias de uma vez** → **Copiar instruções para a IA**. Cole na IA (ChatGPT, Claude...), troque os trechos entre
-colchetes e cole o resultado de volta. Aceita `CORRETA: C` (letra) ou o texto, `A, C` para várias corretas, `COMENTÁRIO:`, `TEMA:`, `PONTOS:`.
+Em Perguntas → **Importar várias de uma vez** → **Copiar instruções para a IA**. Cole o comando na IA (ChatGPT, Claude...), troque os trechos entre colchetes e cole o resultado de volta no site. Formato aceito:
+
+```
+### MÓDULO: Biossegurança e Avaliação da Cena
+
+QUESTÃO 1
+Enunciado da questão:
+A) Alternativa
+B) Alternativa
+C) Alternativa
+D) Alternativa
+CORRETA: C
+EXPLICAÇÃO: Comentário que o aluno lê depois da correção.
+
+---
+
+QUESTÃO 2
+...
+```
+
+- **`### MÓDULO: ...`** (opcional) vira uma seção na prova e o **tema** das questões seguintes (usado no desempenho por tema).
+- **`EXPLICAÇÃO:`** (ou `COMENTÁRIO:`) é o comentário da questão. O aluno o vê depois da liberação.
+- **`CORRETA:`** aceita a letra (`C`) ou várias (`A, C`, com `TIPO: várias corretas`).
+- Sem `PONTOS:`, cada questão vale 1. Também dá para usar `TIPO:`, `TEMA:`, `NOTA PARCIAL: sim`, `TOLERÂNCIA:` e `OBRIGATÓRIA:`. Aceita JSON.
+- Depois de importar, revise: questões sem resposta correta marcada ficam sinalizadas.
 
 ## Corrigir e liberar (Resultados)
 
