@@ -31,7 +31,7 @@ export const adminNavGroups = [
   {
     label: "Engajamento",
     items: [
-      { to: "/admin/formularios", label: "Formulários e atividades", icon: "forms" },
+      { to: "/admin/formularios", label: "Provas e atividades", icon: "forms" },
       { to: "/admin/eventos", label: "Eventos e inscrições", icon: "events" },
     ],
   },

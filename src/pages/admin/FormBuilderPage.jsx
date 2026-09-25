@@ -1,238 +1,278 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import QuestionEditor, { questionProblem } from "../../components/forms/QuestionEditor";
 import { supabase } from "../../services/supabase";
+import {
+  AI_PROMPT,
+  BLOCK_TYPES,
+  FORM_TYPES,
+  RELEASE_MODES,
+  canHavePoints,
+  hasOptions,
+  isQuestion,
+  slugify,
+  uploadFormImage,
+} from "../../services/forms";
+import { emptyBlock, parseImport } from "../../services/formsImport";
+import "../../styles/forms-admin.css";
 
-const types = [
-  ["survey","Pesquisa"],
-  ["exam","Prova"],
-  ["activity","Atividade"],
-  ["task","Tarefa"],
-  ["information","Coleta de informações"],
-];
+const norm = (value) => String(value ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
 
-const blockTypes = [
-  ["heading","Título/seção"],
-  ["text","Texto explicativo"],
-  ["image","Imagem"],
-  ["short_text","Resposta curta"],
-  ["long_text","Resposta longa"],
-  ["choice","Múltipla escolha"],
-  ["multi_choice","Caixas de seleção"],
-  ["true_false","Verdadeiro ou falso"],
-  ["yes_no","Sim ou não"],
-  ["scale","Escala 0 a 10"],
-];
+const toLocalInput = (iso) => {
+  if (!iso) return "";
+  const date = new Date(iso);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
 
-const slugify = (value="") => value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+const numberOrNull = (value) => {
+  const text = String(value ?? "").trim().replace(",", ".");
+  if (text === "") return null;
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
-const emptyBlock = () => ({
-  id: crypto.randomUUID(),
-  type: "short_text",
-  title: "",
-  description: "",
-  image_url: "",
-  options_text: "",
-  required: false,
-  correct_answer: "",
-  points: 0,
-});
+const EMPTY_FORM = {
+  title: "", slug: "", description: "", type: "exam", status: "draft",
+  audience: "students", product_id: "", max_attempts: "", time_limit_minutes: "", pass_score: "",
+  release_mode: "manual", release_at: "", shuffle_questions: false, shuffle_options: false,
+  require_name: true, require_email: false, show_score: false, show_key: true, key_after_last_attempt: false,
+  starts_at: "", ends_at: "",
+};
+
+// linhas do banco -> modelo do editor
+function blockFromRows(row, key) {
+  const options = Array.isArray(row.options) ? row.options : [];
+  const correct = key?.correct;
+  const block = {
+    ...emptyBlock(row.type),
+    id: row.id,
+    isNew: false,
+    title: row.title || "",
+    description: row.description || "",
+    image_url: row.image_url || "",
+    required: Boolean(row.required),
+    points: Number(row.points) || 0,
+    topic: row.topic || "",
+    options: hasOptions(row.type) ? options : [],
+    tolerance: key?.tolerance ?? "",
+    partial_credit: Boolean(key?.partial_credit),
+    annulled: Boolean(key?.annulled),
+    feedback: key?.feedback || "",
+    feedback_image_url: key?.feedback_image_url || "",
+  };
+  if (correct === null || correct === undefined) return block;
+  if (row.type === "choice") block.correct_idx = options.findIndex((option) => norm(option) === norm(correct));
+  else if (row.type === "multi_choice") block.correct_set = (Array.isArray(correct) ? correct : [correct]).map((c) => options.findIndex((option) => norm(option) === norm(c))).filter((i) => i >= 0);
+  else if (row.type === "true_false" || row.type === "yes_no") block.tf = String(correct);
+  else if (row.type === "short_text") block.accepted_text = (Array.isArray(correct) ? correct : [correct]).join("\n");
+  else if (row.type === "number") block.number_value = String(correct);
+  return block;
+}
+
+// modelo do editor -> gabarito
+function keyFromBlock(block) {
+  let correct = null;
+  const options = block.options.map((option) => option.trim());
+  if (block.type === "choice" && block.correct_idx >= 0) correct = options[block.correct_idx] || null;
+  else if (block.type === "multi_choice" && block.correct_set.length) correct = [...block.correct_set].sort((a, b) => a - b).map((i) => options[i]).filter(Boolean);
+  else if ((block.type === "true_false" || block.type === "yes_no") && block.tf) correct = block.tf;
+  else if (block.type === "short_text") {
+    const lines = block.accepted_text.split("\n").map((line) => line.trim()).filter(Boolean);
+    correct = lines.length > 1 ? lines : lines[0] || null;
+  } else if (block.type === "number") correct = numberOrNull(block.number_value);
+  return {
+    block_id: block.id,
+    correct,
+    tolerance: block.type === "number" ? numberOrNull(block.tolerance) : null,
+    partial_credit: block.type === "multi_choice" ? Boolean(block.partial_credit) : false,
+    annulled: Boolean(block.annulled),
+    feedback: block.feedback.trim() || null,
+    feedback_image_url: block.feedback_image_url || null,
+  };
+}
 
 export default function FormBuilderPage() {
   const { id } = useParams();
   const editing = Boolean(id);
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    title:"", slug:"", description:"", type:"survey", status:"draft",
-    require_name:true, require_email:false, show_score:false,
-    starts_at:"", ends_at:""
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [blocks, setBlocks] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [serverIds, setServerIds] = useState([]);
+  const [submissionCount, setSubmissionCount] = useState(0);
+  const [openIds, setOpenIds] = useState({});
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
-  const [bulkText, setBulkText] = useState("");
-  const [showBulk, setShowBulk] = useState(false);
+  const [messageType, setMessageType] = useState("info");
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [newType, setNewType] = useState("choice");
+
+  const notify = (type, text) => {
+    setMessageType(type);
+    setMessage(text);
+  };
+
+  useEffect(() => {
+    supabase.from("products").select("id,title").order("title").then(({ data }) => setProducts(data || []));
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
     const load = async () => {
-      const [{ data:f, error:fe }, { data:b, error:be }] = await Promise.all([
+      const [{ data: row, error: formError }, { data: rows, error: blocksError }, { count }] = await Promise.all([
         supabase.from("forms").select("*").eq("id", id).single(),
-        supabase.from("form_blocks").select("*").eq("form_id", id).order("position")
+        supabase.from("form_blocks").select("*").eq("form_id", id).order("position"),
+        supabase.from("form_submissions").select("id", { count: "exact", head: true }).eq("form_id", id).neq("status", "in_progress"),
       ]);
-      if (fe || be) setMessage(fe?.message || be?.message);
-      else {
-        setForm({
-          title:f.title || "", slug:f.slug || "", description:f.description || "",
-          type:f.type || "survey", status:f.status || "draft",
-          require_name:f.settings?.require_name !== false,
-          require_email:Boolean(f.settings?.require_email),
-          show_score:Boolean(f.settings?.show_score),
-          starts_at:f.starts_at ? f.starts_at.slice(0,16) : "",
-          ends_at:f.ends_at ? f.ends_at.slice(0,16) : "",
-        });
-        setBlocks((b || []).map(x => ({
-          ...x,
-          options_text:Array.isArray(x.options) ? x.options.join("\n") : "",
-          correct_answer:x.correct_answer || "",
-          image_url:x.image_url || "",
-          description:x.description || "",
-          title:x.title || ""
-        })));
+      if (formError || blocksError) {
+        notify("error", formError?.message || blocksError?.message);
+        setLoading(false);
+        return;
       }
+      const ids = (rows || []).map((item) => item.id);
+      const { data: keys } = ids.length ? await supabase.from("form_block_keys").select("*").in("block_id", ids) : { data: [] };
+      const keyById = Object.fromEntries((keys || []).map((key) => [key.block_id, key]));
+      const settings = row.settings || {};
+      setForm({
+        title: row.title || "", slug: row.slug || "", description: row.description || "", type: row.type || "exam", status: row.status || "draft",
+        audience: row.audience || "public", product_id: row.product_id || "",
+        max_attempts: row.max_attempts ?? "", time_limit_minutes: row.time_limit_minutes ?? "", pass_score: row.pass_score ?? "",
+        release_mode: row.release_mode || "immediate", release_at: toLocalInput(row.release_at),
+        shuffle_questions: Boolean(row.shuffle_questions), shuffle_options: Boolean(row.shuffle_options),
+        require_name: settings.require_name !== false, require_email: Boolean(settings.require_email), show_score: Boolean(settings.show_score),
+        show_key: settings.show_key !== false, key_after_last_attempt: Boolean(settings.key_after_last_attempt),
+        starts_at: toLocalInput(row.starts_at), ends_at: toLocalInput(row.ends_at),
+      });
+      setBlocks((rows || []).map((item) => blockFromRows(item, keyById[item.id])));
+      setServerIds(ids);
+      setSubmissionCount(count || 0);
       setLoading(false);
     };
     load();
-  }, [editing,id]);
+  }, [editing, id]);
 
-  const updateForm = (key,value) => setForm(current => {
-    const next = {...current,[key]:value};
-    if (key === "title" && !editing) next.slug = slugify(value);
-    return next;
-  });
+  const update = (key, value) =>
+    setForm((current) => {
+      const next = { ...current, [key]: value };
+      if (key === "title" && !editing) next.slug = slugify(value);
+      return next;
+    });
 
-  const updateBlock = (index,key,value) => setBlocks(current => current.map((b,i)=>i===index?{...b,[key]:value}:b));
-  const addBlock = () => setBlocks(current => [...current, emptyBlock()]);
-  const removeBlock = (index) => setBlocks(current => current.filter((_,i)=>i!==index));
-  const move = (index,dir) => setBlocks(current => {
-    const target = index + dir;
-    if (target < 0 || target >= current.length) return current;
-    const copy = [...current];
-    [copy[index],copy[target]] = [copy[target],copy[index]];
-    return copy;
-  });
-
-  const parseBulkQuestions = (text) => {
-    const clean = String(text || "").replace(/\r/g, "").trim();
-    if (!clean) throw new Error("Cole as perguntas para importar.");
-
-    // Aceita JSON gerado por IA.
-    if (clean.startsWith("[") || clean.startsWith("{")) {
-      try {
-        const parsed = JSON.parse(clean);
-        const items = Array.isArray(parsed) ? parsed : parsed.questions;
-        if (!Array.isArray(items)) throw new Error("JSON sem lista de perguntas.");
-
-        return items.map((item) => {
-          const typeMap = {
-            multipla: "choice", escolha: "choice", choice: "choice",
-            multipla_selecao: "multi_choice", multi_choice: "multi_choice",
-            verdadeiro_falso: "true_false", true_false: "true_false",
-            sim_nao: "yes_no", yes_no: "yes_no",
-            curta: "short_text", short_text: "short_text",
-            longa: "long_text", long_text: "long_text",
-            escala: "scale", scale: "scale",
-          };
-          const type = typeMap[String(item.type || item.tipo || "choice").toLowerCase()] || "choice";
-          const options = item.options || item.alternativas || [];
-          return {
-            ...emptyBlock(),
-            type,
-            title: String(item.question || item.pergunta || item.title || "").trim(),
-            description: String(item.description || item.descricao || "").trim(),
-            options_text: Array.isArray(options) ? options.join("\n") : String(options || ""),
-            required: item.required !== false && item.obrigatoria !== false,
-            correct_answer: String(item.correct_answer || item.resposta_correta || item.correta || "").trim(),
-            points: Number(item.points ?? item.pontos ?? 0) || 0,
-          };
-        }).filter((item) => item.title);
-      } catch (error) {
-        throw new Error("Não consegui interpretar o JSON. Verifique o formato ou use o modelo de texto.");
-      }
-    }
-
-    // Formato de texto amigável para copiar de qualquer IA.
-    const chunks = clean.split(/\n\s*---+\s*\n/g).map(v => v.trim()).filter(Boolean);
-    const imported = chunks.map((chunk) => {
-      const lines = chunk.split("\n").map(v => v.trim()).filter(Boolean);
-      const get = (labels) => {
-        const line = lines.find(v => labels.some(label => v.toLowerCase().startsWith(label)));
-        if (!line) return "";
-        return line.slice(line.indexOf(":") + 1).trim();
-      };
-
-      const typeRaw = get(["tipo:", "type:"]).toLowerCase();
-      const typeMap = {
-        "multipla escolha": "choice", "múltipla escolha": "choice", "multipla": "choice",
-        "caixas de selecao": "multi_choice", "caixas de seleção": "multi_choice",
-        "verdadeiro ou falso": "true_false", "verdadeiro/falso": "true_false",
-        "sim ou nao": "yes_no", "sim ou não": "yes_no",
-        "resposta curta": "short_text", "curta": "short_text",
-        "resposta longa": "long_text", "longa": "long_text",
-        "escala": "scale",
-      };
-      const type = typeMap[typeRaw] || "choice";
-      const question = get(["pergunta:", "questao:", "questão:", "question:"]) || lines[0].replace(/^\d+[\).\-\s]+/, "");
-      const correct = get(["correta:", "resposta correta:", "gabarito:", "correct:"]);
-      const points = Number(String(get(["pontos:", "pontuacao:", "pontuação:", "points:"]) || "0").replace(",", ".")) || 0;
-      const requiredRaw = get(["obrigatoria:", "obrigatória:", "required:"]).toLowerCase();
-      const optionLines = lines.filter(v => /^[A-Ha-h][\)\.\-:]\s+/.test(v) || /^[-•]\s+/.test(v));
-      const options = optionLines.map(v => v.replace(/^[A-Ha-h][\)\.\-:]\s+/, "").replace(/^[-•]\s+/, "").trim());
-
-      return {
-        ...emptyBlock(),
-        type,
-        title: question.trim(),
-        options_text: options.join("\n"),
-        required: requiredRaw ? !["nao","não","false","0"].includes(requiredRaw) : true,
-        correct_answer: correct.trim(),
-        points,
-      };
-    }).filter((item) => item.title);
-
-    if (!imported.length) throw new Error("Nenhuma pergunta reconhecida. Use o modelo mostrado abaixo.");
-    return imported;
+  const students = form.audience === "students";
+  const updateBlock = (blockId, patch) => setBlocks((current) => current.map((block) => (block.id === blockId ? { ...block, ...patch } : block)));
+  const addBlock = () => {
+    const block = emptyBlock(newType);
+    if (!canHavePoints(newType)) block.points = 0;
+    if (!isQuestion(newType)) block.required = false;
+    setBlocks((current) => [...current, block]);
+    setOpenIds((current) => ({ ...current, [block.id]: true }));
   };
-
-  const importBulk = () => {
+  const removeBlock = (blockId) => {
+    if (!window.confirm("Excluir esta pergunta?")) return;
+    setBlocks((current) => current.filter((block) => block.id !== blockId));
+  };
+  const duplicateBlock = (blockId) =>
+    setBlocks((current) => {
+      const index = current.findIndex((block) => block.id === blockId);
+      const copy = { ...current[index], id: crypto.randomUUID(), isNew: true, options: [...current[index].options], correct_set: [...current[index].correct_set] };
+      const next = [...current];
+      next.splice(index + 1, 0, copy);
+      setOpenIds((open) => ({ ...open, [copy.id]: true }));
+      return next;
+    });
+  const moveBlock = (blockId, dir) =>
+    setBlocks((current) => {
+      const index = current.findIndex((block) => block.id === blockId);
+      const target = index + dir;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  const uploadImage = async (blockId, file, field) => {
+    if (!file) return;
     try {
-      const imported = parseBulkQuestions(bulkText);
-      setBlocks((current) => [...current, ...imported]);
-      setBulkText("");
-      setShowBulk(false);
-      setMessage(`${imported.length} pergunta(s) importada(s). Revise e salve/publice.`);
+      updateBlock(blockId, { [field]: await uploadFormImage(file) });
     } catch (error) {
-      setMessage(error.message || "Não foi possível importar as perguntas.");
+      notify("error", error.message);
     }
   };
 
-  const uploadImage = async (file) => {
-    if (!file) return "";
-    if (!file.type.startsWith("image/")) throw new Error("Selecione uma imagem válida.");
-    if (file.size > 5*1024*1024) throw new Error("Imagem deve ter no máximo 5 MB.");
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const path = `forms/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-    const { error } = await supabase.storage.from("forms-media").upload(path,file,{contentType:file.type,upsert:false});
-    if (error) throw error;
-    return supabase.storage.from("forms-media").getPublicUrl(path).data.publicUrl;
+  const doImport = () => {
+    try {
+      const { blocks: imported, withoutAnswer } = parseImport(importText);
+      setBlocks((current) => [...current, ...imported]);
+      setImportText("");
+      setShowImport(false);
+      notify(withoutAnswer ? "info" : "success", `${imported.length} pergunta(s) importada(s).${withoutAnswer ? ` ${withoutAnswer} ficou sem resposta correta marcada: confira as que estão sinalizadas.` : " Revise e salve."}`);
+    } catch (error) {
+      notify("error", error.message);
+    }
   };
 
-  const save = async (publish=false) => {
-    setSaving(true);
-    setMessage("");
+  const copyPrompt = async () => {
     try {
-      if (!form.title.trim()) throw new Error("Informe o título.");
-      const slug = slugify(form.slug || form.title);
-      if (!slug) throw new Error("Informe um endereço válido.");
+      await navigator.clipboard.writeText(AI_PROMPT);
+      notify("success", "Instruções copiadas. Cole na IA, troque os trechos entre colchetes e traga as perguntas aqui em Importar.");
+    } catch {
+      window.prompt("Copie as instruções:", AI_PROMPT);
+    }
+  };
 
+  const totalPoints = useMemo(() => blocks.reduce((sum, block) => sum + (canHavePoints(block.type) ? Number(block.points) || 0 : 0), 0), [blocks]);
+  const questionCount = blocks.filter((block) => isQuestion(block.type)).length;
+  const publicLink = `${window.location.origin}/f/${form.slug || slugify(form.title)}`;
+
+  const save = async (publish = false) => {
+    setMessage("");
+    const problems = blocks.map((block, index) => ({ index, text: questionProblem(block) })).filter((item) => item.text);
+    if (!form.title.trim()) return notify("error", "Informe o título.");
+    if (!slugify(form.slug || form.title)) return notify("error", "Informe um endereço válido para o link.");
+    if (problems.length && publish) {
+      setOpenIds((current) => ({ ...current, ...Object.fromEntries(problems.map((item) => [blocks[item.index].id, true])) }));
+      return notify("error", `Antes de publicar, corrija a pergunta ${problems[0].index + 1}: ${problems[0].text}`);
+    }
+    if (publish && questionCount === 0) return notify("error", "Adicione ao menos uma pergunta antes de publicar.");
+    if (students && form.release_mode === "date" && !form.release_at) return notify("error", "Escolha a data em que a nota será liberada.");
+
+    const currentIds = blocks.map((block) => block.id);
+    const removed = serverIds.filter((blockId) => !currentIds.includes(blockId));
+    if (removed.length && submissionCount > 0 && !window.confirm(`Você removeu ${removed.length} pergunta(s). As respostas já enviadas a elas serão apagadas. Continuar?`)) return;
+
+    setSaving(true);
+    try {
       const payload = {
-        title:form.title.trim(),
-        slug,
-        description:form.description.trim() || null,
-        type:form.type,
-        status:publish ? "published" : form.status,
-        settings:{
-          require_name:Boolean(form.require_name),
-          require_email:Boolean(form.require_email),
-          show_score:Boolean(form.show_score),
+        title: form.title.trim(),
+        slug: slugify(form.slug || form.title),
+        description: form.description.trim() || null,
+        type: form.type,
+        status: publish ? "published" : form.status,
+        audience: form.audience,
+        product_id: students && form.product_id ? form.product_id : null,
+        max_attempts: students ? numberOrNull(form.max_attempts) : null,
+        time_limit_minutes: students ? numberOrNull(form.time_limit_minutes) : null,
+        pass_score: students ? numberOrNull(form.pass_score) : null,
+        release_mode: students ? form.release_mode : "immediate",
+        release_at: students && form.release_mode === "date" && form.release_at ? new Date(form.release_at).toISOString() : null,
+        shuffle_questions: students && form.shuffle_questions,
+        shuffle_options: students && form.shuffle_options,
+        settings: {
+          require_name: Boolean(form.require_name),
+          require_email: Boolean(form.require_email),
+          show_score: Boolean(form.show_score),
+          show_key: Boolean(form.show_key),
+          key_after_last_attempt: Boolean(form.key_after_last_attempt),
         },
-        starts_at:form.starts_at ? new Date(form.starts_at).toISOString() : null,
-        ends_at:form.ends_at ? new Date(form.ends_at).toISOString() : null,
+        starts_at: form.starts_at ? new Date(form.starts_at).toISOString() : null,
+        ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
       };
 
       let formId = id;
       if (editing) {
-        const { error } = await supabase.from("forms").update(payload).eq("id",id);
+        const { error } = await supabase.from("forms").update(payload).eq("id", id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from("forms").insert(payload).select("id").single();
@@ -240,149 +280,236 @@ export default function FormBuilderPage() {
         formId = data.id;
       }
 
-      await supabase.from("form_blocks").delete().eq("form_id",formId);
-
-      const rows = blocks.map((b,index)=>({
-        form_id:formId,
-        type:b.type,
-        title:(b.title || "").trim() || null,
-        description:(b.description || "").trim() || null,
-        image_url:b.image_url || null,
-        options:["choice","multi_choice"].includes(b.type)
-          ? (b.options_text || "").split("\n").map(v=>v.trim()).filter(Boolean)
-          : b.type==="true_false" ? ["Verdadeiro","Falso"]
-          : b.type==="yes_no" ? ["Sim","Não"]
-          : [],
-        required:Boolean(b.required),
-        correct_answer:(b.correct_answer || "").trim() || null,
-        points:Number(b.points) || 0,
-        position:index,
+      const rows = blocks.map((block, index) => ({
+        id: block.id,
+        form_id: formId,
+        type: block.type,
+        title: block.title.trim() || null,
+        description: block.description.trim() || null,
+        image_url: block.image_url || null,
+        options: hasOptions(block.type) ? block.options.map((option) => option.trim()).filter(Boolean) : block.type === "true_false" ? ["Verdadeiro", "Falso"] : block.type === "yes_no" ? ["Sim", "Não"] : [],
+        required: isQuestion(block.type) && Boolean(block.required),
+        points: canHavePoints(block.type) ? Number(block.points) || 0 : 0,
+        position: index,
+        topic: block.topic.trim() || null,
+        correct_answer: null,
       }));
-
       if (rows.length) {
-        const { error } = await supabase.from("form_blocks").insert(rows);
+        const { error } = await supabase.from("form_blocks").upsert(rows, { onConflict: "id" });
+        if (error) throw error;
+      }
+      if (removed.length) {
+        const { error } = await supabase.from("form_blocks").delete().in("id", removed);
+        if (error) throw error;
+      }
+      const keys = blocks.filter((block) => isQuestion(block.type)).map(keyFromBlock);
+      if (keys.length) {
+        const { error } = await supabase.from("form_block_keys").upsert(keys, { onConflict: "block_id" });
         if (error) throw error;
       }
 
-      setMessage(publish ? "Publicado com sucesso. O link já pode ser enviado." : "Salvo com sucesso.");
-      if (!editing) navigate(`/admin/formularios/${formId}`, { replace:true });
-      if (publish) setForm(current=>({...current,status:"published"}));
-    } catch (e) {
-      setMessage(e.message || "Não foi possível salvar.");
+      setServerIds(currentIds);
+      setBlocks((current) => current.map((block) => ({ ...block, isNew: false })));
+      setForm((current) => ({ ...current, status: payload.status }));
+      notify(
+        "success",
+        `${publish ? "Publicado." : "Salvo."}${submissionCount > 0 ? " Se você mudou gabaritos ou pontos, use “Recalcular notas” em Resultados para atualizar as notas já enviadas." : ""}`
+      );
+      if (!editing) navigate(`/admin/formularios/${formId}`, { replace: true });
+    } catch (error) {
+      const text = String(error.message || "");
+      notify("error", /form_block_keys|correct|audience|does not exist/i.test(text) ? "O banco ainda não tem a atualização de provas (SQL 21). Rode o arquivo supabase/21_provas_e_atividades.sql no Supabase." : text || "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
   };
 
-  const publicLink = `${window.location.origin}/f/${form.slug || slugify(form.title)}`;
-
   if (loading) return <section className="admin-section">Carregando...</section>;
 
+  let number = 0;
   return (
-    <section className="admin-section">
-      <style>{`
-        .fb-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}.fb-head h2{margin:3px 0;color:#071426}.fb-head span{color:#d6152d;font-size:.72rem;font-weight:900;letter-spacing:.1em}
-        .fb-actions-top{display:flex;gap:8px;flex-wrap:wrap}.fb-btn{min-height:42px;padding:0 14px;border-radius:10px;font-weight:900;cursor:pointer}.fb-btn.dark{border:0;background:#071426;color:#fff}.fb-btn.red{border:0;background:#d6152d;color:#fff}.fb-btn.light{border:1px solid #d9e2ea;background:#fff;color:#24394e}
-        .fb-card{background:#fff;border:1px solid #e0e7ee;border-radius:18px;padding:20px;margin-bottom:16px}.fb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.fb-field{display:grid;gap:6px}.fb-field.full{grid-column:1/-1}.fb-field label{font-size:.78rem;font-weight:900;color:#2d4256}.fb-field input,.fb-field textarea,.fb-field select{width:100%;padding:11px 12px;border:1px solid #d7e0e8;border-radius:10px;font:inherit}.fb-field textarea{min-height:90px;resize:vertical}.fb-check{display:flex;gap:8px;align-items:center;font-weight:800;color:#30465a}.fb-check input{width:18px;height:18px}
-        .fb-block{border:1px solid #dfe6ed;border-radius:16px;padding:17px;background:#fbfcfd;margin-top:12px}.fb-block-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.fb-block-head strong{color:#071426}.fb-mini{display:flex;gap:6px}.fb-mini button{border:1px solid #d8e1e8;background:#fff;border-radius:8px;min-width:34px;height:34px;cursor:pointer;font-weight:900}.fb-mini .del{color:#b11830}
-        .fb-link{padding:12px;border-radius:10px;background:#f3f6f9;color:#52677b;word-break:break-all;font-size:.82rem}.fb-add{width:100%;min-height:48px;border:1px dashed #bac7d2;border-radius:12px;background:#fff;color:#21384e;font-weight:900;cursor:pointer}.fb-content-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}.fb-bulk{border:1px solid #dfe6ed;border-radius:16px;background:#f7f9fb;padding:18px;margin-bottom:16px}.fb-bulk textarea{width:100%;min-height:260px;border:1px solid #d5dfe7;border-radius:12px;padding:14px;font:inherit;resize:vertical;background:#fff}.fb-bulk-note{font-size:.8rem;color:#63778a;line-height:1.6;margin:8px 0 12px}.fb-bulk-example{white-space:pre-wrap;background:#071426;color:#d9e5ef;padding:14px;border-radius:12px;font-size:.78rem;line-height:1.55;margin:12px 0}.fb-bulk-actions{display:flex;gap:8px;flex-wrap:wrap}.fb-import{min-height:48px;border:0;border-radius:12px;background:#071426;color:#fff;font-weight:900;cursor:pointer}.fb-ai{min-height:48px;border:1px solid #d6152d;border-radius:12px;background:#fff;color:#b20e28;font-weight:900;cursor:pointer}
-        @media(max-width:760px){.fb-head{align-items:stretch;flex-direction:column}.fb-grid{grid-template-columns:1fr}.fb-field.full{grid-column:auto}.fb-content-actions{grid-template-columns:1fr}}
-      `}</style>
-
-      <div className="fb-head">
-        <div><span>FORMULÁRIOS E ATIVIDADES</span><h2>{editing ? "Editar" : "Criar novo"}</h2></div>
-        <div className="fb-actions-top">
-          <button className="fb-btn light" type="button" onClick={()=>navigate("/admin/formularios")}>Voltar</button>
-          <button className="fb-btn dark" type="button" disabled={saving} onClick={()=>save(false)}>Salvar rascunho</button>
-          <button className="fb-btn red" type="button" disabled={saving} onClick={()=>save(true)}>Publicar</button>
+    <section className="admin-section fa">
+      <div className="fa-top">
+        <div>
+          <h2>{editing ? "Editar" : "Nova prova ou atividade"}</h2>
+          <p className="fa-sub">{questionCount} {questionCount === 1 ? "pergunta" : "perguntas"}{totalPoints > 0 ? ` · ${totalPoints} pontos` : ""} · {form.status === "published" ? "Publicado" : form.status === "draft" ? "Rascunho" : form.status === "closed" ? "Encerrado" : "Arquivado"}</p>
+        </div>
+        <div className="fa-top-actions">
+          <button className="fa-btn is-ghost" type="button" onClick={() => navigate("/admin/formularios")}>Voltar</button>
+          <button className="fa-btn is-ghost" type="button" disabled={saving} onClick={() => save(false)}>Salvar rascunho</button>
+          <button className="fa-btn" type="button" disabled={saving} onClick={() => save(true)}>{saving ? "Salvando..." : form.status === "published" ? "Salvar e manter publicado" : "Publicar"}</button>
         </div>
       </div>
 
-      {message && <div className="admin-alert">{message}</div>}
+      {message && <div className={`fa-alert is-${messageType}`} role="status">{message}</div>}
 
-      <div className="fb-card">
-        <div className="fb-grid">
-          <div className="fb-field full"><label>Título *</label><input value={form.title} onChange={e=>updateForm("title",e.target.value)} /></div>
-          <div className="fb-field full"><label>Descrição / instruções</label><textarea value={form.description} onChange={e=>updateForm("description",e.target.value)} /></div>
-          <div className="fb-field"><label>Tipo</label><select value={form.type} onChange={e=>updateForm("type",e.target.value)}>{types.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
-          <div className="fb-field"><label>Status</label><select value={form.status} onChange={e=>updateForm("status",e.target.value)}><option value="draft">Rascunho</option><option value="published">Publicado</option><option value="closed">Fechado</option><option value="archived">Arquivado</option></select></div>
-          <div className="fb-field"><label>Endereço do link</label><input value={form.slug} onChange={e=>updateForm("slug",e.target.value)} /></div>
-          <div className="fb-field"><label>Abertura (opcional)</label><input type="datetime-local" value={form.starts_at} onChange={e=>updateForm("starts_at",e.target.value)} /></div>
-          <div className="fb-field"><label>Encerramento (opcional)</label><input type="datetime-local" value={form.ends_at} onChange={e=>updateForm("ends_at",e.target.value)} /></div>
-          <div className="fb-field"><label className="fb-check"><input type="checkbox" checked={form.require_name} onChange={e=>updateForm("require_name",e.target.checked)} /> Exigir nome</label></div>
-          <div className="fb-field"><label className="fb-check"><input type="checkbox" checked={form.require_email} onChange={e=>updateForm("require_email",e.target.checked)} /> Exigir e-mail</label></div>
-          <div className="fb-field"><label className="fb-check"><input type="checkbox" checked={form.show_score} onChange={e=>updateForm("show_score",e.target.checked)} /> Mostrar nota ao final</label></div>
-          <div className="fb-field full"><label>Link público</label><div className="fb-link">{publicLink}</div></div>
+      <div className="fa-card">
+        <h3>Informações</h3>
+        <div className="fa-grid">
+          <label className="fa-field fa-wide"><span>Título</span><input className="fa-input" value={form.title} onChange={(e) => update("title", e.target.value)} /></label>
+          <label className="fa-field fa-wide"><span>Instruções para quem vai responder (opcional)</span><textarea className="fa-input" rows={3} value={form.description} onChange={(e) => update("description", e.target.value)} /></label>
+          <label className="fa-field">
+            <span>Tipo</span>
+            <select className="fa-input" value={form.type} onChange={(e) => update("type", e.target.value)}>{FORM_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          </label>
+          <label className="fa-field">
+            <span>Situação</span>
+            <select className="fa-input" value={form.status} onChange={(e) => update("status", e.target.value)}>
+              <option value="draft">Rascunho (ninguém vê)</option>
+              <option value="published">Publicado</option>
+              <option value="closed">Encerrado</option>
+              <option value="archived">Arquivado</option>
+            </select>
+          </label>
+          <label className="fa-field fa-wide">
+            <span>Endereço do link</span>
+            <input className="fa-input" value={form.slug} onChange={(e) => update("slug", e.target.value)} />
+            <small>{students ? `Os alunos abrem em Atividades, ou por ${publicLink} depois de entrar.` : publicLink}</small>
+          </label>
         </div>
       </div>
 
-      <div className="fb-card">
-        <h3 style={{marginTop:0}}>Conteúdo</h3>
-        <div className="fb-content-actions">
-          <button className="fb-ai" type="button" onClick={()=>setShowBulk(v=>!v)}>
-            {showBulk ? "Fechar importação" : "⚡ Importar várias perguntas"}
-          </button>
-          <button className="fb-add" type="button" onClick={addBlock}>+ Adicionar uma pergunta</button>
+      <div className="fa-card">
+        <h3>Quem responde e como</h3>
+        <div className="fa-seg is-wide" role="radiogroup" aria-label="Quem pode responder">
+          <button type="button" role="radio" aria-checked={students} className={students ? "is-active" : ""} onClick={() => update("audience", "students")}>Só alunos logados</button>
+          <button type="button" role="radio" aria-checked={!students} className={!students ? "is-active" : ""} onClick={() => update("audience", "public")}>Qualquer pessoa com o link</button>
         </div>
 
-        {showBulk && (
-          <div className="fb-bulk">
-            <strong>Importação em lote</strong>
-            <p className="fb-bulk-note">
-              Peça para qualquer IA gerar as perguntas no modelo abaixo, cole tudo aqui e clique em importar.
-              Também aceitamos JSON.
+        {students ? (
+          <div className="fa-grid">
+            <label className="fa-field">
+              <span>Para quem</span>
+              <select className="fa-input" value={form.product_id} onChange={(e) => update("product_id", e.target.value)}>
+                <option value="">Todos os alunos</option>
+                {products.map((product) => <option key={product.id} value={product.id}>Só quem tem acesso a: {product.title}</option>)}
+              </select>
+            </label>
+            <label className="fa-field"><span>Tentativas permitidas</span><input className="fa-input" type="number" min="1" value={form.max_attempts} onChange={(e) => update("max_attempts", e.target.value)} placeholder="Em branco = ilimitadas" /></label>
+            <label className="fa-field"><span>Tempo de prova (minutos)</span><input className="fa-input" type="number" min="1" value={form.time_limit_minutes} onChange={(e) => update("time_limit_minutes", e.target.value)} placeholder="Em branco = sem limite" /></label>
+            <label className="fa-field"><span>Nota mínima para aprovação (%)</span><input className="fa-input" type="number" min="0" max="100" value={form.pass_score} onChange={(e) => update("pass_score", e.target.value)} placeholder="Em branco = sem aprovação" /></label>
+            <label className="fa-field"><span>Abre em (opcional)</span><input className="fa-input" type="datetime-local" value={form.starts_at} onChange={(e) => update("starts_at", e.target.value)} /></label>
+            <label className="fa-field"><span>Encerra em (opcional)</span><input className="fa-input" type="datetime-local" value={form.ends_at} onChange={(e) => update("ends_at", e.target.value)} /></label>
+            <div className="fa-field fa-wide fa-checks">
+              <label className="fa-check"><input type="checkbox" checked={form.shuffle_questions} onChange={(e) => update("shuffle_questions", e.target.checked)} /> Embaralhar a ordem das perguntas</label>
+              <label className="fa-check"><input type="checkbox" checked={form.shuffle_options} onChange={(e) => update("shuffle_options", e.target.checked)} /> Embaralhar as alternativas</label>
+            </div>
+          </div>
+        ) : (
+          <div className="fa-grid">
+            <div className="fa-field fa-wide fa-checks">
+              <label className="fa-check"><input type="checkbox" checked={form.require_name} onChange={(e) => update("require_name", e.target.checked)} /> Pedir o nome</label>
+              <label className="fa-check"><input type="checkbox" checked={form.require_email} onChange={(e) => update("require_email", e.target.checked)} /> Pedir o e-mail</label>
+              <label className="fa-check"><input type="checkbox" checked={form.show_score} onChange={(e) => update("show_score", e.target.checked)} /> Mostrar a nota ao terminar</label>
+            </div>
+            <label className="fa-field"><span>Abre em (opcional)</span><input className="fa-input" type="datetime-local" value={form.starts_at} onChange={(e) => update("starts_at", e.target.value)} /></label>
+            <label className="fa-field"><span>Encerra em (opcional)</span><input className="fa-input" type="datetime-local" value={form.ends_at} onChange={(e) => update("ends_at", e.target.value)} /></label>
+            <p className="fa-note fa-wide">Tempo de prova, tentativas, nota mínima e liberação da nota só funcionam para alunos logados, porque precisamos saber quem é a pessoa.</p>
+          </div>
+        )}
+      </div>
+
+      {students && (
+        <div className="fa-card">
+          <h3>Nota e comentários para o aluno</h3>
+          <div className="fa-radios" role="radiogroup" aria-label="Quando liberar a nota">
+            {RELEASE_MODES.map(([value, label]) => (
+              <label key={value} className={form.release_mode === value ? "is-checked" : ""}>
+                <input type="radio" name="release" checked={form.release_mode === value} onChange={() => update("release_mode", value)} />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          {form.release_mode === "date" && (
+            <label className="fa-field" style={{ maxWidth: 320 }}><span>Liberar em</span><input className="fa-input" type="datetime-local" value={form.release_at} onChange={(e) => update("release_at", e.target.value)} /></label>
+          )}
+          <p className="fa-help">
+            Até liberar, o aluno só vê que a prova foi enviada. Se houver discursivas ou arquivos, a nota só fica completa depois que você corrigir em Resultados.
+          </p>
+          <div className="fa-checks">
+            <label className="fa-check"><input type="checkbox" checked={form.show_key} onChange={(e) => update("show_key", e.target.checked)} /> Mostrar o gabarito e os comentários das questões depois da liberação</label>
+            {form.show_key && (
+              <label className="fa-check"><input type="checkbox" checked={form.key_after_last_attempt} onChange={(e) => update("key_after_last_attempt", e.target.checked)} /> Só mostrar o gabarito quando o aluno usar todas as tentativas</label>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="fa-card">
+        <div className="fa-card-head">
+          <h3>Perguntas</h3>
+          <div className="fa-tools">
+            <button type="button" className="fa-btn is-ghost is-small" onClick={() => setShowImport((v) => !v)}>{showImport ? "Fechar importação" : "Importar várias de uma vez"}</button>
+            <button type="button" className="fa-btn is-ghost is-small" onClick={() => setOpenIds(Object.fromEntries(blocks.map((block) => [block.id, !Object.values(openIds).some(Boolean)])))}>
+              {Object.values(openIds).some(Boolean) ? "Recolher todas" : "Abrir todas"}
+            </button>
+          </div>
+        </div>
+
+        {showImport && (
+          <div className="fa-import">
+            <p>
+              Peça a uma IA para escrever as perguntas no formato abaixo, cole aqui e importe. Também aceita JSON.{" "}
+              <button type="button" className="fa-link-btn" onClick={copyPrompt}>Copiar instruções para a IA</button>
             </p>
-            <div className="fb-bulk-example">{`TIPO: múltipla escolha
-PERGUNTA: Qual a frequência correta de compressões na RCP adulta?
-A) 60–80/min
-B) 80–100/min
-C) 100–120/min
-D) 120–140/min
-CORRETA: 100–120/min
+            <pre>{`TIPO: múltipla escolha
+PERGUNTA: Qual a frequência das compressões na RCP do adulto?
+A) 60 a 80/min
+B) 80 a 100/min
+C) 100 a 120/min
+D) 120 a 140/min
+CORRETA: C
+COMENTÁRIO: A diretriz recomenda de 100 a 120 compressões por minuto.
 PONTOS: 1
-OBRIGATÓRIA: sim
+TEMA: RCP
 ---
-TIPO: verdadeiro ou falso
-PERGUNTA: O DEA deve ser utilizado assim que estiver disponível.
-CORRETA: Verdadeiro
-PONTOS: 1
-OBRIGATÓRIA: sim`}</div>
-            <textarea
-              value={bulkText}
-              onChange={e=>setBulkText(e.target.value)}
-              placeholder="Cole aqui 10, 20, 50 perguntas geradas por IA..."
-            />
-            <div className="fb-bulk-actions">
-              <button className="fb-import" type="button" onClick={importBulk}>Importar perguntas</button>
-              <button className="fb-btn light" type="button" onClick={()=>setBulkText("")}>Limpar</button>
+TIPO: várias corretas
+PERGUNTA: Quais são sinais de choque?
+A) Palidez
+B) Taquicardia
+C) Bradicardia
+D) Sudorese
+CORRETA: A, B, D
+NOTA PARCIAL: sim
+PONTOS: 2`}</pre>
+            <textarea className="fa-input" rows={10} value={importText} onChange={(e) => setImportText(e.target.value)} placeholder="Cole aqui as perguntas..." />
+            <div className="fa-actions">
+              <button type="button" className="fa-btn" onClick={doImport}>Importar perguntas</button>
+              <button type="button" className="fa-btn is-ghost" onClick={() => setImportText("")}>Limpar</button>
             </div>
           </div>
         )}
 
-        {blocks.map((b,index)=>(
-          <div className="fb-block" key={b.id || index}>
-            <div className="fb-block-head">
-              <strong>Bloco {index+1}</strong>
-              <div className="fb-mini">
-                <button type="button" onClick={()=>move(index,-1)}>↑</button>
-                <button type="button" onClick={()=>move(index,1)}>↓</button>
-                <button className="del" type="button" onClick={()=>removeBlock(index)}>×</button>
-              </div>
-            </div>
-            <div className="fb-grid">
-              <div className="fb-field"><label>Tipo do bloco</label><select value={b.type} onChange={e=>updateBlock(index,"type",e.target.value)}>{blockTypes.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></div>
-              <div className="fb-field"><label>Pontos</label><input type="number" min="0" step="0.5" value={b.points ?? 0} onChange={e=>updateBlock(index,"points",e.target.value)} /></div>
-              <div className="fb-field full"><label>Título / pergunta</label><input value={b.title || ""} onChange={e=>updateBlock(index,"title",e.target.value)} /></div>
-              <div className="fb-field full"><label>Descrição / orientação</label><textarea value={b.description || ""} onChange={e=>updateBlock(index,"description",e.target.value)} /></div>
-              {["choice","multi_choice"].includes(b.type) && <div className="fb-field full"><label>Alternativas (uma por linha)</label><textarea value={b.options_text || ""} onChange={e=>updateBlock(index,"options_text",e.target.value)} /></div>}
-              {["choice","true_false","yes_no","short_text"].includes(b.type) && <div className="fb-field"><label>Resposta correta (opcional)</label><input value={b.correct_answer || ""} onChange={e=>updateBlock(index,"correct_answer",e.target.value)} /></div>}
-              <div className="fb-field"><label>Imagem no bloco (opcional)</label><input type="file" accept="image/*" onChange={async e=>{try{const url=await uploadImage(e.target.files?.[0]); if(url) updateBlock(index,"image_url",url)}catch(err){setMessage(err.message)}}} /></div>
-              {b.image_url && <div className="fb-field full"><img src={b.image_url} alt="" style={{maxWidth:320,borderRadius:12}} /></div>}
-              {!["heading","text","image"].includes(b.type) && <div className="fb-field"><label className="fb-check"><input type="checkbox" checked={Boolean(b.required)} onChange={e=>updateBlock(index,"required",e.target.checked)} /> Resposta obrigatória</label></div>}
-            </div>
-          </div>
-        ))}
-        <button className="fb-add" type="button" onClick={addBlock}>+ Adicionar outro bloco / pergunta</button>
+        {blocks.length === 0 && !showImport && <p className="fa-empty">Nenhuma pergunta ainda. Escolha o tipo abaixo e clique em Adicionar, ou importe várias de uma vez.</p>}
+
+        <div className="fa-qlist">
+          {blocks.map((block, index) => {
+            if (isQuestion(block.type)) number += 1;
+            return (
+              <QuestionEditor
+                key={block.id}
+                block={block}
+                index={index}
+                total={blocks.length}
+                number={number}
+                open={Boolean(openIds[block.id])}
+                onToggle={() => setOpenIds((current) => ({ ...current, [block.id]: !current[block.id] }))}
+                onChange={(patch) => updateBlock(block.id, patch)}
+                onMove={(dir) => moveBlock(block.id, dir)}
+                onDuplicate={() => duplicateBlock(block.id)}
+                onRemove={() => removeBlock(block.id)}
+                onUploadImage={(file, field) => uploadImage(block.id, file, field)}
+              />
+            );
+          })}
+        </div>
+
+        <div className="fa-add">
+          <select className="fa-input" value={newType} onChange={(e) => setNewType(e.target.value)} aria-label="Tipo da nova pergunta">
+            {BLOCK_TYPES.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+          <button type="button" className="fa-btn" onClick={addBlock}>+ Adicionar</button>
+        </div>
       </div>
     </section>
   );

@@ -20,6 +20,9 @@ import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
 import StudentCertificatesPage from "./pages/student/StudentCertificatesPage";
+import StudentActivitiesPage from "./pages/student/StudentActivitiesPage";
+import StudentActivityPage from "./pages/student/StudentActivityPage";
+import StudentActivityResultPage from "./pages/student/StudentActivityResultPage";
 import MemberLayout from "./components/member/MemberLayout";
 import RecoverPasswordPage from "./pages/auth/RecoverPasswordPage";
 import UpdatePasswordPage from "./pages/auth/UpdatePasswordPage";
@@ -356,6 +359,9 @@ export default function App() {
             }
           >
             <Route index element={<StudentCoursesPage />} />
+            <Route path="atividades" element={<StudentActivitiesPage />} />
+            <Route path="atividades/:slug" element={<StudentActivityPage />} />
+            <Route path="atividades/:slug/resultado/:submissionId" element={<StudentActivityResultPage />} />
             <Route path="certificados" element={<StudentCertificatesPage />} />
             <Route path="configuracoes" element={<StudentProfilePage />} />
             <Route path="meus-dados" element={<Navigate to="/minha-area/configuracoes?aba=dados" replace />} />

@@ -20,6 +20,12 @@ export const memberIcons = {
       <path d="m9 13.6-1.4 6.4L12 17.8l4.4 2.2-1.4-6.4" />
     </Icon>
   ),
+  activities: (
+    <Icon>
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 4.5h6M9 12.5l2 2 4-4.5M9 17.5h6" />
+    </Icon>
+  ),
   settings: (
     <Icon>
       <circle cx="12" cy="12" r="3" />

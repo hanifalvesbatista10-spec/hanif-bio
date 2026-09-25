@@ -1,94 +1,170 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import RowActions from "../../components/admin/RowActions";
 import { supabase } from "../../services/supabase";
+import { friendlyFormError, typeLabel } from "../../services/forms";
+import "../../styles/forms-admin.css";
 
-const labels = {
-  survey: "Pesquisa",
-  exam: "Prova",
-  activity: "Atividade",
-  task: "Tarefa",
-  information: "Coleta de informações",
+const STATUS = {
+  draft: { label: "Rascunho", tone: "is-draft" },
+  published: { label: "Publicado", tone: "is-published" },
+  closed: { label: "Encerrado", tone: "is-draft" },
+  archived: { label: "Arquivado", tone: "is-draft" },
 };
+
+const FILTERS = [
+  ["all", "Todos"],
+  ["published", "Publicados"],
+  ["draft", "Rascunhos"],
+  ["closed", "Encerrados"],
+];
 
 export default function FormsPage() {
   const [rows, setRows] = useState([]);
+  const [counts, setCounts] = useState({});
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("info");
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState("all");
+  const [query, setQuery] = useState("");
   const navigate = useNavigate();
+
+  const notify = (type, text) => {
+    setMessageType(type);
+    setMessage(text);
+  };
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("forms")
-      .select("id,title,slug,type,status,created_at")
-      .order("created_at", { ascending: false });
-    if (error) setMessage(error.message);
+    const [{ data, error }, { data: subs }] = await Promise.all([
+      supabase.from("forms").select("id,title,slug,type,status,audience,created_at").order("created_at", { ascending: false }),
+      supabase.from("form_submissions").select("form_id,pending_manual,status").neq("status", "in_progress"),
+    ]);
+    if (error) notify("error", friendlyFormError(error));
     else setRows(data || []);
+    const map = {};
+    (subs || []).forEach((sub) => {
+      map[sub.form_id] ||= { total: 0, pending: 0 };
+      map[sub.form_id].total += 1;
+      if (sub.pending_manual) map[sub.form_id].pending += 1;
+    });
+    setCounts(map);
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const remove = async (row) => {
-    if (!window.confirm(`Excluir definitivamente "${row.title}" e todas as respostas?`)) return;
+    if (!window.confirm(`Excluir "${row.title}" e todas as respostas? Não dá para desfazer.`)) return;
     const { error } = await supabase.from("forms").delete().eq("id", row.id);
-    if (error) setMessage(error.message);
+    if (error) notify("error", error.message);
     else {
-      setMessage("Item excluído com sucesso.");
+      notify("success", "Excluído.");
       load();
     }
+  };
+
+  const duplicate = async (row) => {
+    const { data, error } = await supabase.rpc("form_duplicate", { p_form_id: row.id });
+    if (error) return notify("error", friendlyFormError(error));
+    notify("success", "Cópia criada como rascunho.");
+    navigate(`/admin/formularios/${data}`);
   };
 
   const copyLink = async (row) => {
     const url = `${window.location.origin}/f/${row.slug}`;
     try {
       await navigator.clipboard.writeText(url);
-      setMessage("Link copiado.");
+      notify("success", "Link copiado.");
     } catch {
       window.prompt("Copie o link:", url);
     }
   };
 
-  return (
-    <section className="admin-section">
-      <style>{`
-        .forms-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:22px}
-        .forms-head span{color:#d6152d;font-size:.72rem;font-weight:900;letter-spacing:.12em}.forms-head h2{margin:4px 0 0;color:#071426;font-size:2rem}
-        .forms-new{border:0;border-radius:12px;background:#d6152d;color:#fff;padding:13px 18px;font-weight:900;cursor:pointer}
-        .forms-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.form-card{background:#fff;border:1px solid #e0e7ee;border-radius:18px;padding:20px;box-shadow:0 12px 34px rgba(7,20,38,.06)}
-        .form-card-top{display:flex;justify-content:space-between;gap:10px;align-items:center}.form-type{font-size:.7rem;font-weight:900;color:#d6152d;letter-spacing:.08em;text-transform:uppercase}.form-status{font-size:.68rem;font-weight:900;padding:5px 8px;border-radius:999px;background:#eef3f7;color:#30475d}
-        .form-card h3{margin:12px 0 7px;color:#071426}.form-url{font-size:.78rem;color:#6b7f91;word-break:break-all}.form-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}.form-actions button{min-height:40px;border-radius:10px;font-weight:900;cursor:pointer;padding:0 12px}.primary{background:#071426;color:#fff;border:0}.secondary{background:#fff;border:1px solid #d7e0e8;color:#263b50}.danger{background:#fff4f5;border:1px solid #f0c2c9;color:#b21d34}.forms-empty{padding:40px;border:1px dashed #cbd5df;border-radius:18px;text-align:center;color:#65788a;background:#fff}
-        @media(max-width:760px){.forms-head{align-items:stretch;flex-direction:column}.forms-grid{grid-template-columns:1fr}.forms-new{width:100%}}
-      `}</style>
+  const shown = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    return rows.filter((row) => (filter === "all" || row.status === filter) && (!term || row.title.toLowerCase().includes(term)));
+  }, [rows, filter, query]);
 
-      <div className="forms-head">
-        <div><span>CONSTRUTOR</span><h2>Formulários e atividades</h2></div>
-        <button className="forms-new" type="button" onClick={() => navigate("/admin/formularios/novo")}>+ Criar novo</button>
+  const pendingTotal = Object.values(counts).reduce((sum, item) => sum + item.pending, 0);
+
+  return (
+    <section className="admin-section fa">
+      <div className="fa-top">
+        <div>
+          <h2>Provas e atividades</h2>
+          <p className="fa-sub">
+            Provas, simulados, tarefas e pesquisas.
+            {pendingTotal > 0 && ` Você tem ${pendingTotal} ${pendingTotal === 1 ? "resposta" : "respostas"} para corrigir.`}
+          </p>
+        </div>
+        <div className="fa-top-actions">
+          <button className="fa-btn" type="button" onClick={() => navigate("/admin/formularios/novo")}>+ Criar novo</button>
+        </div>
       </div>
 
-      {message && <div className="admin-alert">{message}</div>}
+      {message && <div className={`fa-alert is-${messageType}`} role="status">{message}</div>}
 
-      {loading ? <div className="forms-empty">Carregando...</div> : rows.length === 0 ? (
-        <div className="forms-empty">Nenhuma pesquisa, prova ou atividade criada ainda.</div>
-      ) : (
-        <div className="forms-grid">
-          {rows.map((row) => (
-            <article className="form-card" key={row.id}>
-              <div className="form-card-top">
-                <span className="form-type">{labels[row.type] || row.type}</span>
-                <span className="form-status">{row.status}</span>
-              </div>
-              <h3>{row.title}</h3>
-              <div className="form-url">/f/{row.slug}</div>
-              <div className="form-actions">
-                <button className="primary" type="button" onClick={() => navigate(`/admin/formularios/${row.id}`)}>Editar</button>
-                <button className="secondary" type="button" onClick={() => navigate(`/admin/formularios/${row.id}/resultados`)}>Resultados</button>
-                <button className="secondary" type="button" onClick={() => copyLink(row)}>Copiar link</button>
-                <button className="secondary" type="button" onClick={() => window.open(`/f/${row.slug}`, "_blank")}>Abrir</button>
-                <button className="danger" type="button" onClick={() => remove(row)}>Excluir</button>
-              </div>
-            </article>
+      <div className="fa-toolbar">
+        <div className="fa-seg" role="group" aria-label="Filtrar por situação">
+          {FILTERS.map(([value, label]) => (
+            <button key={value} type="button" className={filter === value ? "is-active" : ""} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>
           ))}
+        </div>
+        <input className="fa-input" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar pelo título…" aria-label="Buscar" />
+      </div>
+
+      {loading ? (
+        <div className="admin-empty">Carregando...</div>
+      ) : shown.length === 0 ? (
+        <div className="admin-empty">{rows.length === 0 ? "Nada criado ainda. Clique em “Criar novo” para montar sua primeira prova." : "Nada encontrado com esse filtro."}</div>
+      ) : (
+        <div className="fa-table-wrap">
+          <table className="fa-table">
+            <thead>
+              <tr>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Quem responde</th>
+                <th>Situação</th>
+                <th>Respostas</th>
+                <th className="is-end"><span className="ra-th">Ações</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map((row) => {
+                const status = STATUS[row.status] || STATUS.draft;
+                const count = counts[row.id] || { total: 0, pending: 0 };
+                return (
+                  <tr key={row.id}>
+                    <td><strong>{row.title}</strong><small>/f/{row.slug}</small></td>
+                    <td>{typeLabel(row.type)}</td>
+                    <td>{row.audience === "students" ? "Só alunos logados" : "Link público"}</td>
+                    <td><span className={`fa-pill ${status.tone}`}>{status.label}</span></td>
+                    <td className="is-num">
+                      {count.total}
+                      {count.pending > 0 && <small><span className="fa-pill is-review">{count.pending} para corrigir</span></small>}
+                    </td>
+                    <td className="is-end">
+                      <RowActions
+                        label={`Ações de ${row.title}`}
+                        primary={{ label: "Resultados", to: `/admin/formularios/${row.id}/resultados` }}
+                        items={[
+                          { label: "Editar", to: `/admin/formularios/${row.id}` },
+                          { label: "Duplicar", onClick: () => duplicate(row) },
+                          { label: "Copiar link", onClick: () => copyLink(row) },
+                          { label: "Abrir como aluno", hidden: row.status !== "published", href: `/f/${row.slug}` },
+                          { label: "Excluir", danger: true, onClick: () => remove(row) },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </section>

@@ -1,0 +1,102 @@
+/* Página pública dos formulários (link /f/...) */
+.pf-page {
+  min-height: 100vh;
+  padding: 40px 0 80px;
+  background: #f4f6f9;
+  color: #071426;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.pf-shell {
+  width: min(760px, calc(100% - 28px));
+  margin: 0 auto;
+}
+
+.pf-hero {
+  margin-bottom: 18px;
+  padding: 32px 30px;
+  border-radius: 18px;
+  background: #071426;
+  color: #fff;
+}
+
+.pf-hero span {
+  color: #ff8ea0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.pf-hero h1 {
+  margin: 8px 0 10px;
+  font-family: var(--font-display, Inter, sans-serif);
+  font-size: clamp(1.9rem, 5vw, 2.8rem);
+  line-height: 1.08;
+  text-wrap: balance;
+}
+
+.pf-hero p {
+  margin: 0;
+  color: #c5d1dc;
+  line-height: 1.65;
+  white-space: pre-line;
+}
+
+.pf-state {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  padding: 24px;
+  background: #f4f6f9;
+  color: #071426;
+  font-family: Inter, system-ui, sans-serif;
+  text-align: center;
+}
+
+.pf-success {
+  padding: 44px 28px;
+  border: 1px solid #dfe6ee;
+  border-radius: 18px;
+  background: #fff;
+  text-align: center;
+}
+
+.pf-success h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-display, Inter, sans-serif);
+  font-size: clamp(1.8rem, 5vw, 2.6rem);
+}
+
+.pf-success p {
+  margin: 0;
+  color: #53677b;
+}
+
+.pf-score {
+  display: grid;
+  gap: 2px;
+  max-width: 240px;
+  margin: 24px auto 0;
+  padding: 18px;
+  border-radius: 14px;
+  background: #071426;
+  color: #fff;
+}
+
+.pf-score strong {
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-score small {
+  color: #aebdca;
+}
+
+@media (max-width: 650px) {
+  .pf-page {
+    padding-top: 16px;
+  }
+
+  .pf-hero {
+    padding: 24px 20px;
+  }
+}
