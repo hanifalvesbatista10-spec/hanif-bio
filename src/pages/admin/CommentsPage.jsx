@@ -14,6 +14,7 @@ const tabs = [
 export default function CommentsPage() {
   const { user } = useAuth();
   const [comments, setComments] = useState([]);
+  const [lessonProducts, setLessonProducts] = useState({});
   const [tab, setTab] = useState("pending");
   const [productFilter, setProductFilter] = useState("");
   const [drafts, setDrafts] = useState({});
@@ -42,8 +43,22 @@ export default function CommentsPage() {
       setMissingTable(false);
       setComments(data || []);
     }
+    // uma aula compartilhada pode estar em vários cursos
+    const { data: linkRows } = await supabase.from("product_lesson_links").select("lesson_id,product:products(id,title)");
+    if (linkRows) {
+      const map = {};
+      linkRows.forEach((row) => {
+        if (row.product) (map[row.lesson_id] ||= []).push(row.product);
+      });
+      setLessonProducts(map);
+    }
     setLoading(false);
   }, []);
+
+  const productsOf = useCallback(
+    (root) => lessonProducts[root.lesson_id] || (root.lesson?.product ? [root.lesson.product] : []),
+    [lessonProducts]
+  );
 
   useEffect(() => {
     load();
@@ -59,14 +74,13 @@ export default function CommentsPage() {
   const products = useMemo(() => {
     const map = new Map();
     threads.forEach(({ root }) => {
-      const product = root.lesson?.product;
-      if (product) map.set(product.id, product.title);
+      productsOf(root).forEach((product) => map.set(product.id, product.title));
     });
     return [...map.entries()].map(([id, title]) => ({ id, title }));
-  }, [threads]);
+  }, [threads, productsOf]);
 
   const filtered = threads.filter(({ root, replies }) => {
-    if (productFilter && root.lesson?.product?.id !== productFilter) return false;
+    if (productFilter && !productsOf(root).some((product) => product.id === productFilter)) return false;
     const answered = replies.some((reply) => reply.author_role === "admin");
     if (tab === "pending") return root.status === "visible" && !answered && root.author_role !== "admin";
     if (tab === "hidden") return root.status === "hidden";
@@ -183,11 +197,11 @@ export default function CommentsPage() {
                   <header className="adm-thread-head">
                     <div>
                       <strong>{root.lesson?.title || "Aula removida"}</strong>
-                      <small>{root.lesson?.product?.title}</small>
+                      <small>{productsOf(root).map((product) => product.title).join(", ")}</small>
                     </div>
                     <RowActions
                       label="Ações do comentário"
-                      primary={root.lesson?.product?.id ? { label: "Ver na aula", to: `/admin/area-de-membros?produto=${root.lesson.product.id}&aula=${root.lesson_id}` } : undefined}
+                      primary={productsOf(root).length ? { label: "Ver na aula", to: `/admin/area-de-membros?produto=${(productsOf(root).find((product) => product.id === productFilter) || productsOf(root)[0]).id}&aula=${root.lesson_id}` } : undefined}
                       items={[
                         { label: root.status === "hidden" ? "Mostrar para os alunos" : "Ocultar dos alunos", disabled: busyId === root.id, onClick: () => toggleHidden(root) },
                         { label: "Excluir comentário", danger: true, disabled: busyId === root.id, onClick: () => remove(root) },

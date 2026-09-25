@@ -4,6 +4,7 @@ import LessonComments from "../../components/member/LessonComments";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
 import { supabase } from "../../services/supabase";
+import { fetchProductLessons } from "../../services/lessons";
 import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
 
@@ -20,18 +21,13 @@ export default function CourseLessonsPage() {
   useEffect(() => {
     Promise.all([
       supabase.from("products").select("id,title").eq("id", productId).maybeSingle(),
-      supabase
-        .from("product_lessons")
-        .select("*")
-        .eq("product_id", productId)
-        .eq("status", "published")
-        .order("position", { ascending: true }),
+      fetchProductLessons(productId),
     ]).then(([productResult, lessonsResult]) => {
       if (productResult.data) setProduct(productResult.data);
       if (lessonsResult.error) {
         setMessage("Não foi possível carregar as aulas. Se você acabou de ganhar acesso, espere alguns minutos e recarregue a página.");
       } else {
-        const data = lessonsResult.data || [];
+        const data = (lessonsResult.data || []).filter((lesson) => lesson.status === "published");
         setLessons(data);
         if (data.length > 0) {
           const wanted = data.find((lesson) => lesson.id === requestedLesson);

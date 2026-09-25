@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { fetchProductLessons } from "../../services/lessons";
 
 // Espelho da área de membros: carrega a tela REAL do aluno (/minha-area/curso/:id) dentro do painel.
 // A tela do aluno só lista aulas publicadas, então o que aparece aqui é o que o aluno enxerga.
@@ -48,12 +49,7 @@ export default function MemberPreviewPage() {
 
   useEffect(() => {
     if (!productId) return;
-    supabase
-      .from("product_lessons")
-      .select("id,title,status,position")
-      .eq("product_id", productId)
-      .order("position", { ascending: true })
-      .then(({ data }) => setLessons(data || []));
+    fetchProductLessons(productId).then(({ data }) => setLessons(data || []));
   }, [productId, reloadKey]);
 
   useEffect(() => {

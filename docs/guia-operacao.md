@@ -1,7 +1,7 @@
 # Guia de operação do site (dia a dia)
 
 Endereço principal: **https://www.aphhardcore.com** (a raiz `aphhardcore.com` redireciona para o `www`).
-Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas) e `docs/login-e-emails.md` (login e e-mails).
+Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `docs/login-e-emails.md` (login e e-mails) e `docs/provas-e-atividades.md` (provas, simulados e tarefas).
 
 ## Ao trocar o endereço do site (feito em 09/2026)
 
@@ -33,6 +33,16 @@ Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas) e `do
 - **Certificados:** Certificados → Emitir → Alunos cadastrados (CPF, RG e foto vêm de Configurações → Meus dados, preenchidos pelo aluno).
 - **Estorno:** Pix e cartão no app da InfinitePay + Pedidos → **⋯** → **Marcar como reembolsado**; boleto no Asaas (o aviso tira o acesso).
 
+## Aulas compartilhadas entre cursos
+
+Uma aula pode aparecer em vários cursos (rode `supabase/22_aulas_compartilhadas.sql` uma vez). No painel, **Aulas**:
+- **Nova aula** e **Editar** têm a seção **Em quais cursos esta aula aparece**: marque os cursos. A aula é uma só: mudar o vídeo, o texto ou tirar do ar vale para todos.
+- **Adicionar aula de outro curso** (no topo) reaproveita aulas que já existem, sem subir o vídeo de novo.
+- Cada curso tem a **sua ordem** (setas ↑ ↓ mexem só no curso aberto). A aula nova entra no fim da lista dos outros cursos.
+- No menu **⋯** da aula: **Tirar só deste curso** (ela continua nos outros) e **Excluir de todos os cursos**. Aulas compartilhadas mostram "Também em: ...".
+- Quem tem acesso a **qualquer** curso da aula assiste. Os **comentários** ficam na aula, então os alunos de todos os cursos veem os mesmos.
+- Apagar um curso não apaga aulas que estão em outros cursos.
+
 ## Onde olhar quando algo der errado
 
 | Sintoma | Onde ver |
@@ -55,7 +65,7 @@ e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos)
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons` (as anteriores, 01 a 16, já foram executadas).
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import RowActions from "../../components/admin/RowActions";
 import { checkYoutubeVideo, toEmbedUrl, watchUrl, youtubeId } from "../../services/video";
+import { fetchLessonsAndLinks, lessonsForProduct, productIdsOfLesson } from "../../services/lessons";
 
 const muxLabels = {
   ready: { text: "Mux · pronto e protegido", tone: "ok" },
@@ -41,6 +42,7 @@ export default function LessonAuditPage() {
   const productFilter = params.get("produto") || "";
   const [products, setProducts] = useState([]);
   const [lessons, setLessons] = useState([]);
+  const [links, setLinks] = useState([]);
   const [access, setAccess] = useState([]);
   const [videoResults, setVideoResults] = useState({});
   const [checking, setChecking] = useState(false);
@@ -50,7 +52,7 @@ export default function LessonAuditPage() {
   useEffect(() => {
     Promise.all([
       supabase.from("products").select("id,title,status").order("title", { ascending: true }),
-      supabase.from("product_lessons").select("*").order("position", { ascending: true }),
+      fetchLessonsAndLinks(),
       supabase.from("user_products").select("product_id,access_status"),
     ]).then(([productsResult, lessonsResult, accessResult]) => {
       if (productsResult.error) setMessage(productsResult.error.message);
@@ -62,7 +64,8 @@ export default function LessonAuditPage() {
         );
       }
       setProducts(productsResult.data || []);
-      setLessons(lessonsResult.data || []);
+      setLessons(lessonsResult.lessons || []);
+      setLinks(lessonsResult.links || []);
       setAccess(accessResult.data || []);
       setLoading(false);
     });
@@ -73,14 +76,19 @@ export default function LessonAuditPage() {
       products
         .filter((product) => !productFilter || product.id === productFilter)
         .map((product) => {
-          const items = lessons.filter((lesson) => lesson.product_id === product.id);
+          const items = lessonsForProduct(lessons, links, product.id);
           const students = access.filter((row) => row.product_id === product.id && row.access_status === "active").length;
           return { product, items, students };
         }),
-    [products, lessons, access, productFilter]
+    [products, lessons, links, access, productFilter]
   );
 
-  const visibleLessons = groups.flatMap((group) => group.items);
+  // uma aula compartilhada aparece em vários cursos, mas é verificada uma vez só
+  const visibleLessons = useMemo(() => {
+    const seen = new Map();
+    groups.forEach((group) => group.items.forEach((lesson) => seen.has(lesson.id) || seen.set(lesson.id, lesson)));
+    return [...seen.values()];
+  }, [groups]);
 
   const checkVideos = useCallback(async () => {
     setChecking(true);
@@ -100,14 +108,17 @@ export default function LessonAuditPage() {
 
   const totals = useMemo(() => {
     const published = visibleLessons.filter((lesson) => lesson.status === "published").length;
-    const withProblems = visibleLessons.filter((lesson) => {
-      const siblings = lessons.filter((item) => item.product_id === lesson.product_id);
-      const issues = staticIssues(lesson, siblings).filter((issue) => issue.tone === "bad");
-      const video = videoResults[lesson.id];
-      return issues.length > 0 || video?.state === "unavailable" || video?.state === "invalid";
-    }).length;
+    const problem = new Set();
+    groups.forEach((group) =>
+      group.items.forEach((lesson) => {
+        const issues = staticIssues(lesson, group.items).filter((issue) => issue.tone === "bad");
+        const video = videoResults[lesson.id];
+        if (issues.length > 0 || video?.state === "unavailable" || video?.state === "invalid") problem.add(lesson.id);
+      })
+    );
+    const withProblems = problem.size;
     return { total: visibleLessons.length, published, drafts: visibleLessons.length - published, withProblems };
-  }, [visibleLessons, lessons, videoResults]);
+  }, [visibleLessons, groups, videoResults]);
 
   return (
     <section className="admin-section">
@@ -192,6 +203,9 @@ export default function LessonAuditPage() {
                           <td>
                             <strong>{lesson.title}</strong>
                             <small>{lesson.duration || "—"}</small>
+                            {productIdsOfLesson(links, lesson.id).length > 1 && (
+                              <small>Também em: {productIdsOfLesson(links, lesson.id).filter((id) => id !== product.id).map((id) => products.find((item) => item.id === id)?.title || "outro curso").join(", ")}</small>
+                            )}
                           </td>
                           <td><span className={`status-badge ${lesson.status}`}>{lesson.status === "published" ? "Publicada" : "Rascunho"}</span></td>
                           <td>
