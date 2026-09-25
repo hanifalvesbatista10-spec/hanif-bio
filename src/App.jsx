@@ -53,6 +53,7 @@ const CouponsPage = lazy(() => import("./pages/admin/CouponsPage"));
 const CheckoutPage = lazy(() => import("./pages/public/CheckoutPage"));
 const CheckoutThanksPage = lazy(() => import("./pages/public/CheckoutThanksPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
+const StudentPerformancePage = lazy(() => import("./pages/admin/StudentPerformancePage"));
 const MemberPreviewPage = lazy(() => import("./pages/admin/MemberPreviewPage"));
 const LessonAuditPage = lazy(() => import("./pages/admin/LessonAuditPage"));
 const CommentsPage = lazy(() => import("./pages/admin/CommentsPage"));
@@ -318,6 +319,14 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <UsersPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="usuarios/:id"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <StudentPerformancePage />
                 </Suspense>
               }
             />

@@ -165,11 +165,18 @@ export default function QuestionEditor({ block, index, total, number, open, onTo
             )}
             {question && (
               <label className="fa-field">
-                <span>Tema (opcional)</span>
-                <input className="fa-input" value={block.topic} onChange={(event) => onChange({ topic: event.target.value })} placeholder="Ex.: RCP, Trauma" />
+                <span>Tema</span>
+                <input className="fa-input" list="fa-topics" value={block.topic} onChange={(event) => onChange({ topic: event.target.value })} placeholder="Ex.: RCP, Trauma" />
               </label>
             )}
           </div>
+          {question && (
+            <label className="fa-field">
+              <span>Subtema: a parte que a questão cobra (opcional)</span>
+              <input className="fa-input" list="fa-subtopics" value={block.subtopic || ""} onChange={(event) => onChange({ subtopic: event.target.value })} placeholder="Ex.: B - Respiração, Compressões" />
+              <small>Com tema e subtema, a ficha do aluno mostra em quais partes ele mais erra.</small>
+            </label>
+          )}
 
           <label className="fa-field">
             <span>{question ? "Enunciado" : block.type === "heading" ? "Título" : "Título (opcional)"}</span>

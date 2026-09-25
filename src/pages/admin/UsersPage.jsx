@@ -114,6 +114,7 @@ export default function UsersPage() {
                 <td>
                   <RowActions
                     label={`Ações para ${row.full_name || row.email}`}
+                    primary={{ label: "Desempenho", to: `/admin/usuarios/${row.id}` }}
                     items={[
                       { label: "Enviar link de nova senha", onClick: () => sendReset(row), disabled: busyId === row.id },
                       { label: "Reenviar e-mail de confirmação", onClick: () => resendConfirmation(row), disabled: busyId === row.id },

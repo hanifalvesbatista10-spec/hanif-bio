@@ -54,6 +54,7 @@ function blockFromRows(row, key) {
     required: Boolean(row.required),
     points: Number(row.points) || 0,
     topic: row.topic || "",
+    subtopic: row.subtopic || "",
     options: hasOptions(row.type) ? options : [],
     tolerance: key?.tolerance ?? "",
     partial_credit: Boolean(key?.partial_credit),
@@ -109,6 +110,7 @@ export default function FormBuilderPage() {
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
   const [newType, setNewType] = useState("choice");
+  const [knownTopics, setKnownTopics] = useState({ topics: [], subtopics: [] });
 
   const notify = (type, text) => {
     setMessageType(type);
@@ -117,6 +119,11 @@ export default function FormBuilderPage() {
 
   useEffect(() => {
     supabase.from("products").select("id,title").order("title").then(({ data }) => setProducts(data || []));
+    // temas e subtemas já usados em outras provas (sugestões ao digitar, para manter a mesma grafia)
+    supabase.from("form_blocks").select("topic,subtopic").not("topic", "is", null).limit(3000).then(({ data }) => {
+      const uniq = (list) => [...new Set(list.map((item) => String(item || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setKnownTopics({ topics: uniq((data || []).map((row) => row.topic)), subtopics: uniq((data || []).map((row) => row.subtopic)) });
+    });
   }, []);
 
   useEffect(() => {
@@ -280,6 +287,7 @@ export default function FormBuilderPage() {
         formId = data.id;
       }
 
+      const usesSubtopic = blocks.some((block) => (block.subtopic || "").trim());
       const rows = blocks.map((block, index) => ({
         id: block.id,
         form_id: formId,
@@ -292,6 +300,7 @@ export default function FormBuilderPage() {
         points: canHavePoints(block.type) ? Number(block.points) || 0 : 0,
         position: index,
         topic: block.topic.trim() || null,
+        ...(usesSubtopic ? { subtopic: (block.subtopic || "").trim() || null } : {}),
         correct_answer: null,
       }));
       if (rows.length) {
@@ -318,7 +327,7 @@ export default function FormBuilderPage() {
       if (!editing) navigate(`/admin/formularios/${formId}`, { replace: true });
     } catch (error) {
       const text = String(error.message || "");
-      notify("error", /form_block_keys|correct|audience|does not exist/i.test(text) ? "O banco ainda não tem a atualização de provas (SQL 21). Rode o arquivo supabase/21_provas_e_atividades.sql no Supabase." : text || "Não foi possível salvar.");
+      notify("error", /subtopic/i.test(text) ? "O banco ainda não tem o subtema das questões. Rode supabase/25_subtema_das_questoes.sql no Supabase e salve de novo." : /form_block_keys|correct|audience|does not exist/i.test(text) ? "O banco ainda não tem a atualização de provas (SQL 21). Rode o arquivo supabase/21_provas_e_atividades.sql no Supabase." : text || "Não foi possível salvar.");
     } finally {
       setSaving(false);
     }
@@ -461,6 +470,8 @@ B) Avaliar o nível de consciência da vítima.
 C) Garantir a segurança da cena e a sua própria segurança.
 D) Ligar imediatamente para o serviço de emergência.
 CORRETA: C
+TEMA: Biossegurança
+SUBTEMA: Segurança da cena
 EXPLICAÇÃO: A segurança da cena é prioridade no APH: evita novas vítimas.
 
 ---
@@ -483,6 +494,9 @@ PONTOS: 2`}</pre>
         )}
 
         {blocks.length === 0 && !showImport && <p className="fa-empty">Nenhuma pergunta ainda. Escolha o tipo abaixo e clique em Adicionar, ou importe várias de uma vez.</p>}
+
+        <datalist id="fa-topics">{[...new Set([...knownTopics.topics, ...blocks.map((block) => block.topic.trim()).filter(Boolean)])].map((item) => <option key={item} value={item} />)}</datalist>
+        <datalist id="fa-subtopics">{[...new Set([...knownTopics.subtopics, ...blocks.map((block) => (block.subtopic || "").trim()).filter(Boolean)])].map((item) => <option key={item} value={item} />)}</datalist>
 
         <div className="fa-qlist">
           {blocks.map((block, index) => {

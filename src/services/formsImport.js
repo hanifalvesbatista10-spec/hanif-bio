@@ -25,6 +25,7 @@ export function emptyBlock(type = "choice") {
     required: true,
     points: 1,
     topic: "",
+    subtopic: "",
     options: type === "choice" || type === "multi_choice" ? ["", ""] : [],
     correct_idx: -1,
     correct_set: [],
@@ -91,6 +92,7 @@ function fromJsonItem(item) {
     required: item.required !== false && item.obrigatoria !== false,
     points: toNumber(item.points ?? item.pontos, 1),
     topic: String(item.topic || item.tema || "").trim(),
+    subtopic: String(item.subtopic || item.subtema || item.parte || "").trim(),
     feedback: String(item.feedback || item.comentario || item.comentário || item.explicacao || item.explicação || "").trim(),
     tolerance: item.tolerance ?? item.tolerancia ?? "",
     partial_credit: Boolean(item.partial_credit ?? item.nota_parcial ?? false),
@@ -101,7 +103,7 @@ function fromJsonItem(item) {
 }
 
 // Linhas do tipo "CORRETA: C", "EXPLICAÇÃO: ...", "PONTOS: 2" (rótulo seguido de dois-pontos)
-const LABEL = /^(tipo|type|pergunta|quest[aã]o|question|enunciado|corretas?|resposta correta|gabarito|correct|coment[aá]rio|explica[cç][aã]o|feedback|pontos|pontua[cç][aã]o|points|tema|assunto|topic|obrigat[oó]ria|required|toler[aâ]ncia|nota parcial|parcial)\s*:/i;
+const LABEL = /^(tipo|type|pergunta|quest[aã]o|question|enunciado|corretas?|resposta correta|gabarito|correct|coment[aá]rio|explica[cç][aã]o|feedback|pontos|pontua[cç][aã]o|points|tema|subtema|parte|assunto|topic|obrigat[oó]ria|required|toler[aâ]ncia|nota parcial|parcial)\s*:/i;
 // "QUESTÃO 12" sozinho na linha (ou "Pergunta 3: texto")
 const QUESTION_HEADER = /^(quest[aã]o|pergunta)\s*\d+\s*[:.)\-]?\s*(.*)$/i;
 // Alternativas: "A) texto", "b. texto", "- texto"
@@ -178,6 +180,7 @@ function fromTextChunk(chunk, state) {
     required: requiredRaw ? !["nao", "não", "false", "0"].includes(requiredRaw) : true,
     points: toNumber(get(["pontos:", "pontuacao:", "pontuação:", "points:"]), 1),
     topic: get(["tema:", "assunto:", "topic:"]) || state.module || "",
+    subtopic: get(["subtema:", "parte:"]),
     feedback: get(["comentario:", "comentário:", "explicacao:", "explicação:", "feedback:"]),
     tolerance: get(["tolerancia:", "tolerância:"]),
     partial_credit: /^(sim|s|true|1)/i.test(get(["nota parcial:", "parcial:"])),

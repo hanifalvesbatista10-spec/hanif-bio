@@ -157,6 +157,8 @@ B) Alternativa
 C) Alternativa
 D) Alternativa
 CORRETA: C
+TEMA: Trauma
+SUBTEMA: B - Respiração
 EXPLICAÇÃO: Comentário que o aluno lê depois da correção, explicando por que a alternativa certa está certa.
 
 ---
@@ -168,12 +170,16 @@ B) Alternativa
 C) Alternativa
 D) Alternativa
 CORRETA: B
+TEMA: Trauma
+SUBTEMA: C - Circulação
 EXPLICAÇÃO: Comentário da questão.
 
 Regras:
 - Coloque uma linha com apenas --- entre uma questão e a próxima.
-- A linha "### MÓDULO: ..." é opcional. Use quando quiser separar por assunto; ela vira uma seção e o tema das questões seguintes.
+- A linha "### MÓDULO: ..." é opcional. Use quando quiser separar por assunto; ela vira uma seção da prova.
 - Cada questão tem 4 alternativas (A a D) e uma única correta. Em CORRETA escreva só a letra.
+- TEMA é o assunto geral (ex.: RCP, Trauma, Biossegurança). SUBTEMA é a parte específica que a questão cobra (ex.: na sequência XABCDE use a letra e o nome, como "B - Respiração"; em RCP, "Compressões" ou "Uso do DEA"). É com o tema e o subtema que o site mostra ao instrutor em quais partes o aluno mais erra.
+- Escreva o TEMA e o SUBTEMA sempre com a mesma grafia em todas as questões (não varie "RCP", "rcp", "Ressuscitação").
 - A EXPLICAÇÃO deve ser objetiva e, quando ajudar, dizer por que as outras alternativas estão erradas.
 - Não escreva nada além das questões (sem introdução nem conclusão).
 

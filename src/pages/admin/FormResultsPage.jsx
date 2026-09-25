@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import RowActions from "../../components/admin/RowActions";
 import { supabase } from "../../services/supabase";
 import {
@@ -42,6 +42,7 @@ const FILTERS = [
 export default function FormResultsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [form, setForm] = useState(null);
   const [blocks, setBlocks] = useState([]);
   const [keys, setKeys] = useState({});
@@ -90,6 +91,13 @@ export default function FormResultsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // link vindo da ficha do aluno: abre direto a resposta dele
+  useEffect(() => {
+    const wanted = params.get("resposta");
+    if (wanted && submissions.some((item) => item.id === wanted)) setSelectedId(wanted);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [submissions.length]);
 
   const questions = useMemo(() => blocks.filter((block) => isQuestion(block.type)), [blocks]);
   const answersBySub = useMemo(() => {

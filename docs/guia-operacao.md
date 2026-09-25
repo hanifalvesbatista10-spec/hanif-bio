@@ -55,6 +55,18 @@ Em **Feedbacks → Pedir depoimento por link** (rode `supabase/24_depoimentos_po
 - A foto do aluno só é aceita com um link ativo, até 1 MB e só imagem. Depoimentos e fotos enviados por link nunca entram no site antes de você publicar.
 - A página do aluno não aparece no Google (`noindex`).
 
+## Desempenho do aluno (onde ele está errando)
+
+**Usuários → Desempenho** (botão ao lado de cada aluno; rode `supabase/25_subtema_das_questoes.sql` uma vez para usar o subtema). A ficha junta todas as provas, simulados e tarefas do aluno:
+- **Cartões:** média geral (e se está subindo ou caindo), envios e aprovações, dias desde a última atividade e quantos temas estão abaixo de 60%.
+- **Onde está acertando e errando:** cada **tema** (RCP, Trauma...) com o aproveitamento e, dentro dele, cada **subtema** (a parte específica, como "B - Respiração" ou "C - Circulação"). Os mais fracos vêm primeiro: Reforçar (abaixo de 60%), Atenção (60 a 79%), Forte (80% ou mais). Com menos de 3 respostas no assunto aparece "poucos dados".
+- **Ver questões:** ao lado de cada tema ou subtema, mostra as questões que ele errou, com o que respondeu, o gabarito e a explicação. Uma questão errada mais de uma vez fica no topo.
+- **Histórico** de todos os envios (com link para a resposta) e **Ainda não fez** (atividades abertas para ele).
+- **Copiar resumo** gera um texto curto para conversar com o aluno, e **Chamar no WhatsApp** abre a conversa.
+- O aviso "Precisa de atenção" aparece com média abaixo de 60% (a partir de 2 envios), mais de 14 dias parado com atividade pendente, ou desempenho caindo.
+
+**Para a ficha ficar rica**, preencha **Tema** e **Subtema** nas perguntas (ao importar com IA use `TEMA:` e `SUBTEMA:`; o botão "Copiar instruções para a IA" já pede isso). Use sempre a mesma grafia: o editor sugere os nomes já usados. Ignora questões anuladas, sem pontos e discursivas ainda sem nota. Só entram alunos que responderam logados.
+
 ## Onde olhar quando algo der errado
 
 | Sintoma | Onde ver |
@@ -77,7 +89,7 @@ e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos)
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

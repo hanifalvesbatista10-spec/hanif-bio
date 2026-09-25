@@ -65,6 +65,7 @@ QUESTÃO 2
 - **`### MÓDULO: ...`** (opcional) vira uma seção na prova e o **tema** das questões seguintes (usado no desempenho por tema).
 - **`EXPLICAÇÃO:`** (ou `COMENTÁRIO:`) é o comentário da questão. O aluno o vê depois da liberação.
 - **`CORRETA:`** aceita a letra (`C`) ou várias (`A, C`, com `TIPO: várias corretas`).
+- **`TEMA:`** (assunto geral, ex.: Trauma) e **`SUBTEMA:`** (a parte que a questão cobra, ex.: `B - Respiração`) alimentam a ficha de desempenho do aluno (Usuários → Desempenho). Sem `TEMA:`, vale o nome do módulo.
 - Sem `PONTOS:`, cada questão vale 1. Também dá para usar `TIPO:`, `TEMA:`, `NOTA PARCIAL: sim`, `TOLERÂNCIA:` e `OBRIGATÓRIA:`. Aceita JSON.
 - Depois de importar, revise: questões sem resposta correta marcada ficam sinalizadas.
 
