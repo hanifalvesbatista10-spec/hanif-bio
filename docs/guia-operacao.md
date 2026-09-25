@@ -63,3 +63,18 @@ e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos)
   projetos parados por muito tempo e não guarda backups de longo prazo: **exporte os dados de vez em quando**.
 - **Antes de vender de verdade:** nota fiscal (converse com o contador), política de reembolso e páginas de termos e privacidade
   (o cadastro pede o aceite, mas essas páginas ainda não existem no site).
+
+## Aplicativo (PWA): o site instalável no celular
+
+O site é um PWA: o aluno instala pelo navegador e ganha um ícone na tela inicial, que abre em tela cheia direto na Área do aluno.
+
+- **Como o aluno instala:** no Android (Chrome) aparece um aviso "Instale o app" em Meus cursos e o item "Instalar aplicativo" no menu da conta;
+  também dá pelo menu do Chrome ("Instalar app"). No iPhone: Safari → Compartilhar → "Adicionar à Tela de Início".
+- **Atualizações:** o app carrega o site da internet, então tudo o que você publica na Vercel aparece nele sozinho. Não há loja nem versão para publicar.
+- **O que fica guardado no aparelho:** só arquivos que não mudam (scripts com hash, fontes, ícones) e a tela "Você está sem internet".
+  Páginas, dados do aluno, vídeos e chamadas `/api` nunca ficam guardados.
+- **Arquivos:** `public/manifest.webmanifest` (nome, cores, ícones), `public/icons/`, `public/sw.js` (service worker) e `public/offline.html`.
+  Para trocar o ícone ou o nome do app, edite o manifesto e os ícones. Se mudar o `sw.js`, aumente o `VERSION` no topo dele.
+- **Testar:** depois do deploy, abra o site no Chrome do Android, entre na Área do aluno e confira o aviso de instalar. Ative o modo avião
+  com o app aberto e abra outra página: deve aparecer "Você está sem internet".
+- **Próximo passo (opcional):** para aparecer na Play Store, dá para empacotar este mesmo PWA como TWA. Confira antes as regras de pagamento do Google.

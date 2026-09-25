@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="theme-color" content="#071426" />
+<title>Sem conexão | Hanif Alves</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: #071426;
+    color: #fff;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    text-align: center;
+  }
+  main { max-width: 380px; }
+  img { width: 72px; height: 72px; object-fit: contain; }
+  h1 { margin: 20px 0 8px; font-size: 1.6rem; line-height: 1.2; }
+  p { margin: 0 0 24px; color: #c3d0dc; line-height: 1.55; }
+  button {
+    min-height: 48px;
+    padding: 0 26px;
+    border: 0;
+    border-radius: 12px;
+    background: #d6152d;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <img src="/assets/logo-ha.png" alt="" />
+  <h1>Você está sem internet</h1>
+  <p>Os cursos e os vídeos precisam de conexão. Confira o Wi-Fi ou os dados do celular e tente de novo.</p>
+  <button type="button" onclick="location.reload()">Tentar de novo</button>
+</main>
+</body>
+</html>

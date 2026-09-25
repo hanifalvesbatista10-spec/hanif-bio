@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Hanif Alves | Área do aluno",
+  "short_name": "Hanif Alves",
+  "description": "Cursos, certificados e mentorias de Hanif Alves, instrutor de APH.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/minha-area?origem=app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#071426",
+  "theme_color": "#071426",
+  "categories": ["education"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Meus cursos", "url": "/minha-area?origem=app", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Certificados", "url": "/minha-area/certificados?origem=app", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}

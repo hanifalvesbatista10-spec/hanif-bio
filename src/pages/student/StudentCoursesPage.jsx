@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
+import useInstallApp from "../../components/member/useInstallApp";
 import { supabase } from "../../services/supabase";
 
 function CourseCard({ product }) {
@@ -42,6 +43,23 @@ export default function StudentCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const app = useInstallApp();
+  const [hideInstall, setHideInstall] = useState(() => {
+    try {
+      return window.localStorage.getItem("ha_install_hidden") === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  const dismissInstall = () => {
+    setHideInstall(true);
+    try {
+      window.localStorage.setItem("ha_install_hidden", "1");
+    } catch {
+      /* sem armazenamento: o aviso só volta na próxima visita */
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -74,6 +92,16 @@ export default function StudentCoursesPage() {
             Faltam {missing.join(" e ")} no seu cadastro. Sem eles, o seu certificado e a sua carteirinha não saem prontos.
           </p>
           <Link className="mb-btn is-small" to="/minha-area/configuracoes?aba=dados">Completar cadastro</Link>
+        </div>
+      )}
+
+      {app.available && !hideInstall && (
+        <div className="mb-notice is-info mb-install" role="status">
+          <p>Instale o app para abrir os cursos com um toque, direto da tela inicial.</p>
+          <div className="mb-notice-actions">
+            <button type="button" className="mb-btn is-small" onClick={() => app.install()}>Instalar</button>
+            <button type="button" className="mb-btn is-ghost is-small" onClick={dismissInstall}>Agora não</button>
+          </div>
         </div>
       )}
 

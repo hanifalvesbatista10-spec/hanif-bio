@@ -427,6 +427,21 @@
   color: #5b1620;
 }
 
+.mb-notice.is-info {
+  border-color: #cfdcea;
+  background: #f1f6fb;
+}
+
+.mb-notice.is-info p {
+  color: #17324f;
+}
+
+.mb-notice-actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
 .mb-alert {
   margin: 0 0 18px;
   padding: 12px 14px;
@@ -1195,6 +1210,14 @@
   .mb-notice {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .mb-notice-actions {
+    width: 100%;
+  }
+
+  .mb-notice-actions .mb-btn {
+    flex: 1;
   }
 
   .mb-row {

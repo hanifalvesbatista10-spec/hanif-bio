@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "./MemberIcons";
+import useInstallApp from "./useInstallApp";
 import "../../styles/member-shell.css";
 
 const NAV = [
@@ -31,6 +32,7 @@ function UserMenu() {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef(null);
   const buttonRef = useRef(null);
+  const app = useInstallApp();
 
   useEffect(() => setOpen(false), [location.pathname, location.search]);
 
@@ -64,6 +66,7 @@ function UserMenu() {
   const items = [
     { label: "Meus dados", icon: "user", onClick: go("/minha-area/configuracoes?aba=dados") },
     { label: "Alterar senha", icon: "lock", onClick: go("/minha-area/configuracoes?aba=seguranca&alterar=1") },
+    ...(app.available ? [{ label: "Instalar aplicativo", icon: "download", onClick: () => app.install() }] : []),
     ...(isAdmin ? [{ label: "Painel administrativo", icon: "panel", onClick: go("/admin") }] : []),
     { label: "Voltar ao site", icon: "globe", onClick: go("/") },
     { label: "Sair", icon: "logout", danger: true, onClick: leave },
