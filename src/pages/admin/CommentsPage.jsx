@@ -32,7 +32,7 @@ export default function CommentsPage() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from("lesson_comments")
-      .select("id,lesson_id,user_id,parent_id,author_name,author_role,body,status,created_at,lesson:product_lessons(id,title,product_id,product:products(id,title))")
+      .select("id,lesson_id,user_id,parent_id,author_name,author_role,body,status,created_at,lesson:product_lessons(id,title,product_id,product:products!product_lessons_product_id_fkey(id,title))")
       .order("created_at", { ascending: true });
 
     if (error) {
