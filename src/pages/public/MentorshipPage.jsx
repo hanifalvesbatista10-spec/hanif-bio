@@ -130,7 +130,7 @@ export default function MentorshipPage() {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
-                <Installments product={product} />
+                <Installments product={product} tone="dark" />
                 <CheckoutButton href={checkout}>Adquirir agora</CheckoutButton>
               </div>
             </aside>

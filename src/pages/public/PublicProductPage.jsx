@@ -84,7 +84,7 @@ function HemorrhageLanding({ product }) {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
-                <Installments product={product} />
+                <Installments product={product} tone="dark" />
                 <CheckoutButton href={checkout}>Comprar agora</CheckoutButton>
               </div>
             </aside>
@@ -289,7 +289,7 @@ export default function PublicProductPage() {
                   {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                 </div>
               )}
-                <Installments product={product} />
+                <Installments product={product} tone="dark" />
               <a className="public-product-button" href={getProductCheckout(product)} {...checkoutLinkProps(getProductCheckout(product))}>Comprar agora</a>
               <p className="public-product-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
             </aside>

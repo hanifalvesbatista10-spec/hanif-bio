@@ -66,7 +66,7 @@ export default function FeaturedProduct({ product, settings }) {
             </dl>
           )}
 
-          <Installments product={product} />
+          <Installments product={product} tone="dark" />
 
           <div className="hx-actions">
             <Button to={`/produto/${product.slug}`}>

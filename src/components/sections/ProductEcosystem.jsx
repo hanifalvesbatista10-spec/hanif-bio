@@ -37,7 +37,7 @@ function ProductTile({ product, number, settings }) {
             {product.promotional_price !== null && product.price !== null && <del>{money(product.price)}</del>}
           </div>
         )}
-        <Installments product={product} />
+        <Installments product={product} tone="dark" />
         <div className="hx-actions">
           <Link className="hx-btn is-secondary" to={`/produto/${product.slug}`}>Ver detalhes</Link>
           {checkout && (

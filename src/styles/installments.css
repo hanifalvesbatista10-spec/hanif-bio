@@ -1,29 +1,54 @@
-/* Destaque de parcelas nos preços: herda a cor do lugar onde entra (fundo claro ou escuro) */
+/* Destaque de parcelas nos preços: caixa em cor própria (vermelho da marca) para chamar atenção para o valor menor.
+   Fundo claro por padrão; .on-dark para áreas navy. */
 .inst {
-  margin: 4px 0 16px;
-  color: inherit;
+  --inst-accent: #d6152d;
+  --inst-tint: #fff0f2;
+  --inst-line: #f6c9d0;
+  --inst-sub: #53677b;
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 6px 0 16px;
+  padding: 12px 16px 12px;
+  border: 1px solid var(--inst-line);
+  border-radius: 14px;
+  background: var(--inst-tint);
   font-family: inherit;
 }
-.inst p {
-  margin: 0;
+.inst.on-dark {
+  --inst-accent: #ff8a99;
+  --inst-tint: rgba(255, 107, 125, 0.13);
+  --inst-line: rgba(255, 138, 153, 0.34);
+  --inst-sub: #d3dde6;
 }
-.inst-main {
+/* seletores com duas classes: as seções da home e das páginas de produto estilizam "p" e "strong" e ganhariam da regra simples */
+.inst .inst-main,
+.inst .inst-sub {
+  margin: 0;
+  max-width: none;
+  font-family: inherit;
+}
+.inst .inst-main {
+  color: var(--inst-accent);
   font-size: clamp(1.5rem, 1.1rem + 1.4vw, 1.9rem);
   font-weight: 500;
   line-height: 1.1;
   letter-spacing: -0.01em;
 }
-.inst-main strong {
+.inst .inst-main strong {
+  color: var(--inst-accent);
   font-weight: 800;
 }
 .ck-summary .inst {
   margin: 14px 0 6px;
 }
-.inst-sub {
+.inst .inst-sub {
   margin-top: 6px;
+  color: var(--inst-sub);
   font-size: 0.82rem;
+  font-weight: 500;
   line-height: 1.45;
-  opacity: 0.78;
 }
 
 /* Cartão de ajuste no painel (Produtos) */

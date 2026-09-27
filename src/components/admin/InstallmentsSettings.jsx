@@ -106,7 +106,7 @@ export default function InstallmentsSettings() {
           {preview && (
             <div className="ins-preview">
               <small>Prévia com um produto de R$ 297,00</small>
-              <Installments cents={SAMPLE_CENTS} />
+              <Installments cents={SAMPLE_CENTS} tone="dark" />
             </div>
           )}
           {feeNumber !== null && feeValid && !preview && <div className="ins-msg err">Com esses valores a parcela ficaria abaixo de R$ 5,00, então o destaque não seria exibido.</div>}
