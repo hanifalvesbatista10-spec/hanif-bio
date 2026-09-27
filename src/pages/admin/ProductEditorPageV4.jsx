@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import ProductLinks from "../../components/admin/ProductLinks";
 
 const emptyForm = {
   title: "",
@@ -77,6 +78,7 @@ export default function ProductEditorPageV4() {
   const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(null); // versão gravada no banco: os links usam o endereço salvo, não o que está sendo digitado
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
 
@@ -90,6 +92,7 @@ export default function ProductEditorPageV4() {
       } else {
         const normalized = normalizeProduct(data);
         setForm(normalized);
+        setSaved(normalized);
         setPreview(normalized.cover_url);
       }
       setLoading(false);
@@ -202,6 +205,7 @@ export default function ProductEditorPageV4() {
 
       const normalized = normalizeProduct(result.data);
       setForm(normalized);
+      setSaved(normalized);
       setPreview(normalized.cover_url);
       setImageFile(null);
       setMessageType("success");
@@ -298,6 +302,8 @@ export default function ProductEditorPageV4() {
 
         <div className="pe4-actions"><button className="pe4-save" type="submit" disabled={saving}>{saving ? "Salvando no banco..." : "Salvar alterações"}</button><button className="pe4-cancel" type="button" onClick={() => navigate("/admin/produtos")}>Cancelar</button></div>
       </form>
+
+      {editing && saved && saved.slug && <ProductLinks product={saved} />}
     </section>
   );
 }

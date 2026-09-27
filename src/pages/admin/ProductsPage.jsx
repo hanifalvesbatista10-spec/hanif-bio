@@ -35,6 +35,15 @@ export default function ProductsPage() {
     load();
   }, []);
 
+  const copyLink = async (product) => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/produto/${product.slug}`);
+      setMessage(`Link da página de "${product.title}" copiado.`);
+    } catch {
+      setMessage("Não foi possível copiar. Abra o produto e copie em Links deste produto.");
+    }
+  };
+
   const removeProduct = async (product) => {
     const confirmed = window.confirm(
       `Excluir definitivamente o produto "${product.title}"?`
@@ -72,9 +81,9 @@ export default function ProductsPage() {
         .product-manage-body h3{margin:12px 0 8px;color:#071426;font-size:1.22rem}
         .product-manage-body p{margin:0;color:#66798c;line-height:1.55;min-height:48px}
         .product-manage-link{display:block;margin-top:12px;color:#52677b;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-        .product-manage-actions{display:grid;grid-template-columns:1fr auto;gap:10px;margin-top:18px}
+        .product-manage-actions{display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-top:18px}
         .product-manage-actions button{min-height:43px;border-radius:11px;font-weight:900;cursor:pointer}
-        .edit-product{border:0;background:#071426;color:#fff}
+        .edit-product{border:0;background:#071426;color:#fff}.copy-product{border:1px solid #d6e0e9;background:#fff;color:#13283c;padding:0 14px}
         .delete-product{border:1px solid #f1bdc5;background:#fff5f6;color:#bb1730;padding:0 14px}
         .products-empty{padding:45px;text-align:center;border:1px dashed #cbd5df;border-radius:18px;background:#fff;color:#63768a}
         @media(max-width:760px){.products-admin-header{align-items:stretch;flex-direction:column}.products-create-button{width:100%}.products-list{grid-template-columns:1fr}.product-manage-image,.product-manage-placeholder{height:185px}}
@@ -138,6 +147,10 @@ export default function ProductsPage() {
                     onClick={() => navigate(`/admin/produtos/${product.id}`)}
                   >
                     Editar produto
+                  </button>
+
+                  <button type="button" className="copy-product" onClick={() => copyLink(product)}>
+                    Copiar link
                   </button>
 
                   <button

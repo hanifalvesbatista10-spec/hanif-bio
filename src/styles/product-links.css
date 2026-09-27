@@ -1,0 +1,123 @@
+.pl-card {
+  margin-top: 18px;
+  padding: 24px;
+  border: 1px solid #e0e7ee;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgba(7, 20, 38, 0.06);
+}
+.pl-card h3 {
+  margin: 0;
+  color: #071426;
+  font-size: 1.25rem;
+}
+.pl-intro {
+  margin: 6px 0 18px;
+  color: #5b6f82;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.pl-intro b {
+  color: #a60d25;
+}
+.pl-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) auto;
+  gap: 10px 14px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid #e7edf2;
+}
+.pl-label strong {
+  display: block;
+  color: #13283c;
+  font-size: 0.9rem;
+}
+.pl-label small {
+  display: block;
+  margin-top: 2px;
+  color: #7b8c9c;
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+.pl-url {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #d6e0e9;
+  border-radius: 10px;
+  background: #f6f8fa;
+  color: #30475d;
+  font: inherit;
+  font-size: 0.85rem;
+  text-overflow: ellipsis;
+}
+.pl-actions {
+  display: flex;
+  gap: 8px;
+}
+.pl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: #071426;
+  color: #fff;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pl-btn:hover {
+  background: #0d2238;
+}
+.pl-btn.is-ghost {
+  border: 1px solid #d6e0e9;
+  background: #fff;
+  color: #13283c;
+}
+.pl-btn.is-ghost:hover {
+  background: #f1f5f9;
+}
+.pl-btn:focus-visible,
+.pl-url:focus-visible,
+.pl-coupon input:focus-visible {
+  outline: 3px solid #d6152d;
+  outline-offset: 2px;
+}
+.pl-coupon {
+  display: grid;
+  gap: 6px;
+  padding: 14px 0;
+  border-top: 1px solid #e7edf2;
+}
+.pl-coupon label {
+  color: #13283c;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+.pl-coupon input {
+  width: 100%;
+  max-width: 420px;
+  padding: 10px 12px;
+  border: 1px solid #d6e0e9;
+  border-radius: 10px;
+  font: inherit;
+  text-transform: uppercase;
+}
+@media (max-width: 760px) {
+  .pl-card {
+    padding: 18px;
+  }
+  .pl-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pl-actions .pl-btn {
+    flex: 1;
+  }
+}
