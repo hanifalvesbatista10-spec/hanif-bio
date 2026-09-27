@@ -29,6 +29,7 @@ Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `doc
 - **Quando alguém compra:** o site confirma o pagamento e libera o curso na conta com o **mesmo e-mail da compra**. Sem conta ainda:
   o curso aparece quando ele criar uma com esse e-mail. E-mail diferente: Pedidos → menu **⋯** → **Liberar acesso**.
 - **Cupons:** menu Cupons. Cupom de 100% dá acesso grátis: use sempre limite de usos e data final. Dá para limitar o cupom a Pix ou cartão, ou só a boleto (SQL 27).
+- **Parcelas em destaque:** em Produtos, cartão "Parcelamento em destaque nos preços": mostra "12x de R$ X" com o juro do cartão (SQL 28). Veja docs/checkout.md.
 - **Aluno que não consegue entrar:** Usuários → menu **⋯** da linha → **Enviar link de nova senha** ou **Reenviar e-mail de confirmação**.
 - **Certificados:** Certificados → Emitir → Alunos cadastrados (CPF, RG e foto vêm de Configurações → Meus dados, preenchidos pelo aluno).
 - **Estorno:** Pix e cartão no app da InfinitePay + Pedidos → **⋯** → **Marcar como reembolsado**; boleto no Asaas (o aviso tira o acesso).

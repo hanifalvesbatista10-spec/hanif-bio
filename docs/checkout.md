@@ -81,6 +81,15 @@ A InfinitePay não tem ambiente de testes: o teste é uma **compra real de valor
 4. Peça o estorno no app da InfinitePay e use **Marcar como reembolsado** em *Pedidos*.
 5. Desative ou apague o produto de teste.
 
+## Parcelamento em destaque nos preços
+
+Em **Produtos**, o cartão "Parcelamento em destaque nos preços" liga a frase **"12x de R$ 29,30"** (com o juro que o comprador paga) e o valor à vista nos preços dos produtos com checkout do site, na página do produto, na home e no resumo do checkout (já com o cupom aplicado). Antes, rode `supabase/28_parcelamento_em_destaque.sql`.
+
+- **Juro:** é o percentual total que o cartão em N parcelas custa a mais que o preço à vista. Para descobrir, faça um checkout de teste, escolha o cartão em 12x e anote o preço e o total que a InfinitePay mostra; o painel calcula o percentual ("Calcular o juro").
+- **Confira de vez em quando:** se a InfinitePay mudar a taxa da sua conta, o valor mostrado no site fica desatualizado até você refazer o teste e salvar.
+- **Desligar:** deixe o juro em branco ("Desligar destaque"). Sem o SQL 28 ou com o juro vazio, nada é exibido.
+- O texto sempre informa "com juros" e o total no cartão, como exige o Código de Defesa do Consumidor. Parcela abaixo de R$ 5,00 não é anunciada.
+
 ## Cupons de desconto
 
 Em **Cupons** (menu do painel) você cria códigos para o checkout do site. Antes, rode `supabase/20_cupons.sql` no Supabase.

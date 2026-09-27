@@ -1,4 +1,5 @@
 import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
+import Installments from "../../components/ui/Installments";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -129,6 +130,7 @@ export default function MentorshipPage() {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
+                <Installments product={product} />
                 <CheckoutButton href={checkout}>Adquirir agora</CheckoutButton>
               </div>
             </aside>
@@ -213,6 +215,7 @@ export default function MentorshipPage() {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
+                <Installments product={product} />
                 <CheckoutButton href={checkout}>Adquirir agora</CheckoutButton>
                 <p className="hem-buybox-note">{usesInternalCheckout(product) ? "Pagamento seguro com Pix, cartão ou boleto. O acesso é liberado automaticamente após a confirmação." : "Confira o valor, os itens incluídos e as condições da oferta no checkout da Kiwify."}</p>
               </div>

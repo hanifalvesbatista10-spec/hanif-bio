@@ -1,4 +1,5 @@
 import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
+import Installments from "../../components/ui/Installments";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
@@ -83,6 +84,7 @@ function HemorrhageLanding({ product }) {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
+                <Installments product={product} />
                 <CheckoutButton href={checkout}>Comprar agora</CheckoutButton>
               </div>
             </aside>
@@ -167,6 +169,7 @@ function HemorrhageLanding({ product }) {
                     {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                   </div>
                 )}
+                <Installments product={product} />
                 <CheckoutButton href={checkout}>{usesInternalCheckout(product) ? "Comprar agora" : "Comprar agora na Hotmart"}</CheckoutButton>
                 <p className="hem-buybox-note">Você será direcionado para o checkout seguro cadastrado para este produto.</p>
               </div>
@@ -286,6 +289,7 @@ export default function PublicProductPage() {
                   {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
                 </div>
               )}
+                <Installments product={product} />
               <a className="public-product-button" href={getProductCheckout(product)} {...checkoutLinkProps(getProductCheckout(product))}>Comprar agora</a>
               <p className="public-product-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
             </aside>

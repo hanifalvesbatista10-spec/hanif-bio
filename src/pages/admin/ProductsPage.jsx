@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import InstallmentsSettings from "../../components/admin/InstallmentsSettings";
 
 const statusLabels = {
   draft: "Rascunho",
@@ -103,6 +104,8 @@ export default function ProductsPage() {
           + Adicionar novo produto
         </button>
       </div>
+
+      <InstallmentsSettings />
 
       {message && <div className="admin-alert">{message}</div>}
 

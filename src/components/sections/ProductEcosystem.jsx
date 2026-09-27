@@ -3,6 +3,7 @@ import { checkoutLinkProps, getProductCheckout } from "../../services/productChe
 import Accent from "../ui/Accent";
 import Container from "../ui/Container";
 import GlowCard from "../ui/GlowCard";
+import Installments from "../ui/Installments";
 import ProductImage from "../ui/ProductImage";
 import Reveal from "../ui/Reveal";
 import SectionHeading from "../ui/SectionHeading";
@@ -36,6 +37,7 @@ function ProductTile({ product, number, settings }) {
             {product.promotional_price !== null && product.price !== null && <del>{money(product.price)}</del>}
           </div>
         )}
+        <Installments product={product} />
         <div className="hx-actions">
           <Link className="hx-btn is-secondary" to={`/produto/${product.slug}`}>Ver detalhes</Link>
           {checkout && (

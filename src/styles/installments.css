@@ -1,0 +1,171 @@
+/* Destaque de parcelas nos preços: herda a cor do lugar onde entra (fundo claro ou escuro) */
+.inst {
+  margin: 4px 0 16px;
+  color: inherit;
+  font-family: inherit;
+}
+.inst p {
+  margin: 0;
+}
+.inst-main {
+  font-size: clamp(1.5rem, 1.1rem + 1.4vw, 1.9rem);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+}
+.inst-main strong {
+  font-weight: 800;
+}
+.ck-summary .inst {
+  margin: 14px 0 6px;
+}
+.inst-sub {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+
+/* Cartão de ajuste no painel (Produtos) */
+.ins-card {
+  margin-bottom: 22px;
+  padding: 22px;
+  border: 1px solid #e0e7ee;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 12px 34px rgba(7, 20, 38, 0.06);
+}
+.ins-card h3 {
+  margin: 0;
+  color: #071426;
+  font-size: 1.2rem;
+}
+.ins-card > p {
+  margin: 6px 0 16px;
+  color: #5b6f82;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.ins-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px 16px;
+}
+.ins-card label {
+  display: grid;
+  gap: 6px;
+  color: #13283c;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.ins-card input,
+.ins-card select {
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #d6e0e9;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 500;
+}
+.ins-card small {
+  color: #7b8c9c;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.ins-test {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px dashed #cbd5df;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+.ins-test strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #13283c;
+  font-size: 0.88rem;
+}
+.ins-test p {
+  margin: 0 0 12px;
+  color: #5b6f82;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.ins-test-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+.ins-test-row label {
+  min-width: 170px;
+  flex: 1;
+}
+.ins-preview {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #071426;
+  color: #fff;
+}
+.ins-preview .inst {
+  margin: 0;
+}
+.ins-preview > small {
+  display: block;
+  margin-bottom: 8px;
+  color: #9fb2c4;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+.ins-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.ins-btn {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: #d6152d;
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.ins-btn.is-ghost {
+  border: 1px solid #d6e0e9;
+  background: #fff;
+  color: #13283c;
+}
+.ins-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.ins-msg {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.ins-msg.ok {
+  background: #edf8f1;
+  color: #236842;
+}
+.ins-msg.err {
+  background: #fff0f2;
+  color: #a60d25;
+}
+.ins-btn:focus-visible,
+.ins-card input:focus-visible,
+.ins-card select:focus-visible {
+  outline: 3px solid #d6152d;
+  outline-offset: 2px;
+}

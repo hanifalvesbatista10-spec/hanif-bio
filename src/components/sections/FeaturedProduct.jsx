@@ -3,6 +3,7 @@ import Accent from "../ui/Accent";
 import Button from "../ui/Button";
 import Container from "../ui/Container";
 import Eyebrow from "../ui/Eyebrow";
+import Installments from "../ui/Installments";
 import ProductImage from "../ui/ProductImage";
 import Reveal from "../ui/Reveal";
 
@@ -64,6 +65,8 @@ export default function FeaturedProduct({ product, settings }) {
               ))}
             </dl>
           )}
+
+          <Installments product={product} />
 
           <div className="hx-actions">
             <Button to={`/produto/${product.slug}`}>

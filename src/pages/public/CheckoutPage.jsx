@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
 import { checkCoupon, createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
 import { formatCpf, isValidCpf } from "../../services/studentData";
+import Installments from "../../components/ui/Installments";
 import "../../styles/checkout.css";
 
 const METHODS = [
@@ -334,6 +335,7 @@ export default function CheckoutPage() {
             {coupon && coupon.discountCents > 0 && <div><dt>Cupom {coupon.code}</dt><dd className="ck-discount">− {formatMoneyCents(coupon.discountCents)}</dd></div>}
             <div className="ck-total"><dt>Total</dt><dd>{formatMoneyCents(total)}</dd></div>
           </dl>
+          {total > 0 && <Installments cents={total} className="ck-inst" />}
           <ul className="ck-perks">
             <li>Pix, cartão de crédito (parcelado) ou boleto</li>
             <li>Acesso liberado automaticamente após a confirmação</li>
