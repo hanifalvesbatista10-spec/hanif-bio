@@ -1840,6 +1840,27 @@ html.adm-scroll-lock body {
   justify-self: start;
 }
 
+.cp-form .cp-pay {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid #d3dce6;
+  border-radius: 10px;
+}
+
+.cp-form .cp-pay legend {
+  padding: 0 6px;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.cp-form .cp-pay small {
+  color: #5b6f82;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 /* Coluna "Ações" das tabelas com menu de três pontos */
 .adm-content .admin-table th:has(.ra-th) {
   text-align: right;

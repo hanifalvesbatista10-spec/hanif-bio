@@ -74,6 +74,7 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState(null); // { code, label, discountCents, finalCents, free }
   const [couponError, setCouponError] = useState("");
   const [checkingCoupon, setCheckingCoupon] = useState(false);
+  const [methodBlocked, setMethodBlocked] = useState(false); // o cupom digitado não vale para a forma de pagamento escolhida
   const autoApplied = useRef(false);
 
   useEffect(() => {
@@ -115,21 +116,32 @@ export default function CheckoutPage() {
 
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
-  const applyCoupon = async (codeOverride) => {
+  const applyCoupon = async (codeOverride, methodOverride) => {
     const code = String(codeOverride ?? couponCode).trim();
     if (!code) return;
     setCheckingCoupon(true);
     setCouponError("");
     try {
-      setCoupon(await checkCoupon({ slug, code, email: form.email, cpf: form.cpf }));
+      setCoupon(await checkCoupon({ slug, code, email: form.email, cpf: form.cpf, method: methodOverride || method }));
+      setMethodBlocked(false);
     } catch (error) {
       setCoupon(null);
       setCouponError(error.message);
+      setMethodBlocked(error.code === "coupon_wrong_method");
     }
     setCheckingCoupon(false);
   };
 
+  // trocar a forma de pagamento confere o cupom de novo: alguns valem só para Pix/cartão ou só para boleto
+  const chooseMethod = (next) => {
+    if (next === method) return;
+    setMethod(next);
+    if (coupon) applyCoupon(coupon.code, next);
+    else if (methodBlocked && couponCode.trim()) applyCoupon(couponCode, next);
+  };
+
   const removeCoupon = () => {
+    setMethodBlocked(false);
     setCoupon(null);
     setCouponCode("");
     setCouponError("");
@@ -255,7 +267,7 @@ export default function CheckoutPage() {
                     role="radio"
                     aria-checked={method === item.id}
                     className={`ck-method ${method === item.id ? "is-active" : ""}`}
-                    onClick={() => setMethod(item.id)}
+                    onClick={() => chooseMethod(item.id)}
                   >
                     <strong>{item.title}</strong>
                     <span>{item.note}</span>

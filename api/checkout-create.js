@@ -68,7 +68,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
   let coupon = null;
   let discountCents = 0;
   if (String(body.coupon || "").trim()) {
-    const applied = await resolveCoupon({ code: body.coupon, product, listCents, email, cpf });
+    const applied = await resolveCoupon({ code: body.coupon, product, listCents, email, cpf, method });
     coupon = applied.coupon;
     discountCents = applied.discountCents;
     amount = applied.finalCents;

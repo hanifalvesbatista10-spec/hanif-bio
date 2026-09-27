@@ -13,6 +13,8 @@ const emptyForm = {
   expires_on: "",
   max_uses: "",
   one_per_customer: true,
+  pay_online: true,
+  pay_boleto: true,
 };
 
 const CODE_RE = /^[A-Z0-9_-]{2,40}$/;
@@ -103,6 +105,10 @@ export default function CouponsPage() {
     if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return notify("error", "O limite de usos deve ser um número inteiro maior que zero (ou deixe em branco para ilimitado).");
     if (form.starts_on && form.expires_on && form.expires_on < form.starts_on) return notify("error", "A data final não pode ser antes da inicial.");
 
+    if (!form.pay_online && !form.pay_boleto) return notify("error", "Marque pelo menos uma forma de pagamento em que o cupom vale.");
+    // as duas marcadas = vale para tudo (não grava nada); o campo só vai ao banco quando há restrição
+    const restricted = form.pay_online && form.pay_boleto ? null : [form.pay_online ? "online" : "boleto"];
+
     setSaving(true);
     const { error } = await supabase.from("coupons").insert({
       code,
@@ -114,11 +120,13 @@ export default function CouponsPage() {
       expires_at: form.expires_on ? `${form.expires_on}T23:59:59-03:00` : null,
       max_uses: maxUses,
       one_per_customer: form.one_per_customer,
+      ...(restricted ? { payment_methods: restricted } : {}),
       active: true,
     });
     setSaving(false);
     if (error) {
       if (isMissingTable(error)) setMissing(true);
+      else if (String(error.message).includes("payment_methods")) notify("error", "O banco ainda não tem a regra por forma de pagamento. Execute supabase/27_cupom_por_forma_de_pagamento.sql no SQL Editor e tente de novo.");
       else if (error.code === "23505") notify("error", `Já existe um cupom com o código ${code}.`);
       else notify("error", `Não foi possível criar o cupom: ${error.message}`);
       return;
@@ -148,6 +156,12 @@ export default function CouponsPage() {
     } catch {
       notify("error", "Não foi possível copiar. Selecione e copie manualmente.");
     }
+  };
+
+  const payLabel = (coupon) => {
+    const list = Array.isArray(coupon.payment_methods) ? coupon.payment_methods : [];
+    if (list.length !== 1) return "";
+    return list[0] === "boleto" ? "Só no boleto" : "Só no Pix ou cartão";
   };
 
   const describe = (coupon) =>
@@ -226,6 +240,12 @@ export default function CouponsPage() {
             <input value={form.description} onChange={set("description")} placeholder="Ex.: Turma de outubro" maxLength={120} />
           </label>
         </div>
+        <fieldset className="cp-pay">
+          <legend>Formas de pagamento em que o cupom vale</legend>
+          <label className="cp-check"><input type="checkbox" checked={form.pay_online} onChange={set("pay_online")} /> Pix ou cartão</label>
+          <label className="cp-check"><input type="checkbox" checked={form.pay_boleto} onChange={set("pay_boleto")} /> Boleto</label>
+          <small>Pix e cartão são escolhidos pelo comprador na página da InfinitePay, por isso andam juntos. Deixe as duas marcadas para o cupom valer sempre.</small>
+        </fieldset>
         <label className="cp-check"><input type="checkbox" checked={form.one_per_customer} onChange={set("one_per_customer")} /> Cada pessoa (e-mail ou CPF) pode usar este cupom uma vez só</label>
         <button className="admin-button primary" type="submit" disabled={saving}>{saving ? "Criando..." : "Criar cupom"}</button>
       </form>
@@ -249,7 +269,7 @@ export default function CouponsPage() {
                   <tr key={coupon.id}>
                     <td><strong>{coupon.code}</strong>{coupon.description && <small>{coupon.description}</small>}</td>
                     <td>{describe(coupon)}{coupon.discount_type === "percent" && coupon.discount_value === 100 ? " (grátis)" : ""}</td>
-                    <td>{product ? product.title : "Todos"}</td>
+                    <td>{product ? product.title : "Todos"}{payLabel(coupon) && <small>{payLabel(coupon)}</small>}</td>
                     <td>
                       {coupon.starts_at || coupon.expires_at
                         ? `${dateBr(coupon.starts_at) || "—"} a ${dateBr(coupon.expires_at) || "sem fim"}`

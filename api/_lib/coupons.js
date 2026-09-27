@@ -19,7 +19,8 @@ const holds = (order, now) =>
   order.status === "paid" || (order.status === "pending" && now - new Date(order.created_at).getTime() < PENDING_HOLD_MS);
 
 // Valida o cupom para este produto e comprador. Devolve { coupon, discountCents, finalCents } ou lança HttpError.
-export async function resolveCoupon({ code, product, listCents, email, cpf, now = Date.now() }) {
+// "method" (online ou boleto) é opcional: sem ele, a regra de forma de pagamento não é conferida (prévia antes da escolha).
+export async function resolveCoupon({ code, product, listCents, email, cpf, method = "", now = Date.now() }) {
   const normalized = normalizeCode(code);
   const invalid = () => new HttpError(422, "invalid_coupon", "Cupom inválido ou expirado.");
   if (!/^[A-Z0-9_-]{2,40}$/.test(normalized)) throw invalid();
@@ -37,6 +38,12 @@ export async function resolveCoupon({ code, product, listCents, email, cpf, now 
   if (coupon.product_id && coupon.product_id !== product.id) throw invalid();
   if (coupon.starts_at && new Date(coupon.starts_at).getTime() > now) throw invalid();
   if (coupon.expires_at && new Date(coupon.expires_at).getTime() < now) throw invalid();
+  // sem a coluna (SQL 27 ainda não rodou) ou nula = vale para todas as formas de pagamento
+  const allowed = Array.isArray(coupon.payment_methods) && coupon.payment_methods.length ? coupon.payment_methods : null;
+  if (allowed && method && !allowed.includes(method)) {
+    const only = allowed.includes("boleto") ? "boleto" : "Pix ou cartão";
+    throw new HttpError(422, "coupon_wrong_method", `Este cupom vale só para pagamento por ${only}. Escolha essa forma de pagamento.`);
+  }
 
   if (coupon.max_uses || coupon.one_per_customer) {
     const used = (await sb(`orders?coupon_id=eq.${coupon.id}&select=id,status,created_at,buyer_email,buyer_cpf&limit=5000`)) || [];

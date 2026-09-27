@@ -1,8 +1,8 @@
-// POST /api/coupon-check   { slug, code, email?, cpf? }
+// POST /api/coupon-check   { slug, code, email?, cpf?, method? }
 // Diz ao comprador quanto o cupom desconta ANTES de pagar. É só uma prévia: o desconto de verdade é
 // recalculado no servidor em /api/checkout-create, então mexer aqui no navegador não muda o preço cobrado.
 import { HttpError, readBody } from "./_lib/mux.js";
-import { checkoutHandler, priceInCents, requireCheckoutConfig, sb } from "./_lib/checkout.js";
+import { checkoutHandler, normalizeMethod, priceInCents, requireCheckoutConfig, sb } from "./_lib/checkout.js";
 import { resolveCoupon } from "./_lib/coupons.js";
 
 export default checkoutHandler(["POST"], async (req, res) => {
@@ -19,7 +19,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
     throw new HttpError(404, "product_not_found", "Produto não encontrado.");
   }
   const listCents = priceInCents(product);
-  const { coupon, discountCents, finalCents } = await resolveCoupon({ code: body.code, product, listCents, email, cpf });
+  const { coupon, discountCents, finalCents } = await resolveCoupon({ code: body.code, product, listCents, email, cpf, method: normalizeMethod(body.method) });
 
   res.status(200).setHeader("Cache-Control", "no-store").json({
     valid: true,

@@ -89,6 +89,7 @@ Em **Cupons** (menu do painel) você cria códigos para o checkout do site. Ante
 - **Vale para:** todos os produtos com checkout do site, ou um produto só.
 - **Prazo:** data de início e de fim (opcionais). O cupom vale até o fim do dia escolhido, no horário de Brasília.
 - **Limite:** número total de usos (opcional) e "cada pessoa usa uma vez" (por e-mail ou CPF, ligado por padrão).
+- **Forma de pagamento:** o cupom pode valer para todas as formas, só para **Pix ou cartão** ou só para **boleto**. Antes, rode `supabase/27_cupom_por_forma_de_pagamento.sql`. Pix e cartão andam juntos porque o comprador escolhe entre eles na página da InfinitePay, depois de o pedido ser criado; separar os dois exigiria outro provedor de Pix. No checkout, se o comprador trocar de forma de pagamento, o cupom é conferido de novo (e sai se não valer para a nova forma). O servidor confere a regra ao criar o pedido.
 - **Link pronto:** em cupons de um produto, o botão **Copiar link** gera `/checkout/<produto>?cupom=CODIGO`, que já abre com o desconto aplicado.
 - **Cupom de 100%:** libera o acesso **na hora, sem cobrança** (bom para presentear alunos). Quem tem o código tem o curso, então
   use sempre o **limite de usos** e a data final, e desative o cupom quando terminar.
