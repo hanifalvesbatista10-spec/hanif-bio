@@ -111,6 +111,33 @@ Regras que o site impõe: o valor final não pode ficar entre R$ 0,01 e R$ 4,99 
 ou é grátis ou pelo menos R$ 5,00). O desconto de um cupom fixo maior que o preço vira grátis. O parcelamento com juros do
 cartão continua funcionando por cima do valor já com desconto.
 
+## Recuperação de vendas (carrinho abandonado e pagamento recusado)
+
+Menu **Recuperação de vendas** (rode `supabase/29_recuperacao_de_vendas.sql` uma vez). Reúne quem começou a comprar e não
+terminou (pedido "Aguardando" sem pagar) e quem teve o cartão recusado, para você tentar recuperar a venda.
+
+- **E-mails automáticos** (opcional, você liga em Recuperação de vendas): manda 1 lembrete pouco depois do abandono
+  (ou do pagamento recusado) e, se ainda não pagou, 1 último lembrete no dia seguinte. Nunca manda para quem já pagou
+  (a busca sempre exclui pedidos pagos) nem para quem clicou em "não quero mais receber" no e-mail. Você pode anexar
+  um **cupom de desconto** (precisa existir em Cupons) que entra pronto no link do e-mail.
+- **Exige estas variáveis na Vercel**, depois um redeploy: `RESEND_API_KEY` e `RESEND_FROM` (conta na Resend, a mesma
+  do login por e-mail — crie uma chave de API própria, o SMTP do login não serve para isto), `SITE_URL` (já deve
+  existir) e `CRON_SECRET` (invente uma senha longa qualquer; protege a rota do robô).
+- **Frequência**: o robô roda pela Vercel (`vercel.json → crons`) **uma vez por dia** no plano gratuito da Vercel — é o
+  limite do plano Hobby, não do site. Isso ainda recupera vendas, mas o ideal (lembrete em poucas horas, enquanto o
+  comprador está "quente") pede lembretes mais frequentes. Para isso, sem custo: crie uma conta grátis em um
+  agendador externo como o **cron-job.org**, e configure-o para chamar
+  `https://www.aphhardcore.com/api/cron-recover-sales` a cada 20-30 minutos, com o cabeçalho
+  `Authorization: Bearer <CRON_SECRET>`. É seguro chamar várias vezes: cada pedido só recebe cada lembrete uma vez.
+- **WhatsApp**: não é automático. A tabela em Recuperação de vendas tem um botão **Copiar mensagem de WhatsApp**
+  (com o link de pagamento e o cupom, se houver) para quem deixou o telefone — você que manda. A API oficial do
+  WhatsApp (Meta) permite automatizar, mas exige criar uma conta comercial na Meta, verificar a empresa, registrar um
+  número e ter modelos de mensagem aprovados; depois de uma cota mensal grátis, cada conversa iniciada por você é
+  cobrada (por volta de R$ 0,03 a R$ 0,40, dependendo do tipo de mensagem). Se um dia quiser automatizar de verdade,
+  é um projeto à parte — peça para configurar depois de criar a conta na Meta.
+- **"Não quero mais receber"**: o rodapé do e-mail tem um link que marca o pedido para nunca mais entrar na
+  recuperação (não afeta os outros e-mails do site, como confirmação de cadastro).
+
 ## Estorno e reembolso
 
 - **Pix e cartão (InfinitePay):** faça o estorno no app da InfinitePay. Ela não avisa o site, então use
@@ -123,8 +150,8 @@ cartão continua funcionando por cima do valor já com desconto.
 - **Política de reembolso e termos de compra**: em compras online vale o direito de arrependimento em 7 dias
   (Código de Defesa do Consumidor); vale ter uma página com a sua política e a de privacidade (LGPD).
 - **Afiliados, order bump e assinaturas**: não fazem parte desta primeira versão.
-- **Carrinho abandonado**: pedidos "Aguardando" que nunca pagam ficam listados em Pedidos. Hoje não há e-mail
-  automático de recuperação.
+- **Carrinho abandonado**: pedidos "Aguardando" que nunca pagam ficam listados em Pedidos e em **Recuperação de
+  vendas**, com lembrete automático por e-mail (veja a seção abaixo).
 
 ## Problemas comuns
 

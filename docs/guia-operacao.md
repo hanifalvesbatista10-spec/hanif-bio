@@ -30,6 +30,7 @@ Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `doc
   o curso aparece quando ele criar uma com esse e-mail. E-mail diferente: Pedidos → menu **⋯** → **Liberar acesso**.
 - **Cupons:** menu Cupons. Cupom de 100% dá acesso grátis: use sempre limite de usos e data final. Dá para limitar o cupom a Pix ou cartão, ou só a boleto (SQL 27).
 - **Parcelas em destaque:** em Produtos, cartão "Parcelamento em destaque nos preços": mostra "12x de R$ X" com o juro do cartão (SQL 28). Veja docs/checkout.md.
+- **Recuperar carrinho abandonado:** menu Recuperação de vendas (SQL 29). Veja docs/checkout.md.
 - **Aluno que não consegue entrar:** Usuários → menu **⋯** da linha → **Enviar link de nova senha** ou **Reenviar e-mail de confirmação**.
 - **Certificados:** Certificados → Emitir → Alunos cadastrados (CPF, RG e foto vêm de Configurações → Meus dados, preenchidos pelo aluno).
 - **Estorno:** Pix e cartão no app da InfinitePay + Pedidos → **⋯** → **Marcar como reembolsado**; boleto no Asaas (o aviso tira o acesso).
@@ -43,6 +44,22 @@ Uma aula pode aparecer em vários cursos (rode `supabase/22_aulas_compartilhadas
 - No menu **⋯** da aula: **Tirar só deste curso** (ela continua nos outros) e **Excluir de todos os cursos**. Aulas compartilhadas mostram "Também em: ...".
 - Quem tem acesso a **qualquer** curso da aula assiste. Os **comentários** ficam na aula, então os alunos de todos os cursos veem os mesmos.
 - Apagar um curso não apaga aulas que estão em outros cursos.
+
+## Garantia de 7 dias (direito de arrependimento)
+
+Rode `supabase/30_garantia_7_dias.sql` uma vez. Reduz o pedido de reembolso de quem assiste ao curso inteiro e devolve
+dentro do prazo legal (7 dias, Código de Defesa do Consumidor): nos primeiros 7 dias depois da compra, o aluno só vê as
+aulas que você marcar como amostra; o resto libera sozinho quando os 7 dias passam.
+
+- **Ligar/desligar por curso:** Produtos → editar → "Garantia de 7 dias: limitar o que o aluno vê logo depois de
+  comprar" (só aparece nos produtos com checkout do próprio site). Ligada por padrão nos produtos novos.
+- **Escolher as aulas de amostra:** Aulas → editar a aula → "Disponível durante a garantia de 7 dias (neste curso)".
+  Boa prática: marque as primeiras aulas do curso, para o aluno ver que vale a pena antes de o prazo acabar.
+- **Liberar antes da hora:** Acessos dos alunos mostra "Em garantia até [data]" e, no menu **⋯**, **Liberar tudo agora**
+  — útil para um aluno de confiança ou se você preferir não aplicar a garantia num caso específico.
+- **O aluno vê** um aviso no topo do curso ("Você está no período de garantia de 7 dias: X de Y aulas já liberadas...")
+  enquanto durar. Comentários e o vídeo (inclusive Mux) das aulas trancadas também ficam bloqueados, não só a listagem.
+- Quem compra com um cupom de 100% (acesso grátis) também entra na garantia, a não ser que você libere na mão.
 
 ## Depoimentos por link
 
@@ -101,11 +118,12 @@ Supabase. Se algum vazar, gere outro e troque.
 ## Variáveis na Vercel (resumo)
 
 `INFINITEPAY_HANDLE`, `SITE_URL`, `SUPABASE_SERVICE_ROLE_KEY`; para o boleto: `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`
-e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Mux (vídeos protegidos): veja `docs/mux-setup.md`.
+e, se a chave de testes não tiver `hmlg`, `ASAAS_ENV`. Para a recuperação de vendas: `RESEND_API_KEY`, `RESEND_FROM`
+e `CRON_SECRET` (veja `docs/checkout.md`). Mux (vídeos protegidos): veja `docs/mux-setup.md`.
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

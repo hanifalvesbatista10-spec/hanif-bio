@@ -2,10 +2,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "../../services/supabase";
 import RowActions from "../../components/admin/RowActions";
 
+const HOLD_COLUMNS = "id,access_status,granted_at,hold_released_at,user_id,product_id,profile:profiles!user_id(full_name,email),product:products(title,access_hold_enabled)";
+const BASIC_COLUMNS = "id,access_status,granted_at,user_id,product_id,profile:profiles!user_id(full_name,email),product:products(title)";
+
+// A garantia de 7 dias (SQL 30) ainda vale para este acesso?
+function holdActive(grant) {
+  if (!grant.product?.access_hold_enabled || grant.hold_released_at) return false;
+  return Date.now() < new Date(grant.granted_at).getTime() + 7 * 24 * 60 * 60 * 1000;
+}
+
+function holdEndsAt(grant) {
+  return new Date(new Date(grant.granted_at).getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString("pt-BR");
+}
+
 export default function AccessPage() {
   const [students, setStudents] = useState([]);
   const [products, setProducts] = useState([]);
   const [grants, setGrants] = useState([]);
+  const [holdAvailable, setHoldAvailable] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState("");
   const [selectedProduct, setSelectedProduct] = useState("");
   const [loading, setLoading] = useState(true);
@@ -14,14 +28,15 @@ export default function AccessPage() {
 
   const load = async () => {
     setLoading(true);
-    const [profilesResult, productsResult, grantsResult] = await Promise.all([
+    const [profilesResult, productsResult] = await Promise.all([
       supabase.from("profiles").select("id,full_name,email").order("full_name", { ascending: true }),
       supabase.from("products").select("id,title").order("title", { ascending: true }),
-      supabase
-        .from("user_products")
-        .select("id,access_status,granted_at,user_id,product_id,profile:profiles!user_id(full_name,email),product:products(title)")
-        .order("granted_at", { ascending: false }),
     ]);
+    // hold_released_at/access_hold_enabled (SQL 30, garantia de 7 dias) são opcionais: se ainda não existem,
+    // busca de novo sem eles em vez de deixar a página de Acessos inteira sem carregar.
+    let grantsResult = await supabase.from("user_products").select(HOLD_COLUMNS).order("granted_at", { ascending: false });
+    let withHold = !grantsResult.error;
+    if (grantsResult.error) grantsResult = await supabase.from("user_products").select(BASIC_COLUMNS).order("granted_at", { ascending: false });
 
     if (profilesResult.data) setStudents(profilesResult.data);
     if (productsResult.data) setProducts(productsResult.data);
@@ -30,6 +45,7 @@ export default function AccessPage() {
       setMessage(grantsResult.error.message);
     } else {
       setGrants(grantsResult.data || []);
+      setHoldAvailable(withHold);
     }
     setLoading(false);
   };
@@ -60,6 +76,22 @@ export default function AccessPage() {
     } else {
       setMessageType("success");
       setMessage("Acesso liberado com sucesso.");
+      load();
+    }
+  };
+
+  const releaseHold = async (grant) => {
+    const { data: auth } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from("user_products")
+      .update({ hold_released_at: new Date().toISOString(), hold_released_by: auth?.user?.id || null })
+      .eq("id", grant.id);
+    if (error) {
+      setMessageType("error");
+      setMessage(error.message);
+    } else {
+      setMessageType("success");
+      setMessage(`Garantia encerrada: ${grant.profile?.full_name || grant.profile?.email} já vê o curso inteiro.`);
       load();
     }
   };
@@ -129,26 +161,44 @@ export default function AccessPage() {
                 <th>Aluno</th>
                 <th>Produto</th>
                 <th>Status</th>
+                {holdAvailable && <th>Garantia de 7 dias</th>}
                 <th>Ações</th>
               </tr>
             </thead>
             <tbody>
-              {grants.map((grant) => (
-                <tr key={grant.id}>
-                  <td>
-                    <strong>{grant.profile?.full_name || "Sem nome"}</strong>
-                    <small>{grant.profile?.email}</small>
-                  </td>
-                  <td>{grant.product?.title}</td>
-                  <td><span className={`status-badge ${grant.access_status === "active" ? "published" : "draft"}`}>{grant.access_status}</span></td>
-                  <td>
-                    <RowActions
-                      label={`Ações do acesso de ${grant.profile?.full_name || grant.profile?.email}`}
-                      items={[{ label: "Revogar acesso", danger: true, onClick: () => revokeAccess(grant) }]}
-                    />
-                  </td>
-                </tr>
-              ))}
+              {grants.map((grant) => {
+                const inHold = holdAvailable && holdActive(grant);
+                return (
+                  <tr key={grant.id}>
+                    <td>
+                      <strong>{grant.profile?.full_name || "Sem nome"}</strong>
+                      <small>{grant.profile?.email}</small>
+                    </td>
+                    <td>{grant.product?.title}</td>
+                    <td><span className={`status-badge ${grant.access_status === "active" ? "published" : "draft"}`}>{grant.access_status}</span></td>
+                    {holdAvailable && (
+                      <td>
+                        {!grant.product?.access_hold_enabled ? (
+                          <small style={{ color: "#7b8c9c" }}>Desligada neste curso</small>
+                        ) : inHold ? (
+                          <span className="status-badge draft">Em garantia até {holdEndsAt(grant)}</span>
+                        ) : (
+                          <small style={{ color: "#7b8c9c" }}>{grant.hold_released_at ? "Liberada antes da hora" : "Liberada (7 dias passaram)"}</small>
+                        )}
+                      </td>
+                    )}
+                    <td>
+                      <RowActions
+                        label={`Ações do acesso de ${grant.profile?.full_name || grant.profile?.email}`}
+                        items={[
+                          { label: "Liberar tudo agora (encerrar garantia)", hidden: !inHold, onClick: () => releaseHold(grant) },
+                          { label: "Revogar acesso", danger: true, onClick: () => revokeAccess(grant) },
+                        ]}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

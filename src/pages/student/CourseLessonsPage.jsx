@@ -17,13 +17,16 @@ export default function CourseLessonsPage() {
   const [activeLessonId, setActiveLessonId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [hold, setHold] = useState(null); // { in_hold, release_at, total_lessons, visible_lessons } (SQL 30)
 
   useEffect(() => {
     Promise.all([
       supabase.from("products").select("id,title").eq("id", productId).maybeSingle(),
       fetchProductLessons(productId),
-    ]).then(([productResult, lessonsResult]) => {
+      supabase.rpc("my_access_hold", { p_product_id: productId }),
+    ]).then(([productResult, lessonsResult, holdResult]) => {
       if (productResult.data) setProduct(productResult.data);
+      if (!holdResult.error && holdResult.data?.[0]?.in_hold) setHold(holdResult.data[0]);
       if (lessonsResult.error) {
         setMessage("Não foi possível carregar as aulas. Se você acabou de ganhar acesso, espere alguns minutos e recarregue a página.");
       } else {
@@ -56,6 +59,13 @@ export default function CourseLessonsPage() {
       <div className="mb-page-head is-tight">
         <h1>{product?.title || "Curso"}</h1>
       </div>
+
+      {hold && (
+        <div className="mb-alert" role="status">
+          Você está no período de garantia de 7 dias: {hold.visible_lessons} de {hold.total_lessons} aula(s) já liberada(s). As demais liberam
+          sozinhas em {new Date(hold.release_at).toLocaleDateString("pt-BR")}.
+        </div>
+      )}
 
       {loading ? (
         <div className="mb-lessons" aria-hidden="true">

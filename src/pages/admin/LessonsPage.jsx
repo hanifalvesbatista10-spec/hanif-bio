@@ -20,7 +20,7 @@ const MAX_FILE_GB = 5;
 function emptyLesson(productId, position) {
   return {
     id: null, product_id: productId, product_ids: [productId], topics_text: "", title: "", description: "", video_url: "", duration: "",
-    status: "draft", position, video_provider: "youtube",
+    status: "draft", position, video_provider: "youtube", available_in_hold: false,
   };
 }
 
@@ -35,7 +35,7 @@ function formatSize(bytes) {
 }
 
 // Janela de edição: só abre ao clicar em "Editar" ou "Nova aula" e fecha ao salvar.
-function LessonDialog({ lesson, products, sharing, currentProductId, saving, phase, progress, error, onSave, onClose }) {
+function LessonDialog({ lesson, products, sharing, holdAvailable, currentProductId, saving, phase, progress, error, onSave, onClose }) {
   const [draft, setDraft] = useState(lesson);
   const [file, setFile] = useState(null);
   const dialogRef = useRef(null);
@@ -188,6 +188,18 @@ function LessonDialog({ lesson, products, sharing, currentProductId, saving, pha
             {draft.status === "draft" && (
               <p className="adm-hint">Rascunho: o aluno não vê esta aula até você publicar.</p>
             )}
+            {holdAvailable && (
+              <>
+                <label className="adm-check-row">
+                  <input type="checkbox" checked={Boolean(draft.available_in_hold)} onChange={(e) => set("available_in_hold", e.target.checked)} disabled={saving} />
+                  Disponível durante a garantia de 7 dias (neste curso)
+                </label>
+                <small className="adm-hint">
+                  Nos primeiros 7 dias depois da compra, o aluno só vê as aulas marcadas assim (se o curso tiver a garantia ativada em Produtos). Boa
+                  para as primeiras aulas, como amostra; deixe desmarcado nas aulas que valem mais.
+                </small>
+              </>
+            )}
 
             {sharing ? (
               <fieldset className="adm-share" disabled={saving}>
@@ -301,6 +313,7 @@ export default function LessonsPage() {
   const [allLessons, setAllLessons] = useState([]);
   const [links, setLinks] = useState([]);
   const [sharing, setSharing] = useState(true);
+  const [holdAvailable, setHoldAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
@@ -340,6 +353,7 @@ export default function LessonsPage() {
       setAllLessons(lessonData.lessons);
       setLinks(lessonData.links);
       setSharing(lessonData.sharing);
+      setHoldAvailable(Boolean(lessonData.holdAvailable));
     }
     setLoading(false);
   }, []);
@@ -432,7 +446,7 @@ export default function LessonsPage() {
 
   const openEdit = (lesson) => {
     setDialogError("");
-    setEditing({ ...lesson, position: lesson.position ?? 0, product_ids: coursesOf(lesson.id), topics_text: (lesson.topics || []).join("\n") });
+    setEditing({ ...lesson, position: lesson.position ?? 0, product_ids: coursesOf(lesson.id), topics_text: (lesson.topics || []).join("\n"), available_in_hold: Boolean(lesson.available_in_hold) });
   };
 
   const saveLesson = async (row, file) => {
@@ -530,6 +544,7 @@ export default function LessonsPage() {
             lesson_id: saved.id,
             product_id: id,
             position: id === productId ? Number(row.position) || 0 : nextPositionIn(id),
+            ...(id === productId && holdAvailable ? { available_in_hold: Boolean(row.available_in_hold) } : {}),
           }));
         if (rows.length) {
           const { error } = await supabase.from("product_lesson_links").upsert(rows, { onConflict: "lesson_id,product_id" });
@@ -756,6 +771,7 @@ export default function LessonsPage() {
                     ) : id ? "Vídeo do YouTube" : "Link fora do padrão do YouTube"}
                   </small>
                   {(lesson.topics || []).length > 0 && <small className="adm-shared-tag" style={{ background: "#eef6ee", color: "#1d5b32" }}>Ensina: {lesson.topics.join(" · ")}</small>}
+                  {lesson.available_in_hold && <small className="adm-shared-tag" style={{ background: "#fff0f2", color: "#a60d25" }}>Amostra da garantia (7 dias)</small>}
                   {others.length > 0 && (
                     <small className="adm-shared-tag" title="Esta aula é uma só: editar ou tirar do ar vale para todos os cursos">
                       Também em: {others.map(titleOf).join(", ")}
@@ -790,6 +806,7 @@ export default function LessonsPage() {
         <LessonDialog
           key={editing.id || "new"}
           lesson={editing}
+          holdAvailable={holdAvailable}
           products={products}
           sharing={sharing}
           currentProductId={productId}

@@ -14,6 +14,7 @@ const emptyForm = {
   promotional_price: "",
   checkout_url: "",
   checkout_mode: "external",
+  access_hold_enabled: true,
   status: "active",
   is_featured: true,
   display_order: 0,
@@ -40,6 +41,8 @@ function normalizeProduct(data = {}) {
     checkout_url: asText(data.checkout_url),
     checkout_mode: data.checkout_mode === "internal" ? "internal" : "external",
     has_checkout_mode: "checkout_mode" in data, // false = o SQL 19 ainda não foi executado
+    access_hold_enabled: data.access_hold_enabled !== false,
+    has_access_hold: "access_hold_enabled" in data, // false = o SQL 30 ainda não foi executado
     status: asText(data.status) || "active",
     is_featured: Boolean(data.is_featured),
     display_order: data.display_order ?? 0,
@@ -188,6 +191,7 @@ export default function ProductEditorPageV4() {
         checkout_url: checkoutUrl || null,
         // só envia o campo se o banco já o tem (evita quebrar o salvamento antes do SQL 19)
         ...(internal || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : "external" } : {}),
+        ...(form.has_access_hold ? { access_hold_enabled: Boolean(form.access_hold_enabled) } : {}),
         status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
@@ -220,6 +224,8 @@ export default function ProductEditorPageV4() {
           ? "O Supabase bloqueou a gravação por permissão. Execute o arquivo 06_v4_fix_products_permissions.sql no SQL Editor e tente novamente."
           : text.includes("checkout_mode")
           ? "O banco ainda não tem o checkout próprio. Execute supabase/19_checkout_proprio.sql no SQL Editor e tente novamente."
+          : text.includes("access_hold_enabled")
+          ? "O banco ainda não tem a garantia de 7 dias. Execute supabase/30_garantia_7_dias.sql no SQL Editor e tente novamente."
           : text.includes("column") && text.includes("does not exist")
           ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
           : text
@@ -275,6 +281,12 @@ export default function ProductEditorPageV4() {
           <div className="pe4-field"><label>Duração</label><input value={asText(form.duration)} onChange={(e) => update("duration", e.target.value)} placeholder="Ex: 16h, 4 semanas..." /></div>
           <div className="pe4-field"><label>Disponibilidade</label><input value={asText(form.availability_status)} onChange={(e) => update("availability_status", e.target.value)} placeholder="Disponível, Em breve, Turmas abertas..." /></div>
           <div className="pe4-field full"><label className="pe4-check"><input type="checkbox" checked={Boolean(form.is_featured)} onChange={(e) => update("is_featured", e.target.checked)} /> Destacar este produto no site</label></div>
+          {form.checkout_mode === "internal" && (
+            <div className="pe4-field full">
+              <label className="pe4-check"><input type="checkbox" checked={Boolean(form.access_hold_enabled)} onChange={(e) => update("access_hold_enabled", e.target.checked)} /> Garantia de 7 dias: limitar o que o aluno vê logo depois de comprar</label>
+              <span className="pe4-help">Nos primeiros 7 dias (prazo legal de arrependimento), o aluno só vê as aulas marcadas como amostra em Aulas. Ajuda a reduzir reembolso de quem assiste tudo e devolve. Desligue para produtos sem esse risco.</span>
+            </div>
+          )}
         </div>
 
         <div className="pe4-faq">

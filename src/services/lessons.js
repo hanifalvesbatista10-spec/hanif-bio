@@ -8,20 +8,25 @@ export function byOrder(a, b) {
 
 // Painel: todas as aulas e todas as ligações. `sharing` diz se o compartilhamento está disponível no banco.
 export async function fetchLessonsAndLinks() {
-  const [lessonsResult, linksResult] = await Promise.all([
+  const [lessonsResult, withHold] = await Promise.all([
     supabase.from("product_lessons").select("*"),
-    supabase.from("product_lesson_links").select("lesson_id,product_id,position"),
+    supabase.from("product_lesson_links").select("lesson_id,product_id,position,available_in_hold"),
   ]);
-  if (lessonsResult.error) return { error: lessonsResult.error, lessons: [], links: [], sharing: false };
+  if (lessonsResult.error) return { error: lessonsResult.error, lessons: [], links: [], sharing: false, holdAvailable: false };
   const lessons = lessonsResult.data || [];
+  // available_in_hold (SQL 30, garantia de 7 dias) é opcional: se ainda não existe, tenta de novo sem ele
+  // em vez de derrubar o compartilhamento inteiro (SQL 22), que não depende dela.
+  const holdAvailable = !withHold.error;
+  const linksResult = holdAvailable ? withHold : await supabase.from("product_lesson_links").select("lesson_id,product_id,position");
   if (linksResult.error) {
     return {
       lessons,
       sharing: false,
-      links: lessons.filter((lesson) => lesson.product_id).map((lesson) => ({ lesson_id: lesson.id, product_id: lesson.product_id, position: lesson.position })),
+      holdAvailable: false,
+      links: lessons.filter((lesson) => lesson.product_id).map((lesson) => ({ lesson_id: lesson.id, product_id: lesson.product_id, position: lesson.position, available_in_hold: false })),
     };
   }
-  return { lessons, links: linksResult.data || [], sharing: true };
+  return { lessons, links: (linksResult.data || []).map((link) => ({ available_in_hold: false, ...link })), sharing: true, holdAvailable };
 }
 
 // Aulas de um curso, na ordem do curso (a posição vem da ligação, não da aula)
@@ -29,7 +34,7 @@ export function lessonsForProduct(lessons, links, productId) {
   const byId = new Map(lessons.map((lesson) => [lesson.id, lesson]));
   return links
     .filter((link) => link.product_id === productId)
-    .map((link) => (byId.has(link.lesson_id) ? { ...byId.get(link.lesson_id), position: link.position } : null))
+    .map((link) => (byId.has(link.lesson_id) ? { ...byId.get(link.lesson_id), position: link.position, available_in_hold: Boolean(link.available_in_hold) } : null))
     .filter(Boolean)
     .sort(byOrder);
 }
