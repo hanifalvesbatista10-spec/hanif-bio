@@ -632,6 +632,7 @@
 }
 
 .hx-tile.is-product .hx-tile-media {
+  position: relative;
   aspect-ratio: 16 / 10;
   background: #06090d;
   border-bottom: 1px solid var(--border);

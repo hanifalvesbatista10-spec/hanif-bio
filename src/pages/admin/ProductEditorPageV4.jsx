@@ -15,6 +15,7 @@ const emptyForm = {
   checkout_url: "",
   checkout_mode: "external",
   access_hold_enabled: true,
+  highlights_text: "",
   status: "active",
   is_featured: true,
   display_order: 0,
@@ -43,6 +44,8 @@ function normalizeProduct(data = {}) {
     has_checkout_mode: "checkout_mode" in data, // false = o SQL 19 ainda não foi executado
     access_hold_enabled: data.access_hold_enabled !== false,
     has_access_hold: "access_hold_enabled" in data, // false = o SQL 30 ainda não foi executado
+    highlights_text: Array.isArray(data.highlights) ? data.highlights.join("\n") : "",
+    has_highlights: "highlights" in data, // false = o SQL 31 ainda não foi executado
     status: asText(data.status) || "active",
     is_featured: Boolean(data.is_featured),
     display_order: data.display_order ?? 0,
@@ -192,6 +195,7 @@ export default function ProductEditorPageV4() {
         // só envia o campo se o banco já o tem (evita quebrar o salvamento antes do SQL 19)
         ...(internal || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : "external" } : {}),
         ...(form.has_access_hold ? { access_hold_enabled: Boolean(form.access_hold_enabled) } : {}),
+        ...(form.has_highlights ? { highlights: form.highlights_text.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, 6) } : {}),
         status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
@@ -226,6 +230,8 @@ export default function ProductEditorPageV4() {
           ? "O banco ainda não tem o checkout próprio. Execute supabase/19_checkout_proprio.sql no SQL Editor e tente novamente."
           : text.includes("access_hold_enabled")
           ? "O banco ainda não tem a garantia de 7 dias. Execute supabase/30_garantia_7_dias.sql no SQL Editor e tente novamente."
+          : text.includes("highlights")
+          ? "O banco ainda não tem os destaques do produto. Execute supabase/31_produto_destaques.sql no SQL Editor e tente novamente."
           : text.includes("column") && text.includes("does not exist")
           ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
           : text
@@ -255,6 +261,11 @@ export default function ProductEditorPageV4() {
           <div className="pe4-field full"><label>Título *</label><input value={asText(form.title)} onChange={(e) => update("title", e.target.value)} required /></div>
           <div className="pe4-field full"><label>Descrição curta *</label><textarea value={asText(form.short_description)} onChange={(e) => update("short_description", e.target.value)} required /></div>
           <div className="pe4-field full"><label>Descrição completa</label><textarea value={asText(form.full_description)} onChange={(e) => update("full_description", e.target.value)} /></div>
+          <div className="pe4-field full">
+            <label>Destaques do produto (um por linha, até 6)</label>
+            <textarea value={form.highlights_text} onChange={(e) => update("highlights_text", e.target.value)} placeholder={"Mentoria semanal ao vivo\nSimulados corrigidos\nGrupo exclusivo"} />
+            <span className="pe4-help">Aparece em bullets no card do produto (site e home), abaixo da descrição curta. Frases curtas e concretas funcionam melhor.</span>
+          </div>
           <div className="pe4-field full"><label>Imagem de capa</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /><span className="pe4-help">JPG, PNG ou WEBP. Máximo 5 MB.</span>{preview && <div className="pe4-preview"><img src={preview} alt="Prévia da capa" /></div>}</div>
           <div className="pe4-field full">
             <label>Como este produto é vendido</label>

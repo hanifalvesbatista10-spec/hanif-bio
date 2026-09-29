@@ -1,9 +1,11 @@
 import { checkoutLinkProps, getProductCheckout } from "../../services/productCheckout";
+import { useLessonCounts } from "../../services/productStats";
 import Accent from "../ui/Accent";
 import Button from "../ui/Button";
 import Container from "../ui/Container";
 import Eyebrow from "../ui/Eyebrow";
 import Installments from "../ui/Installments";
+import { DiscountBadge, LessonCountTag, ProductHighlights } from "../ui/ProductHighlights";
 import ProductImage from "../ui/ProductImage";
 import Reveal from "../ui/Reveal";
 
@@ -14,6 +16,7 @@ export function money(value) {
 
 export default function FeaturedProduct({ product, settings }) {
   const currentPrice = product.promotional_price ?? product.price;
+  const lessonCounts = useLessonCounts();
   const isMentorship = product.slug === "mentoria-aph";
   const checkout = isMentorship
     ? null
@@ -34,6 +37,7 @@ export default function FeaturedProduct({ product, settings }) {
       <span className="hx-bgword" aria-hidden="true">{(product.category || "Formação").toUpperCase()}</span>
       <Container className="hx-featured-grid">
         <Reveal className="hx-featured-media">
+          <DiscountBadge product={product} />
           <div className="hx-featured-frame">
             <ProductImage
               src={product.cover_url}
@@ -51,6 +55,8 @@ export default function FeaturedProduct({ product, settings }) {
             <Accent text={product.title} />
           </h2>
           <p>{product.short_description}</p>
+          <ProductHighlights items={product.highlights} tone="dark" />
+          <LessonCountTag count={lessonCounts[product.id]} tone="dark" />
 
           {facts.length > 0 && (
             <dl className="hx-facts">

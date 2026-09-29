@@ -1,8 +1,13 @@
 import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
+import { useLessonCounts } from "../../services/productStats";
 import Installments from "../../components/ui/Installments";
+import { DiscountBadge, ProductHighlights } from "../../components/ui/ProductHighlights";
+import SiteHeader from "../../components/layout/SiteHeader";
+import SiteFooter from "../../components/layout/SiteFooter";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import "./ConversionHomePage.css";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "";
@@ -213,42 +218,70 @@ function HemorrhageLanding({ product }) {
   );
 }
 
+const fallbackSettings = {
+  hero_primary_label: "Conhecer treinamentos",
+  whatsapp_url: "https://wa.me/5588993765491",
+  instagram_url: "",
+  footer_description: "Educação aplicada à tomada de decisão em situações críticas.",
+  footer_disclaimer:
+    "Conteúdo educacional. A aplicação prática deve respeitar protocolos, legislação e atribuições profissionais vigentes.",
+  copyright_text: "© 2026 Hanif Alves. Todos os direitos reservados.",
+};
+
+function StatIcon({ kind }) {
+  const paths = {
+    lessons: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="m10 8 6 4-6 4V8Z" fill="currentColor" stroke="none" /></>,
+    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3.5 2" /></>,
+    format: <><rect x="3" y="5" width="18" height="12" rx="2" /><path d="M8 21h8M12 17v4" /></>,
+    availability: <><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" /></>,
+  };
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[kind]}
+    </svg>
+  );
+}
+
 export default function PublicProductPage() {
   const { slug } = useParams();
+  const [settings, setSettings] = useState(fallbackSettings);
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const lessonCounts = useLessonCounts();
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
-    const load = async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("slug", slug)
-        .eq("status", "active")
-        .maybeSingle();
-
-      if (error || !data) {
+    Promise.all([
+      supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(),
+      supabase.from("products").select("*").eq("slug", slug).eq("status", "active").maybeSingle(),
+    ]).then(([settingsResult, productResult]) => {
+      if (settingsResult.data) setSettings((current) => ({ ...current, ...settingsResult.data }));
+      if (productResult.error || !productResult.data) {
         setNotFound(true);
-        setProduct(null);
       } else {
-        setProduct(data);
+        setProduct(productResult.data);
+        document.title = `${productResult.data.title} | Hanif Alves`;
       }
       setLoading(false);
-    };
-    load();
+    });
   }, [slug]);
 
-  if (loading) return <main className="public-product-loading">Carregando produto...</main>;
+  if (loading) return <main className="site-empty" style={{ minHeight: "100vh" }}>Carregando produto...</main>;
 
   if (notFound || !product) {
     return (
-      <main className="public-product-not-found">
-        <h1>Produto não encontrado</h1>
-        <p>Este produto pode estar inativo ou não existir mais.</p>
-        <Link to="/">Voltar para o início</Link>
-      </main>
+      <div className="site-page">
+        <SiteHeader primaryLabel={settings.hero_primary_label || "Ver treinamentos"} />
+        <section className="site-section" style={{ paddingTop: "calc(var(--header-h) + 40px)", minHeight: "60vh" }}>
+          <div className="site-container">
+            <h2>Produto não encontrado</h2>
+            <p>Este produto pode estar inativo ou não existir mais.</p>
+            <Link className="site-about-link" to="/">← Voltar para o início</Link>
+          </div>
+        </section>
+        <SiteFooter settings={settings} />
+      </div>
     );
   }
 
@@ -257,57 +290,152 @@ export default function PublicProductPage() {
   }
 
   const currentPrice = product.promotional_price ?? product.price;
+  const hasDiscount = product.promotional_price !== null && product.price !== null && Number(product.price) > Number(product.promotional_price);
+  const checkout = getProductCheckout(product);
+  const count = lessonCounts[product.id];
+  const stats = [
+    count > 0 && { kind: "lessons", text: `${count} ${count === 1 ? "aula" : "aulas"}` },
+    product.duration && { kind: "clock", text: product.duration },
+    product.format && { kind: "format", text: product.format },
+    product.availability_status && { kind: "availability", text: product.availability_status },
+  ].filter(Boolean);
+  const highlights = (Array.isArray(product.highlights) ? product.highlights : []).map((item) => String(item || "").trim()).filter(Boolean);
 
   return (
-    <main className="public-product-page">
+    <div className="site-page">
+      <SiteHeader primaryLabel={settings.hero_primary_label || "Ver treinamentos"} />
       <style>{`
-        .public-product-page{min-height:100vh;padding:90px 0 110px;background:#f4f7fa;color:#071426}.public-product-shell{width:min(1120px,calc(100% - 30px));margin:0 auto}.public-product-back{display:inline-flex;margin-bottom:18px;color:#31485e;font-weight:900}.public-product-hero{overflow:hidden;border-radius:28px;background:#fff;box-shadow:0 24px 70px rgba(7,20,38,.12)}.public-product-cover{width:100%;max-height:600px;aspect-ratio:16/8;object-fit:cover;background:#e8eef3}.public-product-content{display:grid;grid-template-columns:1fr .42fr;gap:42px;padding:42px}.public-product-category{color:#d6152d;font-size:.74rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase}.public-product-copy h1{margin:10px 0 16px;color:#071426;font-size:clamp(2.3rem,5vw,4.8rem);line-height:1.03;letter-spacing:-.045em}.public-product-short{margin:0;color:#506478;font-size:1.1rem;line-height:1.75}.public-product-full{margin-top:26px;padding-top:24px;border-top:1px solid #e1e7ed;color:#485d72;line-height:1.8;white-space:pre-line}.public-product-buybox{align-self:start;position:sticky;top:92px;padding:27px;border-radius:20px;background:#071426;color:#fff}.public-product-buybox small{color:#9fb2c4;font-weight:900;letter-spacing:.1em;text-transform:uppercase}.public-product-price{margin:12px 0 21px}.public-product-price strong{display:block;color:#fff;font-size:2rem}.public-product-price del{color:#98a8b8}.public-product-button{min-height:56px;display:flex;align-items:center;justify-content:center;border-radius:13px;background:#d6152d;color:#fff;font-weight:900;text-align:center;text-decoration:none}.public-product-help{margin:13px 0 0;color:#aebcca;font-size:.77rem;line-height:1.5;text-align:center}.public-product-loading,.public-product-not-found{min-height:100vh;display:grid;place-content:center;text-align:center;background:#f4f7fa;color:#071426;padding:30px}.public-product-not-found a{margin-top:12px;color:#d6152d;font-weight:900}.public-product-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.public-product-tags span{padding:5px 10px;border-radius:999px;background:#f4f7fa;border:1px solid #e1e7ed;font-size:.72rem;font-weight:700;color:#53677b}.public-product-faq{margin-top:34px;display:grid;gap:12px}.public-product-faq h2{margin:0 0 4px;color:#071426;font-size:1.5rem}.public-product-faq details{border:1px solid #e1e7ed;border-radius:15px;background:#fff;padding:16px 18px}.public-product-faq summary{cursor:pointer;font-weight:900;color:#183047}.public-product-faq p{color:#53677b;line-height:1.7;margin:12px 0 0}@media(max-width:820px){.public-product-content{grid-template-columns:1fr}.public-product-buybox{position:static}}@media(max-width:620px){.public-product-page{padding-top:72px}.public-product-cover{aspect-ratio:16/10}.public-product-content{padding:25px 20px}.public-product-hero{border-radius:20px}.public-product-copy h1{font-size:2.5rem}}
+        .pp-hero{position:relative;overflow:hidden;padding-top:calc(var(--header-h) + 40px)}
+        .pp-back{display:flex;width:fit-content;margin-bottom:26px}
+        .pp-hero-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);gap:clamp(32px,6vw,80px);align-items:center}
+        .pp-hero-copy h1{margin:10px 0 16px;font-family:var(--font-display);font-size:clamp(2.4rem,4.6vw,4.2rem);line-height:1.04;letter-spacing:-.03em;font-weight:800}
+        .pp-lede{margin:0;max-width:52ch;color:var(--brand-text-soft);font-size:1.12rem;line-height:1.7}
+        .pp-price{display:flex;align-items:baseline;gap:12px;margin:22px 0 0}
+        .pp-price strong{font-family:var(--font-display);font-size:2.2rem;font-weight:800}
+        .pp-price del{color:var(--brand-muted)}
+        .pp-hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:22px}
+        .pp-hero-help{margin:12px 0 0;color:var(--brand-muted);font-size:.82rem}
+        .pp-hero-media{position:relative}
+        .pp-hero-frame{aspect-ratio:4/5;overflow:hidden;border-radius:var(--radius-lg);border:1px solid var(--brand-border);background:#06090d;box-shadow:var(--shadow-soft)}
+        .pp-hero-frame img{width:100%;height:100%;object-fit:cover;display:block}
+        .pp-hero-frame.is-empty{display:grid;place-items:center}
+        .pp-hero-frame.is-empty img{width:30%;height:auto;object-fit:contain;opacity:.5}
+        .pp-stats{border-top:1px solid var(--brand-border);border-bottom:1px solid var(--brand-border)}
+        .pp-stats-row{display:flex;flex-wrap:wrap;gap:28px;padding:22px 0}
+        .pp-stat{display:flex;align-items:center;gap:9px;color:var(--brand-text-soft);font-weight:700;font-size:.92rem}
+        .pp-stat svg{flex:none;color:var(--brand-red)}
+        .pp-about{max-width:720px}
+        .pp-about-text{margin-top:18px;color:var(--brand-text-soft);font-size:1.05rem;line-height:1.85;white-space:pre-line}
+        .pp-includes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 28px;margin-top:34px;padding:0;list-style:none}
+        .pp-includes li{position:relative;padding-left:32px;color:var(--brand-text-soft, #fff);font-size:1rem;line-height:1.5}
+        .pp-includes li::before{content:"";position:absolute;left:0;top:.15em;width:22px;height:22px;border-radius:50%;background:var(--brand-red) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5.5 10.5 3 3 6-6.5' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/58% no-repeat}
+        .pp-final{padding:var(--section-y) 0;text-align:center;background:linear-gradient(135deg,var(--brand-navy),var(--brand-navy-deep))}
+        .pp-final h2{margin:0 auto 14px;max-width:720px;font-family:var(--font-display);font-size:clamp(2rem,4vw,3.2rem);letter-spacing:-.02em;color:#fff}
+        .pp-final p{margin:0 auto 24px;max-width:560px;color:var(--brand-on-dark-muted);line-height:1.7}
+        .pp-mobile-buy{display:none}
+        @media(max-width:900px){.pp-hero-grid{grid-template-columns:1fr}.pp-hero-media{order:-1}.pp-hero-frame{aspect-ratio:16/10}.pp-includes{grid-template-columns:1fr}}
+        @media(max-width:640px){.pp-mobile-buy{display:block;position:fixed;left:12px;right:12px;bottom:12px;z-index:80}.pp-mobile-buy .site-btn{width:100%;box-shadow:0 14px 34px rgba(0,0,0,.35)}.pp-hero{padding-bottom:24px}}
       `}</style>
-      <div className="public-product-shell">
-        <Link className="public-product-back" to="/">← Voltar para o site</Link>
-        <article className="public-product-hero">
-          {product.cover_url && <img className="public-product-cover" src={product.cover_url} alt={`Capa de ${product.title}`} />}
-          <div className="public-product-content">
-            <div className="public-product-copy">
-              <span className="public-product-category">{product.category || "Produto educacional"}</span>
-              <h1>{product.title}</h1>
-              <p className="public-product-short">{product.short_description}</p>
-              {(product.duration || product.format || product.availability_status) && (
-                <div className="public-product-tags">
-                  {product.duration && <span>{product.duration}</span>}
-                  {product.format && <span>{product.format}</span>}
-                  {product.availability_status && <span>{product.availability_status}</span>}
-                </div>
-              )}
-              {product.full_description && <div className="public-product-full">{product.full_description}</div>}
-            </div>
-            <aside className="public-product-buybox">
-              <small>Acesso ao produto</small>
-              {currentPrice !== null && (
-                <div className="public-product-price">
-                  <strong>{formatPrice(currentPrice)}</strong>
-                  {product.promotional_price !== null && product.price !== null && <del>{formatPrice(product.price)}</del>}
-                </div>
-              )}
-                <Installments product={product} tone="dark" />
-              <a className="public-product-button" href={getProductCheckout(product)} {...checkoutLinkProps(getProductCheckout(product))}>Comprar agora</a>
-              <p className="public-product-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
-            </aside>
-          </div>
-        </article>
 
-        {Array.isArray(product.faq) && product.faq.length > 0 && (
-          <div className="public-product-faq">
-            <h2>Perguntas frequentes</h2>
-            {product.faq.map((item, index) => (
-              <details key={index}>
-                <summary>{item.question}</summary>
-                <p>{item.answer}</p>
-              </details>
+      <section className="pp-hero site-section">
+        <div className="site-container pp-hero-grid">
+          <div className="pp-hero-copy">
+            <Link className="site-about-link pp-back" to="/">← Voltar para o site</Link>
+            <span className="site-eyebrow">{product.category || "Produto educacional"}</span>
+            <h1>{product.title}</h1>
+            <p className="pp-lede">{product.short_description}</p>
+            <ProductHighlights items={highlights} tone="dark" max={6} />
+            {currentPrice !== null && currentPrice !== undefined && (
+              <div className="pp-price">
+                <strong>{formatPrice(currentPrice)}</strong>
+                {hasDiscount && <del>{formatPrice(product.price)}</del>}
+              </div>
+            )}
+            <Installments product={product} tone="dark" />
+            <div className="pp-hero-actions">
+              <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
+                {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+              </a>
+            </div>
+            <p className="pp-hero-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
+          </div>
+          <div className="pp-hero-media">
+            <DiscountBadge product={product} />
+            <div className={`pp-hero-frame ${product.cover_url ? "" : "is-empty"}`}>
+              {product.cover_url ? <img src={product.cover_url} alt={`Capa de ${product.title}`} /> : <img src="/assets/logo-ha.png" alt="" />}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {stats.length > 0 && (
+        <div className="pp-stats">
+          <div className="site-container pp-stats-row">
+            {stats.map((stat) => (
+              <span className="pp-stat" key={stat.kind}><StatIcon kind={stat.kind} />{stat.text}</span>
             ))}
           </div>
-        )}
+        </div>
+      )}
+
+      {product.full_description && (
+        <section className="site-section">
+          <div className="site-container pp-about">
+            <span className="site-eyebrow">Sobre o curso</span>
+            <h2>O que você vai estudar</h2>
+            <p className="pp-about-text">{product.full_description}</p>
+          </div>
+        </section>
+      )}
+
+      {highlights.length > 0 && (
+        <section className="site-section alt">
+          <div className="site-container">
+            <span className="site-eyebrow">Incluso</span>
+            <h2>O que está incluso</h2>
+            <ul className="pp-includes">
+              {highlights.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
+
+      {Array.isArray(product.faq) && product.faq.length > 0 && (
+        <section className="site-section">
+          <div className="site-container">
+            <span className="site-eyebrow">Dúvidas</span>
+            <h2>Perguntas frequentes</h2>
+            <div className="site-faq-list">
+              {product.faq.map((item, index) => (
+                <details className="site-faq-item" key={index}>
+                  <summary>{item.question}</summary>
+                  <p>{item.answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="pp-final">
+        <div className="site-container">
+          <h2>Pronto para começar?</h2>
+          <p>Garanta o seu acesso agora e comece a estudar {product.title.toLowerCase()} hoje mesmo.</p>
+          <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
+            {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+          </a>
+        </div>
+      </section>
+
+      <SiteFooter settings={settings} />
+
+      <div className="pp-mobile-buy">
+        <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
+          {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+        </a>
       </div>
-    </main>
+    </div>
   );
 }

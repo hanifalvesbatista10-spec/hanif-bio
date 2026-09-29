@@ -4,6 +4,29 @@ import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import useInstallApp from "../../components/member/useInstallApp";
 import { supabase } from "../../services/supabase";
+import { useMyLiveLessons } from "../../services/productStats";
+
+function LiveBanner({ lives }) {
+  if (lives.length === 0) return null;
+  return (
+    <div className="mb-lives" role="status">
+      <h2><i /> Ao vivo agora</h2>
+      <ul>
+        {lives.map((live) => (
+          <li key={live.lesson_id}>
+            <Link to={`/minha-area/curso/${live.product_id}?aula=${live.lesson_id}`}>
+              <span className="mb-lives-info">
+                <strong>{live.title}</strong>
+                <small>{live.product_title}</small>
+              </span>
+              <span className="mb-lives-watch">Assistir {icons.arrowRight}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function CourseCard({ product }) {
   return (
@@ -39,6 +62,7 @@ function Skeleton() {
 
 export default function StudentCoursesPage() {
   const { user, profile } = useAuth();
+  const lives = useMyLiveLessons();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -85,6 +109,8 @@ export default function StudentCoursesPage() {
         <h1>{firstName ? `Olá, ${firstName}` : "Olá"}</h1>
         <p>Seus cursos e mentorias liberados.</p>
       </div>
+
+      <LiveBanner lives={lives} />
 
       {missing.length > 0 && (
         <div className="mb-notice" role="status">

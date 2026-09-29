@@ -8,6 +8,11 @@ import { fetchProductLessons } from "../../services/lessons";
 import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
 
+// O selo "ao vivo" vale por 6 horas (SQL 32), o mesmo prazo que o painel usa.
+function isLiveFresh(lesson) {
+  return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
+}
+
 export default function CourseLessonsPage() {
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
@@ -133,12 +138,24 @@ export default function CourseLessonsPage() {
                     <span className="mb-lesson-num">{lesson.id === activeLessonId ? icons.play : index + 1}</span>
                     <span className="mb-lesson-text">
                       <strong>{lesson.title}</strong>
-                      {lesson.duration && <small>{lesson.duration}</small>}
+                      <span className="mb-lesson-meta">
+                        {isLiveFresh(lesson) && <span className="mb-lesson-live"><i /> AO VIVO</span>}
+                        {lesson.duration && <small>{lesson.duration}</small>}
+                      </span>
                     </span>
                   </button>
                 </li>
               ))}
             </ol>
+            {hold && hold.total_lessons > hold.visible_lessons && (
+              <div className="mb-lesson-locked">
+                <span className="mb-lesson-locked-icon">{icons.lock}</span>
+                <span>
+                  <strong>+{hold.total_lessons - hold.visible_lessons} aula(s) trancada(s)</strong>
+                  <small>Liberam em {new Date(hold.release_at).toLocaleDateString("pt-BR")}</small>
+                </span>
+              </div>
+            )}
           </aside>
         </div>
       )}

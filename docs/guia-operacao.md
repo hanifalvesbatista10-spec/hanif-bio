@@ -35,6 +35,29 @@ Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `doc
 - **Certificados:** Certificados → Emitir → Alunos cadastrados (CPF, RG e foto vêm de Configurações → Meus dados, preenchidos pelo aluno).
 - **Estorno:** Pix e cartão no app da InfinitePay + Pedidos → **⋯** → **Marcar como reembolsado**; boleto no Asaas (o aviso tira o acesso).
 
+## Destaques do produto e contagem de aulas
+
+Rode `supabase/31_produto_destaques.sql` uma vez. Em **Produtos → editar**, o campo **Destaques do produto** (um por
+linha, até 6) aparece em bullets no card do produto, no site e na home, logo abaixo da descrição curta. O número de
+aulas ("32 aulas") aparece sozinho, contado a partir das aulas publicadas do curso, sem precisar preencher nada. Um
+selo de desconto ("-40%") aparece automaticamente sobre a imagem quando há preço promocional menor que o normal.
+
+## Aulas ao vivo
+
+Rode `supabase/32_aulas_ao_vivo.sql` uma vez (depois da 30). Pensado para lives do **YouTube**: o mesmo link do
+YouTube funciona antes, durante e depois da transmissão, então você cadastra a aula do jeito de sempre e só liga o
+aviso na hora.
+
+- Em **Aulas**, no menu **⋯** da aula publicada: **Marcar como ao vivo agora**. Um selo "AO VIVO" aparece no painel e
+  na área do aluno (em **Meus cursos**, como um aviso no topo, e na lista de aulas do curso).
+- O aviso **some sozinho depois de 6 horas**, mesmo que você esqueça de desligar; a aula continua acessível
+  normalmente, só o aviso de "ao vivo" expira. Para encerrar antes, use **Encerrar ao vivo** no mesmo menu.
+- Se a aula estiver trancada pela garantia de 7 dias para um aluno específico, o aviso de "ao vivo" também fica
+  escondido para ele (ele não vê nem que existe).
+- Para encontros menores, tipo mentoria (Google Meet, Zoom): não há integração automática. Cadastre a aula com o link
+  da chamada em "Link do vídeo" e avise o aluno por fora (WhatsApp, e-mail); o Meet não pode ficar embutido dentro do
+  site por regra do próprio Google.
+
 ## Aulas compartilhadas entre cursos
 
 Uma aula pode aparecer em vários cursos (rode `supabase/22_aulas_compartilhadas.sql` uma vez). No painel, **Aulas**:
@@ -123,7 +146,7 @@ e `CRON_SECRET` (veja `docs/checkout.md`). Mux (vídeos protegidos): veja `docs/
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias`, `31_produto_destaques`, `32_aulas_ao_vivo` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

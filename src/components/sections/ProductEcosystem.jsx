@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { checkoutLinkProps, getProductCheckout } from "../../services/productCheckout";
+import { useLessonCounts } from "../../services/productStats";
 import Accent from "../ui/Accent";
 import Container from "../ui/Container";
 import GlowCard from "../ui/GlowCard";
 import Installments from "../ui/Installments";
+import { DiscountBadge, LessonCountTag, ProductHighlights } from "../ui/ProductHighlights";
 import ProductImage from "../ui/ProductImage";
 import Reveal from "../ui/Reveal";
 import SectionHeading from "../ui/SectionHeading";
@@ -21,16 +23,20 @@ function ProductTile({ product, number, settings }) {
   const currentPrice = product.promotional_price ?? product.price;
   const isMentorship = product.slug === "mentoria-aph";
   const checkout = isMentorship ? null : getProductCheckout(product) || product.whatsapp_url || settings.whatsapp_url;
+  const lessonCounts = useLessonCounts();
   return (
     <GlowCard className="hx-tile is-product">
       <span className="hx-tile-number" aria-hidden="true">{number}</span>
       <div className="hx-tile-media">
+        <DiscountBadge product={product} />
         <ProductImage src={product.cover_url} alt={product.title} sizes="(max-width: 900px) 92vw, 640px" />
       </div>
       <div className="hx-tile-body">
         <span className="hx-chip">{product.category || "Formação"}</span>
         <h3><Link to={`/produto/${product.slug}`}>{product.title}</Link></h3>
         <p>{product.short_description}</p>
+        <ProductHighlights items={product.highlights} tone="dark" max={3} />
+        <LessonCountTag count={lessonCounts[product.id]} tone="dark" />
         {currentPrice !== null && currentPrice !== undefined && (
           <div className="hx-price">
             <strong>{money(currentPrice)}</strong>

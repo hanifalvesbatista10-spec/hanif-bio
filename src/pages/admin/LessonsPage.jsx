@@ -28,6 +28,12 @@ function isMux(lesson) {
   return lesson.video_provider === "mux";
 }
 
+// O aviso "ao vivo" para o aluno vale por 6 horas (SQL 32); passado isso, o botão continua "Encerrar ao
+// vivo" pronto, mas o selo aqui avisa que ninguém mais está vendo como ao vivo.
+function isLiveFresh(lesson) {
+  return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
+}
+
 function formatSize(bytes) {
   if (!bytes) return "";
   const mb = bytes / (1024 * 1024);
@@ -589,6 +595,29 @@ export default function LessonsPage() {
     setBusyId(null);
   };
 
+  const toggleLive = async (lesson) => {
+    const next = !lesson.is_live;
+    setBusyId(lesson.id);
+    const { data, error } = await supabase
+      .from("product_lessons")
+      .update({ is_live: next, live_started_at: next ? new Date().toISOString() : lesson.live_started_at })
+      .eq("id", lesson.id)
+      .select("*")
+      .single();
+    if (error) {
+      notify(
+        "error",
+        error.message.includes("is_live") || error.message.includes("live_started_at")
+          ? "O banco ainda não tem aulas ao vivo. Execute supabase/32_aulas_ao_vivo.sql no SQL Editor e tente de novo."
+          : `Erro ao alterar: ${error.message}`
+      );
+    } else {
+      replaceLesson(data);
+      notify("success", next ? `“${lesson.title}” está ao vivo agora. O aviso some sozinho depois de 6 horas.` : `“${lesson.title}” não está mais marcada como ao vivo.`);
+    }
+    setBusyId(null);
+  };
+
   const removeLesson = async (lesson) => {
     const hasAsset = isMux(lesson) && lesson.mux_asset_id;
     const courses = coursesOf(lesson.id);
@@ -780,6 +809,11 @@ export default function LessonsPage() {
                 </div>
 
                 <div className="adm-lesson-status">
+                  {lesson.is_live && (
+                    <span className="adm-live-badge" title={isLiveFresh(lesson) ? "Aparece como ao vivo para os alunos" : "Marcada, mas já passou de 6h: os alunos não veem mais o aviso"}>
+                      <i /> AO VIVO{!isLiveFresh(lesson) && " (expirou)"}
+                    </span>
+                  )}
                   <span className={`status-badge ${lesson.status}`}>{statusLabels[lesson.status] || lesson.status}</span>
                 </div>
 
@@ -789,6 +823,7 @@ export default function LessonsPage() {
                     primary={{ label: "Editar", onClick: () => openEdit(lesson) }}
                     items={[
                       { label: published ? "Tirar do ar" : "Publicar", disabled: busyId === lesson.id, onClick: () => toggleStatus(lesson) },
+                      { label: lesson.is_live ? "Encerrar ao vivo" : "Marcar como ao vivo agora", hidden: !published, disabled: busyId === lesson.id, onClick: () => toggleLive(lesson) },
                       { label: "Atualizar status do vídeo", hidden: !(mux && (waiting || lesson.mux_status === "errored")), onClick: () => syncMuxLesson(lesson) },
                       { label: "Ver como aluno", to: `/admin/area-de-membros?produto=${productId}&aula=${lesson.id}` },
                       { label: "Tirar só deste curso", hidden: !(sharing && courses.length > 1), disabled: busyId === lesson.id, onClick: () => unlinkLesson(lesson) },

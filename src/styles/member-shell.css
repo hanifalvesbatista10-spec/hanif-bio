@@ -409,6 +409,101 @@
   background: #fff0f2;
 }
 
+/* ---------- Ao vivo agora ---------- */
+.mb-lives {
+  margin-bottom: 24px;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--mb-navy), #16324f);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(7, 20, 38, 0.22);
+}
+
+.mb-lives h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 12px;
+  font-family: var(--font-display, Inter, sans-serif);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.mb-lives h2 i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--mb-red);
+  animation: mb-live-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes mb-live-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.mb-lives ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mb-lives a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.mb-lives a:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.26);
+}
+
+.mb-lives-info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.mb-lives-info strong {
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.mb-lives-info small {
+  color: #b9c7d5;
+  font-size: 0.8rem;
+}
+
+.mb-lives-watch {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--mb-red);
+  font-size: 0.82rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mb-lives h2 i {
+    animation: none;
+  }
+}
+
 /* ---------- Avisos ---------- */
 .mb-notice {
   display: flex;
@@ -1075,23 +1170,92 @@
   gap: 12px;
   width: 100%;
   min-height: 52px;
-  padding: 10px 12px;
-  border: 0;
-  border-radius: 10px;
+  padding: 12px 13px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   background: transparent;
   color: var(--mb-text);
   font: inherit;
   text-align: left;
   cursor: pointer;
-  transition: background 0.14s ease;
+  transition: background 0.14s ease, border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .mb-lesson:hover {
-  background: #f4f7fa;
+  border-color: var(--mb-line);
+  background: #f7f9fb;
+  box-shadow: 0 2px 8px rgba(7, 20, 38, 0.05);
 }
 
 .mb-lesson.is-active {
+  border-color: #dbe4ec;
   background: #eef3f8;
+  box-shadow: 0 2px 10px rgba(7, 20, 38, 0.06);
+}
+
+.mb-lesson-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.mb-lesson-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff0f2;
+  color: #a60d25;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+.mb-lesson-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mb-red);
+  animation: mb-live-pulse 1.4s ease-in-out infinite;
+}
+
+.mb-lesson-locked {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 6px 4px 2px;
+  padding: 12px 13px;
+  border: 1px dashed var(--mb-line);
+  border-radius: 12px;
+  color: var(--mb-muted);
+}
+
+.mb-lesson-locked-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #eef2f7;
+}
+
+.mb-lesson-locked-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.mb-lesson-locked strong {
+  display: block;
+  color: var(--mb-text);
+  font-size: 0.88rem;
+}
+
+.mb-lesson-locked small {
+  font-size: 0.78rem;
 }
 
 .mb-lesson-num {
