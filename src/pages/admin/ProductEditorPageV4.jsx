@@ -14,7 +14,7 @@ const emptyForm = {
   promotional_price: "",
   checkout_url: "",
   checkout_mode: "external",
-  access_hold_enabled: true,
+  access_hold_enabled: false,
   highlights_text: "",
   status: "active",
   is_featured: true,
@@ -295,7 +295,7 @@ export default function ProductEditorPageV4() {
           {form.checkout_mode === "internal" && (
             <div className="pe4-field full">
               <label className="pe4-check"><input type="checkbox" checked={Boolean(form.access_hold_enabled)} onChange={(e) => update("access_hold_enabled", e.target.checked)} /> Garantia de 7 dias: limitar o que o aluno vê logo depois de comprar</label>
-              <span className="pe4-help">Nos primeiros 7 dias (prazo legal de arrependimento), o aluno só vê as aulas marcadas como amostra em Aulas. Ajuda a reduzir reembolso de quem assiste tudo e devolve. Desligue para produtos sem esse risco.</span>
+              <span className="pe4-help">Desligada por padrão. Nos primeiros 7 dias (prazo legal de arrependimento), o aluno só vê as aulas marcadas como amostra em Aulas. <strong>Antes de ligar, marque em Aulas pelo menos uma aula como "amostra" deste curso</strong> — senão o aluno não vê nenhuma aula nos primeiros 7 dias.</span>
             </div>
           )}
         </div>

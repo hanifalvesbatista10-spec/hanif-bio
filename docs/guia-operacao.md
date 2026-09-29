@@ -71,12 +71,17 @@ Uma aula pode aparecer em vários cursos (rode `supabase/22_aulas_compartilhadas
 
 ## Garantia de 7 dias (direito de arrependimento)
 
-Rode `supabase/30_garantia_7_dias.sql` uma vez. Reduz o pedido de reembolso de quem assiste ao curso inteiro e devolve
-dentro do prazo legal (7 dias, Código de Defesa do Consumidor): nos primeiros 7 dias depois da compra, o aluno só vê as
-aulas que você marcar como amostra; o resto libera sozinho quando os 7 dias passam.
+Rode `supabase/30_garantia_7_dias.sql` e, depois, `supabase/35_garantia_desligada_por_padrao.sql` (corrige o padrão:
+veja o aviso abaixo). Reduz o pedido de reembolso de quem assiste ao curso inteiro e devolve dentro do prazo legal
+(7 dias, Código de Defesa do Consumidor): nos primeiros 7 dias depois da compra, o aluno só vê as aulas que você
+marcar como amostra; o resto libera sozinho quando os 7 dias passam.
+
+**Desligada por padrão.** É você quem liga, produto por produto, quando quiser usar. Antes de ligar, marque em
+Aulas pelo menos uma aula como amostra daquele curso — se nenhuma aula estiver marcada, o aluno não vê **nenhuma**
+aula do curso nos primeiros 7 dias, o que quase sempre é pior do que não usar a garantia.
 
 - **Ligar/desligar por curso:** Produtos → editar → "Garantia de 7 dias: limitar o que o aluno vê logo depois de
-  comprar" (só aparece nos produtos com checkout do próprio site). Ligada por padrão nos produtos novos.
+  comprar" (só aparece nos produtos com checkout do próprio site).
 - **Escolher as aulas de amostra:** Aulas → editar a aula → "Disponível durante a garantia de 7 dias (neste curso)".
   Boa prática: marque as primeiras aulas do curso, para o aluno ver que vale a pena antes de o prazo acabar.
 - **Liberar antes da hora:** Acessos dos alunos mostra "Em garantia até [data]" e, no menu **⋯**, **Liberar tudo agora**
@@ -147,7 +152,7 @@ e `CRON_SECRET` (veja `docs/checkout.md`). Mux (vídeos protegidos): veja `docs/
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias`, `31_produto_destaques`, `32_aulas_ao_vivo`, `34_afiliados` (as anteriores, 01 a 16, já foram executadas; a 33 é do rastreamento de conversão do Google Ads, de outra sessão). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias`, `31_produto_destaques`, `32_aulas_ao_vivo`, `34_afiliados`, `35_garantia_desligada_por_padrao` (as anteriores, 01 a 16, já foram executadas; a 33 é do rastreamento de conversão do Google Ads, de outra sessão). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 
