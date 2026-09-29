@@ -25,6 +25,7 @@ export default function SiteFooter({ settings }) {
           <h4>Acesso</h4>
           <Link to="/login">Área do aluno</Link>
           <Link to="/certificado">Verificar certificado</Link>
+          <Link to="/seja-afiliado">Seja afiliado</Link>
           <Link to="/admin/login">Acesso administrativo</Link>
           <p style={{ marginTop: 12 }}>{settings.footer_disclaimer}</p>
         </div>

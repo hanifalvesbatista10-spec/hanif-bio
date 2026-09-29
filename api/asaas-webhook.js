@@ -4,7 +4,7 @@
 // uma única vez. Autenticação: o Asaas envia o token que você cadastrou no cabeçalho "asaas-access-token".
 import { HttpError, readBody } from "./_lib/mux.js";
 import { METHOD_BY_BILLING, checkoutHandler, requireCheckoutConfig, safeEqual, sb } from "./_lib/checkout.js";
-import { markOrderPaid, revokeAccess } from "./_lib/orders.js";
+import { markOrderPaid, revokeAccess, voidAffiliateCommission } from "./_lib/orders.js";
 
 const now = () => new Date().toISOString();
 
@@ -40,6 +40,7 @@ async function handleEvent(event) {
       if (order.status === "refunded") return;
       await sb(`orders?id=eq.${order.id}`, { method: "PATCH", body: { status: "refunded", refunded_at: now(), updated_at: now() } });
       await revokeAccess(order);
+      await voidAffiliateCommission(order);
       return;
     }
     case "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED":

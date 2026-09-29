@@ -1,7 +1,7 @@
 # Guia de operação do site (dia a dia)
 
 Endereço principal: **https://www.aphhardcore.com** (a raiz `aphhardcore.com` redireciona para o `www`).
-Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `docs/login-e-emails.md` (login e e-mails) e `docs/provas-e-atividades.md` (provas, simulados e tarefas).
+Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `docs/afiliados.md` (afiliados e comissão), `docs/login-e-emails.md` (login e e-mails) e `docs/provas-e-atividades.md` (provas, simulados e tarefas).
 
 ## Ao trocar o endereço do site (feito em 09/2026)
 
@@ -31,6 +31,7 @@ Guias detalhados: `docs/checkout.md` (vendas, cupons, InfinitePay e Asaas), `doc
 - **Cupons:** menu Cupons. Cupom de 100% dá acesso grátis: use sempre limite de usos e data final. Dá para limitar o cupom a Pix ou cartão, ou só a boleto (SQL 27).
 - **Parcelas em destaque:** em Produtos, cartão "Parcelamento em destaque nos preços": mostra "12x de R$ X" com o juro do cartão (SQL 28). Veja docs/checkout.md.
 - **Recuperar carrinho abandonado:** menu Recuperação de vendas (SQL 29). Veja docs/checkout.md.
+- **Afiliados:** menu Afiliados (SQL 34). Aprove pedidos, defina o cupom exclusivo, acompanhe a comissão. Veja docs/afiliados.md.
 - **Aluno que não consegue entrar:** Usuários → menu **⋯** da linha → **Enviar link de nova senha** ou **Reenviar e-mail de confirmação**.
 - **Certificados:** Certificados → Emitir → Alunos cadastrados (CPF, RG e foto vêm de Configurações → Meus dados, preenchidos pelo aluno).
 - **Estorno:** Pix e cartão no app da InfinitePay + Pedidos → **⋯** → **Marcar como reembolsado**; boleto no Asaas (o aviso tira o acesso).
@@ -146,7 +147,7 @@ e `CRON_SECRET` (veja `docs/checkout.md`). Mux (vídeos protegidos): veja `docs/
 
 ## Migrações do banco já criadas (rodar no SQL Editor, na ordem)
 
-`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias`, `31_produto_destaques`, `32_aulas_ao_vivo` (as anteriores, 01 a 16, já foram executadas). Guia das provas: `docs/provas-e-atividades.md`.
+`17_certificados_paginas`, `18_dados_do_aluno`, `19_checkout_proprio`, `20_cupons`, `21_provas_e_atividades`, `22_aulas_compartilhadas`, `23_fechar_funcoes_internas`, `24_depoimentos_por_link`, `25_subtema_das_questoes`, `26_desempenho_turma_e_aluno`, `27_cupom_por_forma_de_pagamento`, `28_parcelamento_em_destaque`, `29_recuperacao_de_vendas`, `30_garantia_7_dias`, `31_produto_destaques`, `32_aulas_ao_vivo`, `34_afiliados` (as anteriores, 01 a 16, já foram executadas; a 33 é do rastreamento de conversão do Google Ads, de outra sessão). Guia das provas: `docs/provas-e-atividades.md`.
 
 ## Saúde do projeto
 

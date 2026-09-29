@@ -13,6 +13,7 @@ import EventPage from "./pages/public/EventPage";
 import CertificateVerifyPage from "./pages/public/CertificateVerifyPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
 import FeedbackLinkPage from "./pages/public/FeedbackLinkPage";
+import AffiliateApplyPage from "./pages/public/AffiliateApplyPage";
 import LoginPage from "./pages/auth/LoginPage";
 import StudentLoginPage from "./pages/auth/StudentLoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
@@ -52,6 +53,7 @@ const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
 const OrdersPage = lazy(() => import("./pages/admin/OrdersPage"));
 const CouponsPage = lazy(() => import("./pages/admin/CouponsPage"));
 const SalesRecoveryPage = lazy(() => import("./pages/admin/SalesRecoveryPage"));
+const AffiliatesPage = lazy(() => import("./pages/admin/AffiliatesPage"));
 const CheckoutPage = lazy(() => import("./pages/public/CheckoutPage"));
 const CheckoutThanksPage = lazy(() => import("./pages/public/CheckoutThanksPage"));
 const UsersPage = lazy(() => import("./pages/admin/UsersPage"));
@@ -96,6 +98,7 @@ export default function App() {
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/depoimento/:token" element={<FeedbackLinkPage />} />
+          <Route path="/seja-afiliado" element={<AffiliateApplyPage />} />
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route
@@ -322,6 +325,14 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <SalesRecoveryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="afiliados"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <AffiliatesPage />
                 </Suspense>
               }
             />

@@ -153,6 +153,8 @@ export default function OrdersPage() {
         const { error: accessError } = await supabase.from("user_products").update({ access_status: "revoked" }).eq("user_id", order.user_id).eq("product_id", order.product_id);
         if (accessError) throw accessError;
       }
+      // Se o pedido usou o cupom de um afiliado, a comissão ainda não paga é anulada (não afeta o que já foi pago).
+      await supabase.from("affiliate_commissions").update({ status: "void" }).eq("order_id", order.id).eq("status", "owed");
       setMessageType("success");
       setMessage(`Pedido de ${order.buyer_name} marcado como reembolsado${order.user_id ? " e acesso removido" : ""}.`);
       load();
