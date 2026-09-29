@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchOrderStatus, formatMoneyCents } from "../../services/checkoutApi";
+import { reportPurchaseConversion } from "../../services/adsConversion";
 import "../../styles/checkout.css";
 
 const POLL_FAST_MS = 3000;
@@ -30,6 +31,7 @@ export default function CheckoutThanksPage() {
         if (!active) return;
         setOrder(data);
         setError("");
+        if (data.status === "paid") reportPurchaseConversion(orderId);
         if (["paid", "failed", "canceled", "refunded"].includes(data.status)) return;
       } catch (err) {
         if (!active) return;

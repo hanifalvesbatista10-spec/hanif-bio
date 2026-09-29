@@ -3,7 +3,7 @@
 // O id do pedido é um UUID impossível de adivinhar.
 // Se o comprador volta da InfinitePay com transaction_nsu e slug, o pagamento é conferido na hora na
 // InfinitePay (não depende só do aviso), o que também cobre um aviso atrasado.
-import { HttpError } from "./_lib/mux.js";
+import { HttpError, readBody } from "./_lib/mux.js";
 import { checkoutConfig, checkoutHandler, requireCheckoutConfig, sb } from "./_lib/checkout.js";
 import { confirmOrder } from "./_lib/infinitepay.js";
 
@@ -15,8 +15,25 @@ async function loadOrder(id) {
   return rows?.[0] || null;
 }
 
-export default checkoutHandler(["GET"], async (req, res) => {
+// POST { order }: marca a conversão do Google Ads como enviada. Só responde send=true uma vez por pedido
+// e só para pedido pago; o navegador dispara o evento apenas nesse caso (não duplica em recarregar/abas).
+async function claimConversion(req, res) {
+  const id = String(readBody(req).order || "").trim();
+  if (!UUID.test(id)) throw new HttpError(400, "invalid_order", "Pedido inválido.");
+  const rows = await sb(`orders?id=eq.${id}&status=eq.paid&ads_conversion_sent_at=is.null&select=id,amount_cents`, {
+    method: "PATCH",
+    prefer: "return=representation",
+    body: { ads_conversion_sent_at: new Date().toISOString() },
+  });
+  const row = rows?.[0];
+  res.status(200).setHeader("Cache-Control", "no-store").json(
+    row ? { send: true, transactionId: row.id, value: row.amount_cents / 100 } : { send: false },
+  );
+}
+
+export default checkoutHandler(["GET", "POST"], async (req, res) => {
   requireCheckoutConfig(["serviceKey"]);
+  if (req.method === "POST") return claimConversion(req, res);
   const id = String(req.query?.order || "").trim();
   if (!UUID.test(id)) throw new HttpError(400, "invalid_order", "Pedido inválido.");
 

@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { supabase } from "../../services/supabase";
+import { reportPurchaseConversion } from "../../services/adsConversion";
 import { memberIcons as icons } from "./MemberIcons";
 import useInstallApp from "./useInstallApp";
 import "../../styles/member-shell.css";
@@ -120,10 +122,18 @@ function UserMenu() {
 // Estrutura da área do aluno: barra superior (navegação e conta), conteúdo e, no celular, barra de abas embaixo.
 export default function MemberLayout() {
   const location = useLocation();
+  const { user } = useAuth();
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
   }, [location.pathname]);
+
+  // Pix/boleto aprovado depois (webhook): envia a conversão no primeiro acesso com o pedido já pago
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase.from("orders").select("id").eq("user_id", user.id).eq("status", "paid").is("ads_conversion_sent_at", null).limit(10)
+      .then(({ data }) => (data || []).forEach((order) => reportPurchaseConversion(order.id)));
+  }, [user?.id]);
 
   return (
     <div className="mb">
