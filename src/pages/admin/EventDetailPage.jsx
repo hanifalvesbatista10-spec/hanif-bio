@@ -7,14 +7,17 @@ import {
   EXPERIENCE_OPTIONS,
   GOAL_OPTIONS,
   ORIGINS,
+  REGISTRATION_FIELDS,
   SLUG_PATTERN,
   STATUS_LABELS,
   eventUrl,
+  exportRegistrationsPdf,
   labelFor,
   slugify,
   toCsv,
   withDefaults,
 } from "../../services/events";
+import { downloadBlob } from "../../services/certificates";
 import { copyToClipboard, isMissingEventsTable } from "./EventsPage";
 
 function toLocalInput(iso) {
@@ -50,6 +53,9 @@ export default function EventDetailPage() {
   const [origin, setOrigin] = useState("");
   const [query, setQuery] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [showPdfPicker, setShowPdfPicker] = useState(false);
+  const [pdfFields, setPdfFields] = useState(["full_name", "whatsapp"]);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const notify = (type, text) => {
     setMessageType(type);
@@ -191,6 +197,22 @@ export default function EventDetailPage() {
     URL.revokeObjectURL(url);
   };
 
+  const togglePdfField = (key) =>
+    setPdfFields((current) => (current.includes(key) ? current.filter((item) => item !== key) : [...current, key]));
+
+  const exportPdf = async () => {
+    if (pdfFields.length === 0) return notify("error", "Escolha ao menos uma informação para exportar.");
+    setExportingPdf(true);
+    try {
+      const blob = await exportRegistrationsPdf(filtered, pdfFields, { eventTitle: form.title });
+      downloadBlob(blob, `inscricoes-${form.slug}.pdf`);
+      setShowPdfPicker(false);
+    } catch (error) {
+      notify("error", error.message || "Não foi possível gerar o PDF.");
+    }
+    setExportingPdf(false);
+  };
+
   const deleteLead = async (row) => {
     if (!window.confirm(`Excluir definitivamente a inscrição de ${row.full_name}?\n\nEssa ação não pode ser desfeita.`)) return;
     setDeletingId(row.id);
@@ -290,7 +312,31 @@ export default function EventDetailPage() {
           <div className="adm-controls is-registrations">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar nome, cidade, origem..." aria-label="Buscar inscritos" />
             <button type="button" className="admin-button" onClick={exportCsv} disabled={filtered.length === 0}>Exportar CSV</button>
+            <button type="button" className="admin-button" onClick={() => setShowPdfPicker((v) => !v)} disabled={filtered.length === 0}>Exportar PDF</button>
           </div>
+
+          {showPdfPicker && (
+            <div className="pl-card" style={{ marginBottom: 16 }}>
+              <h3>Exportar PDF</h3>
+              <p className="adm-hint">Escolha o que vai no PDF ({filtered.length} inscrito{filtered.length === 1 ? "" : "s"}).</p>
+              <div className="adm-controls" style={{ flexWrap: "wrap", gap: "8px 18px" }}>
+                {REGISTRATION_FIELDS.map(([key, label]) => (
+                  <label key={key} className="adm-check-row" style={{ minWidth: 0 }}>
+                    <input type="checkbox" checked={pdfFields.includes(key)} onChange={() => togglePdfField(key)} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+              <div className="form-actions" style={{ marginTop: 14 }}>
+                <button type="button" className="admin-button primary" onClick={exportPdf} disabled={exportingPdf}>
+                  {exportingPdf ? "Gerando..." : "Gerar PDF"}
+                </button>
+                <button type="button" className="admin-button adm-ghost" onClick={() => setShowPdfPicker(false)} disabled={exportingPdf}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="admin-table-wrap">
             <table className="admin-table adm-reg-table">

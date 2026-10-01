@@ -142,6 +142,78 @@ export function isRegistrationOpen(event, count = 0) {
   return true;
 }
 
+// Campos que dá para exportar em PDF, na ordem em que aparecem como opção de escolha.
+export const REGISTRATION_FIELDS = [
+  ["full_name", "Nome", (row) => row.full_name || ""],
+  ["whatsapp", "WhatsApp", (row) => row.whatsapp || ""],
+  ["email", "E-mail", (row) => row.email || ""],
+  ["city", "Cidade", (row) => row.city || ""],
+  ["occupation", "Profissão", (row) => row.occupation || ""],
+  ["aph_experience", "Experiência APH", (row) => labelFor(EXPERIENCE_OPTIONS, row.aph_experience)],
+  ["main_goal", "Objetivo", (row) => labelFor(GOAL_OPTIONS, row.main_goal)],
+  ["source", "Origem", (row) => row.source || "—"],
+  ["created_at", "Inscrito em", (row) => new Date(row.created_at).toLocaleString("pt-BR")],
+];
+
+// PDF só com as colunas escolhidas (ex.: só nome e WhatsApp, pra passar pra equipe sem expor o resto).
+export async function exportRegistrationsPdf(rows, selectedKeys, { eventTitle = "" } = {}) {
+  const fields = REGISTRATION_FIELDS.filter(([key]) => selectedKeys.includes(key));
+  if (!fields.length) throw new Error("Escolha ao menos uma informação para exportar.");
+
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ orientation: fields.length > 4 ? "landscape" : "portrait", unit: "pt", format: "a4" });
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const margin = 36;
+  const usableW = pageW - margin * 2;
+  const colW = usableW / fields.length;
+  const rowH = 20;
+  const headerH = 22;
+
+  const fit = (text) => {
+    const lines = doc.splitTextToSize(String(text ?? ""), colW - 12);
+    return lines.length <= 1 ? lines[0] || "" : `${lines[0].slice(0, -1)}…`;
+  };
+
+  const drawTableHeader = (y) => {
+    doc.setFillColor(7, 20, 38);
+    doc.rect(margin, y, usableW, headerH, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9.5);
+    doc.setTextColor(255, 255, 255);
+    fields.forEach(([, label], i) => doc.text(label, margin + i * colW + 6, y + headerH - 7));
+    doc.setTextColor(20, 24, 28);
+    return y + headerH;
+  };
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(eventTitle ? `Inscritos — ${eventTitle}` : "Inscritos", margin, margin);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(90, 103, 117);
+  doc.text(`${rows.length} pessoa${rows.length === 1 ? "" : "s"} • gerado em ${new Date().toLocaleString("pt-BR")}`, margin, margin + 15);
+  doc.setTextColor(20, 24, 28);
+
+  let y = drawTableHeader(margin + 28);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  rows.forEach((row, index) => {
+    if (y + rowH > pageH - margin) {
+      doc.addPage();
+      y = drawTableHeader(margin);
+    }
+    if (index % 2 === 1) {
+      doc.setFillColor(244, 246, 249);
+      doc.rect(margin, y, usableW, rowH, "F");
+    }
+    fields.forEach(([, , getValue], i) => doc.text(fit(getValue(row)), margin + i * colW + 6, y + rowH - 7));
+    y += rowH;
+  });
+
+  return doc.output("blob");
+}
+
 export function toCsv(rows) {
   const headers = ["Nome", "WhatsApp", "E-mail", "Cidade", "Profissão", "Experiência APH", "Objetivo", "Origem", "Inscrito em"];
   const escape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
