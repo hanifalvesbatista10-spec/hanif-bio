@@ -115,6 +115,15 @@ export default function SalesRecoveryPage() {
     else notify("error", "Não foi possível copiar. Copie a mensagem manualmente.");
   };
 
+  // wa.me abre a conversa com a mensagem já escrita no campo — quem manda de verdade é você, com um clique
+  // em enviar (o WhatsApp não deixa nenhum site enviar mensagem sozinho, sem a pessoa confirmar).
+  const whatsappLink = (order) => {
+    const digits = String(order.buyer_phone || "").replace(/\D/g, "");
+    if (!digits) return "";
+    const withCountry = digits.length <= 11 ? `55${digits}` : digits;
+    return `https://wa.me/${withCountry}?text=${encodeURIComponent(whatsappMessage(order))}`;
+  };
+
   if (missing) {
     return (
       <section className="admin-section">
@@ -216,9 +225,22 @@ export default function SalesRecoveryPage() {
                     {order.recovery_opt_out ? "Pediu para não receber" : STAGE_LABEL[order.recovery_stage] || "—"}
                   </td>
                   <td>
-                    <button type="button" className="pl-btn" disabled={!order.buyer_phone} onClick={() => copyWhatsapp(order)}>
-                      {copiedId === order.id ? "Copiado" : "Copiar mensagem de WhatsApp"}
-                    </button>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <a
+                        className="pl-btn"
+                        href={whatsappLink(order)}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-disabled={!order.buyer_phone}
+                        onClick={(e) => { if (!order.buyer_phone) e.preventDefault(); }}
+                        style={!order.buyer_phone ? { pointerEvents: "none", opacity: 0.5 } : undefined}
+                      >
+                        Abrir no WhatsApp
+                      </a>
+                      <button type="button" className="pl-btn" disabled={!order.buyer_phone} onClick={() => copyWhatsapp(order)}>
+                        {copiedId === order.id ? "Copiado" : "Copiar mensagem"}
+                      </button>
+                    </div>
                     {!order.buyer_phone && <small style={{ display: "block", color: "#7b8c9c", marginTop: 4 }}>Sem WhatsApp cadastrado</small>}
                   </td>
                 </tr>
