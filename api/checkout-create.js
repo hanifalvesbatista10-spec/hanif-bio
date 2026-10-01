@@ -78,7 +78,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
   // cada forma de pagamento exige as variáveis do seu provedor (pedido grátis não passa pelo gateway)
   if (!free) requireCheckoutConfig(method === "online" ? ["infinitepayHandle"] : ["asaasKey"]);
 
-  const base = siteUrl(req);
+  const base = siteUrl();
   if (method === "online" && !base) {
     throw new HttpError(503, "checkout_not_configured", "Checkout ainda não configurado no servidor (faltam: SITE_URL).");
   }

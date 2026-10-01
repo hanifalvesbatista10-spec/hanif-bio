@@ -34,7 +34,7 @@ export default checkoutHandler(["GET"], async (req, res) => {
       ASAAS_WEBHOOK_TOKEN: Boolean(config.webhookToken),
     },
     infinitepayHandle: config.infinitepayHandle || null,
-    infinitepay: config.infinitepayHandle ? await testConnection(siteUrl(req)) : null,
+    infinitepay: config.infinitepayHandle ? await testConnection(siteUrl()) : null,
     envUsed: config.asaasEnv,
     envForced: Boolean(process.env.ASAAS_ENV),
     asaas: null,

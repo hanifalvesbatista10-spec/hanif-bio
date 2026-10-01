@@ -9,7 +9,7 @@
 // agendador externo gratuito (ex.: cron-job.org) para esta mesma URL a cada 20-30 minutos — é seguro chamar
 // várias vezes, porque cada pedido só recebe cada lembrete uma vez.
 // Protegido por CRON_SECRET: exige o cabeçalho "Authorization: Bearer <CRON_SECRET>". Sem essa variável
-// configurada, a rota fica aberta (avisa nos logs) — configure-a antes de ligar a recuperação automática.
+// configurada, a rota fica BLOQUEADA (ninguém consegue chamar) até você configurá-la na Vercel.
 import crypto from "node:crypto";
 import { HttpError } from "./_lib/mux.js";
 import { checkoutHandler, sb, siteUrl } from "./_lib/checkout.js";
@@ -21,8 +21,8 @@ const DAY = 24 * HOUR;
 function verifyCron(req) {
   const secret = process.env.CRON_SECRET || "";
   if (!secret) {
-    console.warn("cron-recover-sales: CRON_SECRET não configurado, a rota está sem proteção.");
-    return true;
+    console.warn("cron-recover-sales: CRON_SECRET não configurado, a rota está bloqueada.");
+    return false;
   }
   return (req.headers.authorization || "") === `Bearer ${secret}`;
 }
@@ -85,7 +85,7 @@ async function processBatch({ base, settings, filter, stage, subject, intro }) {
 export default checkoutHandler(["GET", "POST"], async (req, res) => {
   if (!verifyCron(req)) throw new HttpError(401, "unauthorized", "Não autorizado.");
 
-  const base = siteUrl(req);
+  const base = siteUrl();
   const settingsRows = await sb("recovery_settings?id=eq.1&select=*&limit=1").catch(() => null);
   const settings = settingsRows?.[0];
 

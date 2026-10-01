@@ -155,9 +155,11 @@ export function normalizeMethod(value) {
   return PROVIDER_BY_METHOD[method] ? method : "";
 }
 
-// Endereço público do site (retorno e aviso de pagamento). SITE_URL tem prioridade.
-export function siteUrl(req) {
-  const origin = process.env.SITE_URL || req?.headers?.origin || "";
+// Endereço público do site (retorno e aviso de pagamento). Vem só da variável de ambiente — nunca do
+// header Origin da requisição, que quem chama a API controla e não é confiável para montar o webhook_url
+// e o redirect_url mandados ao provedor de pagamento.
+export function siteUrl() {
+  const origin = process.env.SITE_URL || "";
   return /^https?:\/\//.test(origin) ? origin.replace(/\/$/, "") : "";
 }
 
