@@ -32,8 +32,33 @@ export async function revokeAccess(order) {
   });
 }
 
-// Comissão de afiliado (SQL 34): se o pedido usou um cupom ligado a um afiliado ativo, calcula e guarda a
-// comissão num registro à parte (uma vez por pedido). Nunca derruba o pagamento: um erro aqui só fica no
+// Comissão progressiva (SQL 36): sem comissão própria definida no afiliado, a taxa sobe conforme as vendas
+// pagas DESTE MÊS (mês corrente, reinicia todo dia 1). Vale só da venda que bate a meta em diante — as
+// comissões já registradas antes não mudam. "Vendas do mês" conta owed+paid, nunca void (estornado não conta).
+async function resolveCommissionPercent(affiliateId, ownPercent) {
+  if (Number.isFinite(ownPercent) && ownPercent > 0) return ownPercent;
+
+  const settings = await sb(`affiliate_settings?id=eq.1&select=default_commission_percent,tier2_threshold,tier2_percent,tier3_threshold,tier3_percent&limit=1`);
+  const s = settings?.[0];
+  const base = Number(s?.default_commission_percent);
+  if (!Number.isFinite(base) || base <= 0) return null;
+
+  const now0 = new Date();
+  const monthStart = new Date(Date.UTC(now0.getUTCFullYear(), now0.getUTCMonth(), 1)).toISOString();
+  const priorSales = await sb(
+    `affiliate_commissions?affiliate_id=eq.${affiliateId}&status=neq.void&created_at=gte.${monthStart}&select=id`
+  );
+  const ordinal = (priorSales?.length || 0) + 1; // esta venda é a Nª paga do afiliado neste mês
+
+  const tier3 = Number(s.tier3_threshold);
+  const tier2 = Number(s.tier2_threshold);
+  if (Number.isFinite(tier3) && ordinal >= tier3) return Number(s.tier3_percent) || base;
+  if (Number.isFinite(tier2) && ordinal >= tier2) return Number(s.tier2_percent) || base;
+  return base;
+}
+
+// Comissão de afiliado (SQL 34/36): se o pedido usou um cupom ligado a um afiliado ativo, calcula e guarda
+// a comissão num registro à parte (uma vez por pedido). Nunca derruba o pagamento: um erro aqui só fica no
 // log, o aluno recebe o acesso de qualquer jeito.
 async function recordAffiliateCommission(order) {
   if (!order.coupon_id) return;
@@ -47,11 +72,7 @@ async function recordAffiliateCommission(order) {
   // o próprio afiliado não ganha comissão comprando com o link dele
   if (affiliate.email && order.buyer_email && String(affiliate.email).toLowerCase() === String(order.buyer_email).toLowerCase()) return;
 
-  let percent = Number(affiliate.commission_percent);
-  if (!Number.isFinite(percent) || percent <= 0) {
-    const settings = await sb(`affiliate_settings?id=eq.1&select=default_commission_percent&limit=1`);
-    percent = Number(settings?.[0]?.default_commission_percent);
-  }
+  const percent = await resolveCommissionPercent(affiliateId, Number(affiliate.commission_percent));
   if (!Number.isFinite(percent) || percent <= 0) return;
 
   const amountCents = Math.round((Number(order.amount_cents) * percent) / 100);

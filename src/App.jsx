@@ -14,6 +14,7 @@ import CertificateVerifyPage from "./pages/public/CertificateVerifyPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
 import FeedbackLinkPage from "./pages/public/FeedbackLinkPage";
 import AffiliateApplyPage from "./pages/public/AffiliateApplyPage";
+import AffiliatePortalPage from "./pages/public/AffiliatePortalPage";
 import LoginPage from "./pages/auth/LoginPage";
 import StudentLoginPage from "./pages/auth/StudentLoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
@@ -99,6 +100,7 @@ export default function App() {
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/depoimento/:token" element={<FeedbackLinkPage />} />
           <Route path="/seja-afiliado" element={<AffiliateApplyPage />} />
+          <Route path="/painel-afiliado" element={<AffiliatePortalPage />} />
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route

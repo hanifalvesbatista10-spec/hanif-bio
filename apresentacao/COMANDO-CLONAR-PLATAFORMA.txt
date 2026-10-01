@@ -1,0 +1,705 @@
+=====================================================================
+MEGA COMANDO: CRIAR UMA PLATAFORMA DE CURSOS IGUAL A "HANIF-BIO"
+PARA OUTRO CLIENTE
+=====================================================================
+
+COMO USAR
+1. Abra o Claude Code numa pasta VAZIA (a do novo cliente), por exemplo
+   C:\Users\<voce>\Projetos\cliente-novo
+2. Ajuste a linha REFERENCIA logo abaixo, se o projeto original estiver em
+   outro caminho.
+3. Cole TUDO o que está abaixo da linha "COLE A PARTIR DAQUI" no Claude Code.
+4. Responda ao briefing quando ele perguntar. O resto ele conduz.
+
+Nunca cole senhas, chaves ou tokens no chat. O comando manda o Claude
+pedir para você colocar os segredos você mesmo, no painel da Vercel e no
+arquivo .env.local.
+
+COLE A PARTIR DAQUI ==================================================
+
+REFERENCIA = C:\Users\hanif\OneDrive\Desktop\Projetos\hanif-bio
+
+Você é um engenheiro de software sênior e vai criar uma plataforma de
+cursos, vendas e provas para um NOVO CLIENTE, idêntica em funções e em
+qualidade a um projeto de referência que já está em produção. Responda
+sempre em português do Brasil, com texto direto, sem travessões longos.
+
+O projeto de referência fica na pasta REFERENCIA (acima). Ele é o site e a
+plataforma de cursos do instrutor Hanif Alves (domínio
+https://www.aphhardcore.com). É um React + Vite (SPA) hospedado na Vercel,
+com Supabase (Postgres, Auth, RLS, Storage) e funções serverless em api/.
+
+O objetivo NÃO é inventar nada. É reproduzir esse projeto com a marca, o
+conteúdo, os produtos, o domínio e as contas do novo cliente, sem deixar
+nenhum resquício do cliente original.
+
+---------------------------------------------------------------------
+0. REGRAS DE CONDUTA (valem para todas as fases)
+---------------------------------------------------------------------
+0.1  Segredos: NUNCA peça, leia, imprima ou grave chaves, senhas, tokens ou
+     service role key no chat, no código ou no git. Diga ao usuário qual
+     variável criar e onde (painel da Vercel, painel do Supabase ou
+     .env.local). Crie .env.example só com os NOMES das variáveis. Garanta
+     que .env* (menos o .example) está no .gitignore.
+0.2  Não apague nada fora da pasta do novo projeto. Não altere a pasta de
+     REFERENCIA, só leia.
+0.3  Não faça commit nem push sem o usuário pedir. Quando pedir, use
+     mensagens de commit claras em português.
+0.4  Trabalhe por fases. Ao fim de cada fase, resuma em poucas linhas o que
+     foi feito, o que falta e o que depende do usuário, e siga para a
+     próxima sem esperar, a menos que falte uma informação do briefing.
+0.5  Teste antes de dizer que terminou (fase 9). Se algo falhar, diga com a
+     saída do erro. Não declare "pronto" sem ter rodado o build e os testes.
+0.6  Antes de mudar um arquivo copiado, leia-o inteiro. Preserve o estilo e
+     as convenções do código existente.
+0.7  Texto para o usuário final (telas, e-mails, certificados): português
+     claro, sem jargão, sem emoji como ícone.
+0.8  Ações que cobram dinheiro ou publicam (comprar domínio, subir para
+     produção, mudar DNS, mandar e-mail em massa) exigem confirmação do
+     usuário no chat antes.
+
+---------------------------------------------------------------------
+1. FASE 1: BRIEFING DO NOVO CLIENTE
+---------------------------------------------------------------------
+Pergunte ao usuário, de uma vez só e em lista, e espere as respostas.
+Sugira um padrão razoável quando o usuário não souber.
+
+IDENTIDADE
+ a) Nome do negócio e nome do instrutor/marca que aparece no topo.
+ b) Nicho e público (ex.: cursos de enfermagem, idiomas, concursos).
+ c) Slogan e frase principal da página inicial.
+ d) Cores: principal, de destaque e de fundo escuro. (Referência: azul
+    marinho #071426 e vermelho #d6152d.) Aceite logo em SVG/PNG e pergunte
+    se há fonte de marca. (Referência: Barlow Semi Condensed.)
+ e) Logo (arquivo), ícone quadrado 512x512 para o app, foto do instrutor,
+    imagem de topo da página inicial.
+ f) Vídeo de abertura (a referência tem um vídeo curto de ~2 s com a logo).
+    Pode ser removido se o cliente não tiver.
+
+NEGÓCIO
+ g) Domínio final (ex.: www.clienteexemplo.com.br) e se já está registrado.
+ h) E-mail de contato e telefone/WhatsApp. Redes sociais.
+ i) Produtos que serão vendidos: nome, tipo (curso, mentoria, e-book,
+    evento), preço, descrição curta, imagem de capa.
+ j) Formas de pagamento: Pix e cartão parcelado (InfinitePay), boleto
+    (Asaas). Quais o cliente quer? Quem paga o juro do parcelamento?
+ k) Vídeo das aulas: YouTube não listado, Mux (protegido), ou ambos.
+ l) Vai emitir certificados? Tem arte pronta (PNG/PDF do certificado,
+    verso, carteirinha)? Quais dados do aluno precisa (CPF, RG, tipo
+    sanguíneo, foto 3x4 ou só nome)?
+ m) Vai aplicar provas/simulados? Quais temas e subtemas organizam as
+    questões (ex.: RCP, Trauma...). Usa nota mínima?
+ n) E-mail do primeiro administrador (o dono da plataforma).
+ o) Textos legais: termos de uso, política de privacidade, CNPJ/razão
+    social para rodapé e checkout.
+ p) Existe conteúdo fixo do cliente original que NÃO se aplica? (a lista
+    do item 4.2 é a base; confirme o que remover ou trocar.)
+
+Guarde as respostas num arquivo docs/briefing-cliente.md (sem segredos).
+
+---------------------------------------------------------------------
+2. FASE 2: INSPEÇÃO DO PROJETO DE REFERÊNCIA
+---------------------------------------------------------------------
+Leia, nesta ordem, antes de copiar:
+ 1. REFERENCIA\package.json, vercel.json, index.html, vite.config.*,
+    .gitignore, .env.example (se existir).
+ 2. REFERENCIA\docs\guia-operacao.md (visão de tudo o que o painel faz),
+    docs\checkout.md, docs\login-e-emails.md, docs\mux-setup.md,
+    docs\provas-e-atividades.md, docs\plans\reconstrucao-hanif-bio.md.
+ 3. REFERENCIA\src\App.jsx (todas as rotas), src\contexts\AuthContext.jsx.
+ 4. A lista de arquivos em src\pages, src\components, src\services, api\
+    e supabase\.
+ 5. Os 35 arquivos SQL de REFERENCIA\supabase, em ordem numérica.
+Se algo neste comando divergir do que você lê no projeto, o projeto de
+referência vale mais. Avise o usuário da divergência.
+
+---------------------------------------------------------------------
+3. FASE 3: CÓPIA DO PROJETO
+---------------------------------------------------------------------
+3.1  Copie REFERENCIA para a pasta atual, EXCLUINDO: node_modules, dist,
+     .git, .vercel, .env, .env.*, apresentacao, e qualquer arquivo de
+     screenshot ou temporário. Exemplo em PowerShell:
+       robocopy "REFERENCIA" "." /E /XD node_modules dist .git .vercel apresentacao /XF .env .env.*
+3.2  NÃO copie as mídias pesadas do cliente original que serão trocadas:
+     public\media\hero\*.mp4, public\assets\hanif-hero.*,
+     public\assets\mentoria-*.*, public\assets\comunidade-aph.png,
+     public\assets\aulao-barro-hero.jpg, public\assets\ebook-hemorragias.*,
+     public\assets\logo-ha.png. Se já foram copiadas, substitua ou apague
+     na fase 4 e deixe um placeholder simples enquanto o cliente não manda
+     os arquivos reais.
+3.3  Rode `git init`, faça o primeiro commit só se o usuário pedir, e
+     rode `npm install`. Rode `npm run build` para provar que a cópia
+     compila ANTES de mexer em qualquer coisa.
+3.4  Nome do pacote: troque "name" no package.json pelo slug do cliente.
+
+---------------------------------------------------------------------
+4. FASE 4: REBRAND (TIRAR TUDO DO CLIENTE ORIGINAL)
+---------------------------------------------------------------------
+4.1  Varredura. Rode buscas (Grep) por, sem diferenciar maiúsculas:
+       Hanif, hanif, "Alves", APH, aphhardcore, "Aulão", aulao, "Barro",
+       mentoria-aph, evento-aulao-barro, comunidade-aph, "Hardcore",
+       "SAMU", "urgência", "emergência", "pré-hospitalar", "hemorragia",
+       logo-ha, hanif-hero, "qgenfhyzobauknptwsex" (id do projeto Supabase
+       original), "hanif.alves", "hanifalves", cores #071426 e #d6152d.
+     Liste TODOS os achados agrupados por arquivo antes de editar.
+
+4.2  Pontos conhecidos com conteúdo fixo do cliente original (confirme e
+     generalize; não deixe slug fixo no código):
+     - src\App.jsx: rotas fixas /evento/aulao-barro, /produto/mentoria-aph,
+       /obrigado/mentoria-aph, /produto/evento-aulao-barro. Troque por
+       rotas dinâmicas (por slug vindo do banco) ou remova o que não se
+       aplica. Os componentes MentorshipPage.jsx, ThankYouPage.jsx e
+       EventPage.jsx devem ler o produto/evento do banco, não do código.
+     - src\components\sections\*: Hero, Authority, Positioning,
+       ExpertiseStrip, FeaturedProduct, ContentShowcase, ProductEcosystem.
+       Os textos e imagens devem vir do CMS (tabela site_settings e
+       conteúdo editável, SQLs 05, 09 e 10) ou do briefing.
+     - src\pages\public: ConversionHomePage.jsx, SobrePage.jsx,
+       PublicProductPage.jsx, ContentListPage.jsx, ContentDetailPage.jsx,
+       CheckoutPage.jsx, CheckoutThanksPage.jsx, CertificateVerifyPage.jsx.
+     - src\components\layout\SiteHeader.jsx e SiteFooter.jsx (nome,
+       links, redes, CNPJ).
+     - src\components\member\MemberLayout.jsx (nome ao lado da logo e
+       src="/assets/logo-ha.png").
+     - src\components\admin\AdminLayout.jsx (nome "Painel administrativo").
+     - src\services\certificates.js e events.js (textos padrão).
+     - api\_lib\checkout.js e api\checkout-diagnose.js (nomes, e-mails,
+       descrições enviadas ao gateway).
+     - public\manifest.webmanifest (name, short_name, theme_color,
+       background_color, ícones), public\offline.html, public\robots.txt,
+       public\sitemap.xml (domínio!), index.html (title, meta description,
+       og:*, theme-color, canonical, favicon).
+     - public\fonts: troque as fontes Barlow por as da marca do cliente
+       (ou mantenha, se ele aceitar), ajustando @font-face em src\styles.
+     - src\styles\*: variáveis de cor (--navy, --red etc). Centralize as
+       cores em variáveis CSS no :root e troque só ali. Mantenha
+       contraste AA mínimo entre texto e fundo.
+     - docs\*.md: troque nomes, domínios e exemplos.
+4.3  Ícones do app (PWA): gere icon-192, icon-512 e uma versão maskable a
+     partir do ícone do cliente e salve em public\icons.
+4.4  Vídeo de abertura: se o cliente tiver, substitua; se não, remova o
+     componente que o exibe e a referência em sessionStorage
+     ("ha_intro_seen" é a chave da referência; renomeie para o slug do
+     cliente).
+4.5  Chaves de armazenamento local e nomes de cache do service worker
+     (public\sw.js): renomeie os prefixos para o cliente.
+4.6  Seed de conteúdo: crie os produtos, FAQ, depoimentos e textos
+     iniciais do cliente por meio de um SQL novo (37_seed_cliente.sql) OU
+     deixe o painel vazio e ensine o cliente a cadastrar. NÃO copie os
+     produtos do cliente original.
+4.7  Depois de editar, rode de novo a varredura do item 4.1. O resultado
+     deve ser ZERO ocorrências do cliente original (exceto em docs de
+     histórico que você marcar de propósito). Rode `npm run build`.
+
+---------------------------------------------------------------------
+5. FASE 5: BANCO DE DADOS (SUPABASE NOVO)
+---------------------------------------------------------------------
+Nunca reutilize o projeto Supabase do cliente original.
+
+5.1  Peça ao usuário para criar um projeto Supabase novo (região Brasil
+     ou a mais próxima) e para colocar, ele mesmo, em .env.local:
+       VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+     e na Vercel (Environment Variables):
+       VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY, SUPABASE_URL,
+       SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY (só servidor).
+5.2  Troque em qualquer arquivo o id do Supabase antigo por leitura de
+     variável de ambiente. Não deve haver URL do projeto antigo no código.
+5.3  Execute os SQLs da pasta supabase\ NESTA ORDEM, cada um inteiro, no
+     SQL Editor do Supabase (o usuário cola e roda; você confere depois):
+       01_setup_completo.sql
+       02_tornar_admin.sql            (edite o e-mail do admin ANTES; o
+                                        usuário precisa ter feito o cadastro
+                                        no site para existir em auth.users)
+       03_feedbacks_publicos_home.sql
+       04_produtos_dinamicos_upload.sql
+       05_v4_site_settings.sql
+       06_v4_fix_products_permissions.sql
+       07_event_registrations.sql
+       08_forms_activities.sql
+       09_conteudo_faq_seo.sql
+       10_conteudo_editavel_home_sobre.sql
+       11_temas_e_etiquetas.sql
+       12_area_de_membros.sql
+       13_comentarios_aulas.sql
+       14_mux_video.sql
+       15_eventos.sql
+       16_certificados.sql
+       17_certificados_paginas.sql
+       18_dados_do_aluno.sql
+       19_checkout_proprio.sql
+       20_cupons.sql
+       21_provas_e_atividades.sql
+       22_aulas_compartilhadas.sql
+       23_fechar_funcoes_internas.sql
+       24_depoimentos_por_link.sql
+       25_subtema_das_questoes.sql
+       26_desempenho_turma_e_aluno.sql
+       27_cupom_por_forma_de_pagamento.sql
+       28_parcelamento_em_destaque.sql
+       29_recuperacao_de_vendas.sql
+       30_garantia_7_dias.sql
+       31_produto_destaques.sql
+       32_aulas_ao_vivo.sql
+       33_conversao_google_ads.sql
+       34_afiliados.sql
+       35_garantia_desligada_por_padrao.sql
+       36_comissao_progressiva.sql
+     Antes, leia cada um e remova qualquer dado do cliente original
+     (inserts de produtos, textos, e-mails). Se um SQL depender de dado
+     que só existe no original, corrija com o mínimo de mudança e avise.
+5.3.1 Se algum SQL falhar, pare, mostre o erro e ajuste. Não pule.
+5.4  Storage: confira que os buckets criados pelos SQLs existem
+     (imagens de produtos, certificados/modelos, avatares, depoimentos,
+     arquivos de atividades) e que as políticas de leitura/escrita batem
+     com o que o código usa.
+5.5  Auth (painel do Supabase): peça ao usuário para configurar
+       - Site URL = https://<dominio-do-cliente>
+       - Redirect URLs: https://<dominio>/**, http://localhost:5173/**
+       - Confirmação de e-mail ligada
+       - SMTP próprio (Resend recomendado) com remetente no domínio do
+         cliente, para os e-mails não caírem em spam. Passo a passo em
+         docs\login-e-emails.md.
+       - Modelos de e-mail (confirmação, recuperação de senha) em
+         português com a marca do cliente. Escreva os textos e entregue
+         prontos para colar.
+5.6  Conferência externa SEM usar segredos: com a chave anon PÚBLICA (a
+     mesma do front-end), faça chamadas REST/RPC e confirme:
+       - tabelas sensíveis (orders, form_block_keys, form_submissions,
+         profiles de outros usuários) NÃO respondem dados para anon;
+       - funções internas SECURITY DEFINER não são executáveis por anon;
+       - rotas públicas (products publicados, site_settings, depoimentos
+         aprovados) respondem.
+     Isso é o mesmo teste que foi usado no projeto original.
+
+---------------------------------------------------------------------
+6. FASE 6: INTEGRAÇÕES E VARIÁVEIS DE AMBIENTE
+---------------------------------------------------------------------
+Crie/atualize .env.example com os NOMES abaixo (sem valores) e explique
+ao usuário onde cada um é obtido. O usuário cadastra os valores.
+
+  Front-end (públicas, prefixo VITE_):
+    VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+  Servidor (Vercel > Settings > Environment Variables):
+    SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+    SITE_URL                    (https://dominio-do-cliente, sem barra final)
+    INFINITEPAY_HANDLE          (usuário InfinitePay do cliente, sem $)
+    ASAAS_API_KEY, ASAAS_WEBHOOK_TOKEN, ASAAS_ENV (sandbox|production)
+    MUX_TOKEN_ID, MUX_TOKEN_SECRET,
+    MUX_SIGNING_KEY_ID, MUX_SIGNING_KEY_PRIVATE
+    RESEND_API_KEY               (chave de API da Resend, para a recuperação
+                                   de vendas; é diferente do SMTP do login)
+    RESEND_FROM                  (ex.: "Nome do Cliente <naoresponda@dominio>")
+    CRON_SECRET                  (senha longa inventada; protege a rota do
+                                   robô de recuperação de vendas)
+
+6.1  Pagamentos (docs\checkout.md):
+     - InfinitePay: Pix e cartão em até 12x, juro por conta do comprador.
+       Webhook: https://<dominio>/api/infinitepay-webhook
+     - Asaas: boleto. Webhook: https://<dominio>/api/asaas-webhook com o
+       ASAAS_WEBHOOK_TOKEN configurado dos dois lados.
+     - Se o cliente não usar um dos dois, esconda a opção no checkout e
+       mantenha o outro funcionando. Teste em sandbox primeiro.
+     - Use o botão de diagnóstico do painel (Pedidos) e a rota
+       /api/checkout-diagnose para conferir a conexão.
+6.3  Vídeo protegido (docs\mux-setup.md): conta Mux, chave de assinatura,
+     upload direto pelo painel de Aulas. Se o cliente só usa YouTube,
+     deixe o Mux desligado sem quebrar nada.
+6.4  E-mail: Resend com domínio verificado (SPF, DKIM, DMARC), ligado ao
+     SMTP do Supabase (login) E com uma chave de API própria em
+     RESEND_API_KEY/RESEND_FROM (recuperação de vendas, api\_lib\resend.js).
+     São dois usos separados da mesma conta Resend.
+6.4b Recuperação de vendas (docs\checkout.md): rode o SQL 29, cadastre
+     RESEND_API_KEY, RESEND_FROM, CRON_SECRET. O cron do vercel.json roda
+     1x por dia no plano Hobby da Vercel (limite do plano, não do código);
+     para lembretes mais rápidos (o ideal), configure um agendador externo
+     grátis (ex.: cron-job.org) chamando /api/cron-recover-sales a cada
+     20-30 min com o cabeçalho Authorization: Bearer <CRON_SECRET>. WhatsApp
+     automático (API oficial da Meta) é um projeto à parte: exige conta
+     comercial verificada, número dedicado e modelos aprovados, com custo
+     por conversa após uma cota mensal grátis; não implemente sem o cliente
+     pedir e ter a conta Meta pronta. Por padrão, use só o botão "Copiar
+     mensagem de WhatsApp" do painel (envio manual).
+6.5  Vercel: crie o projeto, conecte o repositório do cliente, cadastre as
+     variáveis, faça o primeiro deploy, aponte o domínio (DNS) e confira
+     o HTTPS. O vercel.json copiado já trata as rotas da SPA e os
+     cabeçalhos; confira-o.
+6.6  Domínio: atualizar Site URL do Supabase, SITE_URL da Vercel,
+     canonical/og do index.html, sitemap.xml e robots.txt.
+
+---------------------------------------------------------------------
+7. FASE 7: ESPECIFICAÇÃO FUNCIONAL (O QUE TEM QUE EXISTIR E FUNCIONAR)
+---------------------------------------------------------------------
+Esta lista é o critério de "100% igual". Cada item deve existir e passar
+no teste da fase 9. Use o código da REFERENCIA como implementação.
+
+7.1  SITE PÚBLICO
+  Rotas: /, /sobre, /conteudos, /conteudos/:slug, /produto/:slug,
+  /checkout/:slug, /checkout/obrigado, /evento/:slug, /f/:slug (formulário
+  público), /depoimento/:token, /seja-afiliado, /painel-afiliado, /certificado,
+  /certificado/:code, /login, /cadastro, /recuperar-senha, /atualizar-senha,
+  /bloqueado.
+  - Página inicial: vídeo/imagem de abertura, chamada principal, produtos
+    em destaque, conteúdos, depoimentos aprovados, FAQ, rodapé.
+  - Tudo editável pelo painel (site_settings, produtos, FAQ, SEO por
+    produto). Nada de texto de marca hardcoded.
+  - Robots: não indexar /minha-area, /admin, /login, /checkout.
+  - PWA: manifest, service worker, página offline, instalável.
+
+7.2  VENDAS (checkout próprio)
+  - /checkout/:slug com dados do comprador (nome, e-mail, CPF, WhatsApp
+    opcional), escolha Pix/cartão ou boleto, cupom, resumo e botão pagar.
+  - Cupons: porcentagem ou valor fixo, validade, limite de usos, escopo
+    por produto, restrição por forma de pagamento (Pix ou cartão, ou boleto), cupom de 100% que libera o acesso sem pagar. API
+    api\coupon-check.js e lib api\_lib\coupons.js.
+  - Pedidos (tabela orders): status, pago, estornado, liberação
+    automática do acesso (tabela de acessos/enrollments) quando o
+    webhook confirma, mesmo se o comprador ainda não tem conta (o acesso
+    fica vinculado ao e-mail e é aplicado no cadastro).
+  - Painel /admin/pedidos: lista, filtros, estorno, diagnóstico de
+    conexão. /admin/cupons: CRUD de cupons.
+  - Funções: api\checkout-create.js, checkout-status.js,
+    infinitepay-webhook.js, asaas-webhook.js e api\_lib\{checkout,
+    orders,infinitepay,coupons}.js.
+
+7.3  ÁREA DO ALUNO (/minha-area)
+  - Layout: barra superior com logo, abas (Meus cursos, Atividades,
+    Certificados, Configurações), menu do usuário, e no celular barra de
+    abas embaixo (MemberLayout.jsx).
+  - Meus cursos e /minha-area/curso/:productId com lista de aulas por
+    módulo, player (YouTube ou Mux), marcar concluída, comentários por
+    aula com resposta do instrutor (etiqueta "Instrutor").
+  - Aulas compartilhadas entre cursos, cada curso com sua ordem
+    (SQL 22).
+  - Vídeo Mux protegido: link assinado que expira e marca d'água móvel
+    com nome/e-mail do aluno (api\mux-token.js, mux-asset.js,
+    mux-upload.js, _lib\mux.js).
+  - Configurações: abas "Meus dados" (nome, CPF, RG, tipo sanguíneo,
+    foto 3x4, etc, conforme SQL 18) e "Segurança" (botão "Alterar senha"
+    e "Sair de todos os aparelhos").
+  - Certificados: lista dos certificados do aluno e download do PDF.
+  - Atividades (/minha-area/atividades, /:slug, /resultado/:id),
+    Meu desempenho (/minha-area/desempenho).
+  - Menu "Instalar aplicativo" quando o navegador permitir (PWA).
+
+7.4  PROVAS, SIMULADOS E ATIVIDADES (SQLs 08, 21, 25)
+  - Tipos de formulário: prova, simulado, tarefa, pesquisa.
+  - Tipos de questão: uma correta, várias corretas (nota parcial),
+    verdadeiro/falso, sim/não, resposta curta, numérica, discursiva e
+    envio de arquivo. Seções, embaralhar, questão obrigatória, pontos.
+  - Regras: cronômetro, número de tentativas, nota mínima, quem pode
+    responder (por formulário), liberação do resultado (na hora, manual
+    ou por data), comentário/explicação por questão liberado junto com
+    a nota.
+  - Correção automática nas objetivas e tela de correção manual para
+    discursiva e arquivo, com nota e comentário. Liberar resultados em
+    lote. Recalcular notas após mudar gabarito. Anular questão.
+  - Segurança: gabarito em form_block_keys (privado); perguntas de
+    provas de alunos só legíveis com tentativa em andamento
+    (form_blocks_readable). O aluno NUNCA recebe a resposta certa antes
+    da liberação.
+  - Importador em lote de questões comentadas no formato de IA
+    ("QUESTÃO n", "### MÓDULO", "EXPLICAÇÃO"), com o "comando pronto
+    para a IA" na tela (src\services\formsImport.js). O módulo vira
+    seção e tema.
+  - Resultados por formulário (/admin/formularios/:id/resultados) com
+    estatística por questão, alternativa errada mais marcada e
+    exportação CSV.
+  - Documentação: docs\provas-e-atividades.md.
+
+7.5  DESEMPENHO (SQLs 25 e 26)
+  - Cada questão tem tema e subtema.
+  - Ficha do aluno em /admin/usuarios/:id: média, tema/subtema onde
+    erra, questões mais erradas, histórico, resumo, botão de WhatsApp.
+  - Visão da turma em /admin/desempenho: cartões (alunos que já
+    responderam, média, aprovação, alunos que precisam de atenção),
+    temas críticos com subtemas, questões que mais derrubam, alunos
+    (nenhuma prova, parado há N dias, média baixa), comparação entre
+    provas, aulas sugeridas por tema.
+  - "Meu desempenho" do aluno: cartões, assuntos a reforçar com botão
+    "rever esta aula" (aula marcada com o mesmo tema), pontos fortes.
+  - RPCs: class_performance, my_performance, form_list_for_student.
+    Lógica pura em src\services\performance.js (testável no Node).
+  - Aulas ganham "tema que ensinam" (tags) para o vínculo com a
+    sugestão de reforço.
+
+7.5b RECUPERAÇÃO DE VENDAS (SQL 29, /admin/recuperacao-de-vendas)
+  - Lista pedidos "pending" (carrinho abandonado) e "failed" (pagamento
+    recusado) que ainda não pagaram, com valor, tempo desde o abandono
+    e estágio de lembrete já enviado.
+  - E-mails automáticos opcionais (liga/desliga no painel): 1º lembrete
+    pouco depois do abandono, último lembrete no dia seguinte se ainda
+    não pagou. Nunca manda para quem já pagou (a busca sempre exclui
+    pedidos pagos) nem para quem clicou em "não quero mais receber".
+    Cupom opcional anexado ao link do lembrete.
+  - Robô em api\cron-recover-sales.js, chamado pelo cron do vercel.json
+    (1x/dia no plano Hobby da Vercel) e, se configurado, por um
+    agendador externo grátis para maior frequência (veja 6.4b). Envio
+    por api\_lib\resend.js (chamada direta à API da Resend, não é o
+    SMTP do login). Link de descadastro em api\recovery-opt-out.js,
+    assinado por HMAC com CRON_SECRET.
+  - Botão "Copiar mensagem de WhatsApp" por pedido (envio manual, com
+    o link de pagamento e o cupom se houver).
+  - Tabela recovery_settings: só o admin lê/edita (nem se está ligado
+    nem o cupom aparecem para o público).
+
+7.5c GARANTIA DE 7 DIAS (SQL 30, direito de arrependimento/CDC)
+  - Reduz o pedido de reembolso de quem assiste ao curso inteiro e
+    devolve dentro do prazo legal: nos primeiros 7 dias depois da
+    compra, o aluno só vê as aulas marcadas como amostra.
+  - Liga/desliga por produto (products.access_hold_enabled, DESLIGADO
+    por padrão desde a SQL 35 — é o admin quem decide ligar, produto
+    por produto, nunca automático); a amostra é marcada aula a aula,
+    por curso, em Aulas (product_lesson_links.available_in_hold). Se
+    ligar sem marcar nenhuma amostra, o aluno não vê nenhuma aula nos
+    primeiros 7 dias — avise isso na tela (já tem um aviso lá).
+  - Aplicado no RLS de product_lessons e na função can_access_lesson
+    (também usada pelo vídeo protegido e pelos comentários, não só pela
+    listagem): a aula trancada não é lida de jeito nenhum antes do
+    prazo, mesmo por fora da tela.
+  - RPC my_access_hold(product_id) alimenta o aviso na área do aluno
+    ("você está na garantia, X de Y aulas liberadas, libera em <data>").
+  - Admin libera antes da hora por aluno+curso em Acessos dos alunos
+    (user_products.hold_released_at/hold_released_by).
+
+7.5d DESTAQUES DO PRODUTO E CONTAGEM DE AULAS (SQL 31)
+  - products.highlights (text[], até 6 linhas, editável em Produtos):
+    bullets curtos de benefício, mostrados no card do produto (home e
+    página do produto), abaixo da descrição curta.
+  - Selo "-N%" automático sobre a imagem quando há preço promocional
+    menor que o normal (calculado no front, não fica salvo no banco).
+  - Contagem de aulas ("32 aulas") pela RPC product_lesson_counts()
+    (SECURITY DEFINER, só devolve o número, nunca o conteúdo das aulas;
+    liberada para anon). Componentes: src\components\ui\ProductHighlights.jsx.
+
+7.5e AULAS AO VIVO (SQL 32, pensado para lives do YouTube)
+  - product_lessons.is_live/live_started_at: o admin liga em Aulas
+    (menu ⋯ → "Marcar como ao vivo agora"/"Encerrar ao vivo"). O mesmo
+    link de YouTube funciona antes, durante e depois da live, então o
+    cadastro da aula não muda, só o aviso.
+  - O aviso expira sozinho 6h depois de ligado (não precisa de cron).
+  - RPC my_live_lessons() (authenticated) devolve as lives que o aluno
+    pode ver agora, respeitando acesso ativo E a garantia de 7 dias (se
+    a aula estiver trancada para aquele aluno, ela não aparece como "ao
+    vivo" para ele, mesmo estando ao vivo de verdade).
+  - Sinalização na área do aluno: banner "Ao vivo agora" em Meus cursos
+    (StudentCoursesPage) e selo na lista de aulas do curso
+    (CourseLessonsPage). src\services\productStats.js.
+  - Google Meet/Zoom NÃO são suportados por integração automática (o
+    Meet não pode ser embutido em iframe por regra do Google, e exige
+    conta Workspace + API do Calendar para automatizar). Para encontros
+    pequenos, é só colocar o link da chamada no cadastro da aula, como
+    um link qualquer; sem automação.
+
+7.5f CONVERSÃO DE COMPRA DO GOOGLE ADS (SQL 33)
+  - orders.ads_conversion_sent_at: marca o pedido cuja conversão já foi
+    enviada ao Google Ads (uma vez por pedido, nunca duplica).
+  - src\services\adsConversion.js manda o evento de conversão (via
+    window.gtag) só depois de o servidor confirmar e marcar o pedido
+    como pago (api\checkout-status.js), chamado da página de obrigado
+    do checkout e, como reforço, da área do aluno (MemberLayout.jsx),
+    para pedidos que ainda não foram reportados.
+  - O ID da tag do Google Ads (AW-XXXXXXXXX/XXXXXXXXXXX) é específico
+    da conta do cliente: troque no adsConversion.js E no <script> do
+    gtag.js carregado no index.html. Sem essas duas trocas, o cliente
+    novo ficaria mandando conversão para a conta do Hanif.
+
+7.5g AFILIADOS (SQLs 34 e 36, /admin/afiliados, /seja-afiliado, /painel-afiliado)
+  - Reaproveita o sistema de cupons: cada afiliado aprovado ganha um
+    cupom exclusivo (coupons.affiliate_id), com desconto para quem
+    compra. Não automatiza pagamento de comissão (split de pagamento
+    não é suportado pelo InfinitePay/Asaas configurados aqui); o
+    instrutor paga por fora (Pix) e marca como pago no painel.
+  - Formulário público /seja-afiliado (RLS: insert só como 'pending',
+    sem comissão nem aprovação definidas) cai como pedido pendente.
+    Liga/desliga em affiliate_settings.signup_enabled.
+  - Admin aprova em /admin/afiliados: define o código do cupom, o
+    desconto e, opcionalmente, uma comissão só daquela pessoa (em
+    branco = usa a comissão padrão ou a faixa progressiva).
+  - Comissão progressiva (SQL 36): sem comissão própria, a taxa sobe
+    sozinha com as vendas pagas do afiliado NO MÊS CORRENTE (reinicia
+    todo dia 1) — padrão 10%, 2ª faixa (padrão 15% a partir da 5ª venda)
+    e 3ª faixa (padrão 20% a partir da 10ª venda), configuráveis em
+    Configuração. Não retroativo: só a venda que bate a meta em diante
+    usa a taxa nova. Calculada em resolveCommissionPercent
+    (api\_lib\orders.js).
+  - Comissão calculada em api\_lib\orders.js (markOrderPaid), sobre o
+    valor pago (depois do desconto), quando o pedido é confirmado.
+    Bloqueia autocompra (e-mail do comprador = e-mail do afiliado) e
+    afiliado não-ativo. Uma linha por pedido (affiliate_commissions,
+    índice único em order_id) mesmo se o aviso de pagamento repetir.
+  - Estorno anula a comissão ainda não paga (asaas-webhook.js e o
+    "Marcar como reembolsado" de Pedidos/OrdersPage.jsx).
+  - Valor mínimo de pagamento (affiliate_settings.minimum_payout_cents):
+    só um aviso ao marcar como pago, nunca bloqueia.
+  - Painel do afiliado sem login (SQL 36, /painel-afiliado): o afiliado
+    digita e-mail + código do cupom e consulta comissão atual, vendas do
+    mês, quanto falta para a próxima faixa, a pagar/já pago e o link dos
+    materiais oficiais de divulgação. RPC public.affiliate_portal
+    (security definer) — nunca expõe a tabela de afiliados para anon.
+  - Documentação completa: docs\afiliados.md.
+
+7.6  CERTIFICADOS (SQLs 16, 17, 18)
+  - Modelos com várias páginas (certificado, verso, carteirinha), arte
+    enviada pelo cliente, campos posicionáveis (nome, curso, carga
+    horária, data, CPF, RG, tipo sanguíneo, foto, código, QR).
+  - Emissão: um, em massa (lista colada) ou a partir de alunos
+    cadastrados. Download do PDF (jspdf) e de todos em ZIP (jszip).
+    QR (qrcode) apontando para /certificado/:code.
+  - Verificação pública em /certificado e /certificado/:code.
+  - Editor de modelo: src\pages\admin\CertificateTemplateEditor.jsx.
+
+7.7  DEPOIMENTOS POR LINK (SQL 24)
+  - Admin cria link geral ou pessoal, com validade e limite de usos, e
+    copia mensagem pronta para WhatsApp.
+  - Aluno abre /depoimento/:token e envia nome, cargo, cidade, nota,
+    texto, foto opcional e autorização de publicação.
+  - Entra como "Em análise"; só aparece no site depois que o admin
+    publica. Nada vai ao ar sozinho.
+
+7.8  PAINEL DO INSTRUTOR (/admin)
+  Menu lateral: Visão geral, Conteúdo do site, Produtos, Pedidos, Cupons,
+  Recuperação de vendas, Afiliados, Conteúdos e materiais, Perguntas frequentes, Feedbacks, Área de
+  membros (Ver como aluno, Aulas, Certificados, Auditoria das aulas,
+  Comentários, Acessos), Usuários, Formulários e atividades, Desempenho,
+  Eventos, Inscrições.
+  - Tabelas com menu de três pontos por linha (RowActions.jsx, em
+    portal, com teclado: setas, Esc).
+  - Usuários: papel (aluno/instrutor/admin), status, enviar link de
+    nova senha, reenviar e-mail de confirmação, liberar/retirar curso,
+    ver desempenho.
+  - Aulas: cadastro (YouTube ou Mux), módulos, ordem, aula em vários
+    cursos, tema que ensina.
+  - Auditoria das aulas: aponta vídeo com problema.
+  - Ver como aluno (MemberPreviewPage.jsx).
+  - Eventos: página pública com inscrição e lista de inscritos.
+  - Todos os acessos do painel protegidos por papel (RLS + guarda de
+    rota).
+
+7.9  QUALIDADE TRANSVERSAL
+  - Responsivo (desktop 1440 e celular 390), sem barra horizontal.
+  - Acessível: foco visível, contraste, rótulos, teclado em menus e
+    diálogos, respeita prefers-reduced-motion.
+  - RLS ligado em TODAS as tabelas. Funções SECURITY DEFINER com
+    "revoke ... from public, anon" explícito (o Supabase concede
+    EXECUTE por padrão a novas funções).
+  - Rotas de página em lazy loading (React Router 7).
+
+---------------------------------------------------------------------
+8. FASE 8: ARMADILHAS JÁ CONHECIDAS (NÃO REPITA ESTES ERROS)
+---------------------------------------------------------------------
+ 1. PostgREST devolve no máximo 1000 linhas por consulta. Qualquer lista
+    que possa passar disso precisa paginar com .range().
+ 2. Embeds do Supabase com mais de uma relação entre as mesmas tabelas
+    dão erro PGRST201 ("more than one relationship"). Use a dica de FK,
+    ex.: product:products!product_lessons_product_id_fkey(...).
+ 3. Funções novas no Postgres do Supabase ficam executáveis por anon por
+    padrão. Sempre "revoke execute ... from public, anon" e conceda só a
+    "authenticated" (ou só ao service role) quando for o caso.
+ 4. onAuthStateChange não pode aguardar (await) chamadas ao Supabase
+    dentro do callback: causa travamento. Dispare fora do callback.
+ 5. Arquivos com finais de linha CRLF quebram substituições
+    multilinha. Normalize \r\n antes de editar por script.
+ 6. window.prompt/alert/confirm travam automação de teste (CDP). Nos
+    testes, trate Page.javascriptDialogOpening.
+ 7. Animações por rolagem deixam a página em branco em captura "full
+    page". Capture rolando, ou force as classes de entrada.
+ 8. Gabarito nunca no mesmo objeto que a pergunta enviada ao aluno.
+ 9. Não use "taskkill /IM chrome.exe": pode fechar o Chrome do
+    usuário. Mate só os processos que você iniciou.
+10. Não use regex nem "\n" dentro de "node -e" no Windows; grave o
+    script em arquivo.
+11. Segredos: nada de chave em chat, código, print ou commit.
+12. Webhooks de pagamento devem ser idempotentes (o mesmo aviso pode
+    chegar duas vezes) e validar token/origem.
+13. Cupom de 100% não passa pelo gateway: libere o acesso direto e
+    registre o pedido como pago.
+14. Aluno comprou antes de criar conta: o acesso deve ficar guardado
+    pelo e-mail e ser aplicado ao cadastrar/confirmar.
+15. Domínio novo = atualizar Site URL e Redirect URLs do Supabase, senão
+    o link do e-mail de recuperação de senha falha.
+16. Cron jobs no plano Hobby (gratuito) da Vercel rodam no máximo 1x por
+    dia; expressão mais frequente (ex.: a cada 15 min) falha o deploy.
+    Para o robô de recuperação de vendas rodar mais rápido sem custo,
+    use um agendador externo grátis (ex.: cron-job.org) chamando a rota
+    (protegida por CRON_SECRET) na frequência desejada; a rota é segura
+    para chamar várias vezes (cada envio só acontece uma vez por pedido).
+
+---------------------------------------------------------------------
+9. FASE 9: TESTES E ACEITE
+---------------------------------------------------------------------
+Faça TUDO abaixo e registre o resultado.
+
+9.1  Build e lint: `npm run build` sem erros. Rode os testes existentes
+     do projeto, se houver.
+9.2  Varredura final (item 4.1) sem resquícios do cliente original.
+9.3  Banco: rode os SQLs 01 a 36 (+ seed) num Postgres de teste em
+     memória (PGlite, pacote @electric-sql/pglite) com stubs mínimos de
+     auth.users, auth.uid() e storage, e valide com asserts:
+       - regras de RLS por papel (aluno, instrutor, admin, anon);
+       - aluno não lê gabarito nem perguntas de prova sem tentativa;
+       - correção automática (uma, várias, V/F, numérica, curta);
+       - liberação de resultado (imediata, manual, por data);
+       - cupons (limite, validade, 100%);
+       - desempenho por tema/subtema, incluindo alunos sem prova.
+     Rode também contra o Supabase real, só com a chave anon pública,
+     os testes de exposição do item 5.6.
+9.4  Funções puras (ex.: src\services\performance.js) testadas direto no
+     Node.
+9.5  Telas: suba `npm run dev`, abra em Chrome headless (protocolo CDP)
+     ou no navegador do Claude Code, com o Supabase simulado por
+     interceptação de rede, em 1440x900 e 390x844, e confira:
+       home, produto, checkout (Pix e boleto, cupom aplicado), login,
+       cadastro, área do aluno (cursos, aula, atividades, prova com
+       cronômetro, resultado com comentário, meu desempenho,
+       configurações), admin (usuários com menu de três pontos, ficha do
+       aluno, desempenho da turma, formulários e construtor, resultados
+       e correção, certificados e emissão, feedbacks por link, pedidos e
+       cupons), verificação pública de certificado, página offline.
+     Sem erro no console, sem overflow horizontal, foco visível,
+     contraste adequado.
+9.6  Fluxo real de ponta a ponta em ambiente de teste (peça ao usuário
+     para acompanhar):
+       cadastro -> e-mail de confirmação -> login -> compra de teste
+       (sandbox) -> acesso liberado -> assistir aula -> comentar ->
+       fazer prova -> ver resultado liberado -> emitir certificado ->
+       verificar código -> instalar como app.
+9.7  Segurança: rode a lista do item 5.6 outra vez após o deploy.
+9.8  Entregue ao usuário um relatório curto: o que foi feito, o que
+     depende dele (chaves, DNS, contas), o que ficou como melhoria
+     futura, e o link do site em produção.
+
+---------------------------------------------------------------------
+10. FASE 10: DOCUMENTAÇÃO E ENTREGA
+---------------------------------------------------------------------
+ - Atualize docs\guia-operacao.md com o nome e o domínio do novo cliente
+   e o passo a passo de uso do painel (cadastrar produto, aula, prova,
+   liberar acesso, emitir certificado, pedir depoimento).
+ - Crie docs\entrega-cliente.md: contas usadas (sem senhas), onde cada
+   variável está, como renovar domínio e chaves, contatos de suporte.
+ - README.md do projeto com: o que é, como rodar (`npm install`,
+   `npm run dev`), como fazer deploy, lista das variáveis de ambiente
+   (só nomes) e ordem dos SQLs.
+ - Grave um resumo do processo em docs\historico-implantacao.md.
+
+---------------------------------------------------------------------
+ORDEM DE EXECUÇÃO RESUMIDA
+---------------------------------------------------------------------
+Fase 1 briefing -> 2 inspeção -> 3 cópia e build -> 4 rebrand e varredura
+-> 5 Supabase (SQLs 01 a 36, auth, storage, teste anon) -> 6 integrações
+(pagamento, Mux, e-mail, Vercel, domínio) -> 7 conferir a especificação
+-> 8 respeitar as armadilhas -> 9 testes e aceite -> 10 documentação.
+
+Comece agora pela Fase 1: faça as perguntas do briefing ao usuário.
+
+FIM DO COMANDO =======================================================
+
+NOTAS PARA QUEM ESTÁ ENTREGANDO (fora do que se cola)
+- Modo alternativo, sem acesso ao projeto original: cole junto o
+  conteúdo dos 35 SQLs e dos docs\*.md e diga ao Claude Code que a
+  Fase 7 é a especificação, pedindo que reconstrua o código a partir
+  dela. Só funciona bem se o projeto de referência estiver disponível
+  para leitura; sem ele, o resultado será parecido, não idêntico.
+- Custos e contas do cliente: Supabase, Vercel, Resend, InfinitePay,
+  Asaas, Mux (opcional) e domínio. Cada um em nome do cliente.
+- Mantenha o projeto de referência limpo de dados de cliente para poder
+  reutilizá-lo como modelo.

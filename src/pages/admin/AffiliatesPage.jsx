@@ -35,7 +35,16 @@ export default function AffiliatesPage() {
   const [affiliates, setAffiliates] = useState([]);
   const [coupons, setCoupons] = useState([]);
   const [commissions, setCommissions] = useState([]);
-  const [settings, setSettings] = useState({ default_commission_percent: "10", signup_enabled: true });
+  const [settings, setSettings] = useState({
+    default_commission_percent: "10",
+    signup_enabled: true,
+    tier2_threshold: "5",
+    tier2_percent: "15",
+    tier3_threshold: "10",
+    tier3_percent: "20",
+    minimum_payout: "50",
+    materials_url: "",
+  });
   const [savingSettings, setSavingSettings] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [message, setMessage] = useState("");
@@ -56,7 +65,7 @@ export default function AffiliatesPage() {
     const [affiliatesR, couponsR, commissionsR, settingsR] = await Promise.all([
       supabase.from("affiliates").select("*").order("created_at", { ascending: false }),
       supabase.from("coupons").select("id,code,discount_type,discount_value,active,affiliate_id").not("affiliate_id", "is", null),
-      supabase.from("affiliate_commissions").select("affiliate_id,amount_cents,status"),
+      supabase.from("affiliate_commissions").select("affiliate_id,amount_cents,status,created_at"),
       supabase.from("affiliate_settings").select("*").eq("id", 1).maybeSingle(),
     ]);
 
@@ -68,7 +77,19 @@ export default function AffiliatesPage() {
     }
     if (!couponsR.error) setCoupons(couponsR.data || []);
     if (!commissionsR.error) setCommissions(commissionsR.data || []);
-    if (settingsR.data) setSettings({ default_commission_percent: String(settingsR.data.default_commission_percent ?? "10"), signup_enabled: settingsR.data.signup_enabled !== false });
+    if (settingsR.data) {
+      const d = settingsR.data;
+      setSettings({
+        default_commission_percent: String(d.default_commission_percent ?? "10"),
+        signup_enabled: d.signup_enabled !== false,
+        tier2_threshold: d.tier2_threshold === null || d.tier2_threshold === undefined ? "" : String(d.tier2_threshold),
+        tier2_percent: String(d.tier2_percent ?? "15"),
+        tier3_threshold: d.tier3_threshold === null || d.tier3_threshold === undefined ? "" : String(d.tier3_threshold),
+        tier3_percent: String(d.tier3_percent ?? "20"),
+        minimum_payout: String((d.minimum_payout_cents ?? 5000) / 100).replace(".", ","),
+        materials_url: d.materials_url || "",
+      });
+    }
     setLoading(false);
   };
 
@@ -79,14 +100,28 @@ export default function AffiliatesPage() {
   const couponByAffiliate = useMemo(() => Object.fromEntries(coupons.map((c) => [c.affiliate_id, c])), [coupons]);
   const totalsByAffiliate = useMemo(() => {
     const totals = {};
+    const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     for (const row of commissions) {
-      const t = totals[row.affiliate_id] || { owed: 0, paid: 0 };
+      const t = totals[row.affiliate_id] || { owed: 0, paid: 0, salesThisMonth: 0 };
       if (row.status === "owed") t.owed += row.amount_cents;
       if (row.status === "paid") t.paid += row.amount_cents;
+      if (row.status !== "void" && new Date(row.created_at) >= monthStart) t.salesThisMonth += 1;
       totals[row.affiliate_id] = t;
     }
     return totals;
   }, [commissions]);
+
+  // Mesma lógica da faixa progressiva do servidor (api/_lib/orders.js), só pra mostrar na tela — quem
+  // calcula de verdade, na hora da venda, é o servidor.
+  const currentPercentFor = (affiliate) => {
+    if (Number(affiliate.commission_percent) > 0) return { percent: Number(affiliate.commission_percent), fixed: true };
+    const sales = totalsByAffiliate[affiliate.id]?.salesThisMonth || 0;
+    const t3 = Number(settings.tier3_threshold);
+    const t2 = Number(settings.tier2_threshold);
+    if (settings.tier3_threshold && sales >= t3) return { percent: Number(settings.tier3_percent), fixed: false };
+    if (settings.tier2_threshold && sales >= t2) return { percent: Number(settings.tier2_percent), fixed: false };
+    return { percent: Number(settings.default_commission_percent), fixed: false };
+  };
 
   const pending = affiliates.filter((a) => a.status === "pending");
   const others = affiliates.filter((a) => a.status !== "pending");
@@ -95,10 +130,40 @@ export default function AffiliatesPage() {
     event.preventDefault();
     const percent = Number(String(settings.default_commission_percent).replace(",", "."));
     if (!Number.isFinite(percent) || percent <= 0 || percent > 100) return notify("error", "Informe uma comissão padrão entre 1 e 100.");
+
+    const t2Raw = String(settings.tier2_threshold).trim();
+    const t3Raw = String(settings.tier3_threshold).trim();
+    const tier2_threshold = t2Raw === "" ? null : Number(t2Raw);
+    const tier3_threshold = t3Raw === "" ? null : Number(t3Raw);
+    const tier2_percent = Number(String(settings.tier2_percent).replace(",", "."));
+    const tier3_percent = Number(String(settings.tier3_percent).replace(",", "."));
+    if (tier2_threshold !== null && (!Number.isInteger(tier2_threshold) || tier2_threshold <= 0)) return notify("error", "A meta de vendas da 2ª faixa deve ser um número inteiro maior que zero (ou em branco para desativar).");
+    if (tier3_threshold !== null && (!Number.isInteger(tier3_threshold) || tier3_threshold <= 0)) return notify("error", "A meta de vendas da 3ª faixa deve ser um número inteiro maior que zero (ou em branco para desativar).");
+    if (tier2_threshold !== null && (!Number.isFinite(tier2_percent) || tier2_percent <= 0 || tier2_percent > 100)) return notify("error", "A comissão da 2ª faixa deve ser entre 1 e 100.");
+    if (tier3_threshold !== null && (!Number.isFinite(tier3_percent) || tier3_percent <= 0 || tier3_percent > 100)) return notify("error", "A comissão da 3ª faixa deve ser entre 1 e 100.");
+    if (tier2_threshold !== null && tier3_threshold !== null && tier3_threshold <= tier2_threshold) return notify("error", "A meta da 3ª faixa deve ser maior que a da 2ª faixa.");
+
+    const minimumRaw = Number(String(settings.minimum_payout).replace(",", "."));
+    if (!Number.isFinite(minimumRaw) || minimumRaw < 0) return notify("error", "Informe um valor mínimo de pagamento válido (pode ser 0).");
+    const minimum_payout_cents = Math.round(minimumRaw * 100);
+
+    const materials_url = settings.materials_url.trim();
+    if (materials_url && !/^https?:\/\//i.test(materials_url)) return notify("error", "O link dos materiais deve começar com http:// ou https://.");
+
     setSavingSettings(true);
     const { error } = await supabase
       .from("affiliate_settings")
-      .update({ default_commission_percent: percent, signup_enabled: settings.signup_enabled, updated_at: new Date().toISOString() })
+      .update({
+        default_commission_percent: percent,
+        signup_enabled: settings.signup_enabled,
+        tier2_threshold,
+        tier2_percent: tier2_threshold !== null ? tier2_percent : null,
+        tier3_threshold,
+        tier3_percent: tier3_threshold !== null ? tier3_percent : null,
+        minimum_payout_cents,
+        materials_url: materials_url || null,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", 1);
     setSavingSettings(false);
     if (error) {
@@ -106,6 +171,7 @@ export default function AffiliatesPage() {
       return notify("error", `Não foi possível salvar: ${error.message}`);
     }
     notify("success", "Configuração salva.");
+    load();
   };
 
   const startApprove = (affiliate) => {
@@ -181,7 +247,10 @@ export default function AffiliatesPage() {
   const markPaid = async (affiliate) => {
     const owed = totalsByAffiliate[affiliate.id]?.owed || 0;
     if (owed <= 0) return notify("error", "Não há comissão pendente para marcar como paga.");
-    if (!window.confirm(`Marcar ${formatMoneyCents(owed)} como pago para ${affiliate.full_name}? Faça o Pix antes.`)) return;
+    const minimumCents = Math.round(Number(String(settings.minimum_payout).replace(",", ".")) * 100) || 0;
+    const belowMinimum = minimumCents > 0 && owed < minimumCents;
+    const warning = belowMinimum ? `\n\nAviso: esse valor está abaixo do mínimo de pagamento configurado (${formatMoneyCents(minimumCents)}). Você pode pagar assim mesmo.` : "";
+    if (!window.confirm(`Marcar ${formatMoneyCents(owed)} como pago para ${affiliate.full_name}? Faça o Pix antes.${warning}`)) return;
     setBusyId(affiliate.id);
     const { error } = await supabase
       .from("affiliate_commissions")
@@ -267,6 +336,37 @@ export default function AffiliatesPage() {
             <input value={settings.default_commission_percent} onChange={(e) => setSettings((c) => ({ ...c, default_commission_percent: e.target.value }))} inputMode="decimal" placeholder="10" />
           </label>
         </div>
+
+        <p className="adm-hint" style={{ marginTop: 18 }}>
+          Comissão progressiva: a taxa sobe sozinha conforme as vendas pagas do afiliado no mês corrente (reinicia todo dia 1). Vale
+          só da venda que bate a meta em diante. Deixe a meta em branco para desativar uma faixa. Não vale para afiliado com comissão
+          própria definida (isso é configurado por afiliado, na tabela abaixo).
+        </p>
+        <div className="form-grid two" style={{ marginTop: 10 }}>
+          <label>2ª faixa — a partir de quantas vendas no mês
+            <input value={settings.tier2_threshold} onChange={(e) => setSettings((c) => ({ ...c, tier2_threshold: e.target.value }))} inputMode="numeric" placeholder="5" />
+          </label>
+          <label>2ª faixa — comissão (%)
+            <input value={settings.tier2_percent} onChange={(e) => setSettings((c) => ({ ...c, tier2_percent: e.target.value }))} inputMode="decimal" placeholder="15" />
+          </label>
+          <label>3ª faixa — a partir de quantas vendas no mês
+            <input value={settings.tier3_threshold} onChange={(e) => setSettings((c) => ({ ...c, tier3_threshold: e.target.value }))} inputMode="numeric" placeholder="10" />
+          </label>
+          <label>3ª faixa — comissão (%)
+            <input value={settings.tier3_percent} onChange={(e) => setSettings((c) => ({ ...c, tier3_percent: e.target.value }))} inputMode="decimal" placeholder="20" />
+          </label>
+        </div>
+
+        <div className="form-grid two" style={{ marginTop: 18 }}>
+          <label>Valor mínimo para pagamento (R$)
+            <input value={settings.minimum_payout} onChange={(e) => setSettings((c) => ({ ...c, minimum_payout: e.target.value }))} inputMode="decimal" placeholder="50" />
+          </label>
+          <label>Link dos materiais de divulgação
+            <input value={settings.materials_url} onChange={(e) => setSettings((c) => ({ ...c, materials_url: e.target.value }))} type="url" placeholder="https://..." />
+          </label>
+        </div>
+        <p className="adm-hint">O valor mínimo é só um aviso na hora de marcar como pago — não impede pagar abaixo dele.</p>
+
         <label className="adm-check-row" style={{ marginTop: 14 }}>
           <input type="checkbox" checked={settings.signup_enabled} onChange={(e) => setSettings((c) => ({ ...c, signup_enabled: e.target.checked }))} />
           Aceitar novos pedidos de afiliados (formulário público em /seja-afiliado)
@@ -350,7 +450,8 @@ export default function AffiliatesPage() {
                 <tbody>
                   {others.map((affiliate) => {
                     const coupon = couponByAffiliate[affiliate.id];
-                    const totals = totalsByAffiliate[affiliate.id] || { owed: 0, paid: 0 };
+                    const totals = totalsByAffiliate[affiliate.id] || { owed: 0, paid: 0, salesThisMonth: 0 };
+                    const current = currentPercentFor(affiliate);
                     return (
                       <tr key={affiliate.id}>
                         <td><strong>{affiliate.full_name}</strong><small>{affiliate.email}</small></td>
@@ -364,6 +465,11 @@ export default function AffiliatesPage() {
                             onBlur={(e) => saveCommission(affiliate, e.target.value)}
                             aria-label={`Comissão de ${affiliate.full_name}`}
                           />
+                          {!current.fixed && affiliate.status === "active" && (
+                            <small style={{ display: "block", marginTop: 4 }}>
+                              Taxa atual: {current.percent}% ({totals.salesThisMonth} venda{totals.salesThisMonth === 1 ? "" : "s"} no mês)
+                            </small>
+                          )}
                         </td>
                         <td>{formatMoneyCents(totals.owed)}</td>
                         <td>{formatMoneyCents(totals.paid)}</td>
