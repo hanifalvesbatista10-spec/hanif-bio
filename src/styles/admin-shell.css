@@ -167,6 +167,26 @@ html.adm-scroll-lock body {
   color: var(--brand-red, #d6152d);
 }
 
+.adm-nav-badge {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--brand-red, #d6152d);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 20px;
+  text-align: center;
+}
+
+.adm-nav-link.is-active .adm-nav-badge {
+  background: #fff;
+  color: var(--brand-red, #d6152d);
+}
+
 .adm-nav-foot {
   display: grid;
   flex: 0 0 auto;

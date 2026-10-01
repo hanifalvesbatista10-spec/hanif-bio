@@ -43,6 +43,9 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
+  const [editingCoupon, setEditingCoupon] = useState(null); // id do cupom com o desconto em edição
+  const [discountForm, setDiscountForm] = useState({ discount_type: "percent", value: "" });
+  const [discountSaving, setDiscountSaving] = useState(false);
 
   const notify = (type, text) => {
     setMessageType(type);
@@ -133,6 +136,33 @@ export default function CouponsPage() {
     }
     notify("success", `Cupom ${code} criado.`);
     setForm(emptyForm);
+    load();
+  };
+
+  const startEditDiscount = (coupon) => {
+    setEditingCoupon(coupon.id);
+    setDiscountForm({
+      discount_type: coupon.discount_type,
+      value: coupon.discount_type === "percent" ? String(coupon.discount_value) : String(coupon.discount_value / 100).replace(".", ","),
+    });
+  };
+
+  const saveDiscount = async (coupon) => {
+    const raw = Number(String(discountForm.value).replace(",", "."));
+    let discount_value;
+    if (discountForm.discount_type === "percent") {
+      if (!Number.isFinite(raw) || raw < 1 || raw > 100 || !Number.isInteger(raw)) return notify("error", "A porcentagem deve ser um número inteiro de 1 a 100.");
+      discount_value = raw;
+    } else {
+      if (!Number.isFinite(raw) || raw <= 0) return notify("error", "Informe o valor do desconto em reais (ex.: 50 ou 49,90).");
+      discount_value = Math.round(raw * 100);
+    }
+    setDiscountSaving(true);
+    const { error } = await supabase.from("coupons").update({ discount_type: discountForm.discount_type, discount_value }).eq("id", coupon.id);
+    setDiscountSaving(false);
+    if (error) return notify("error", error.message);
+    notify("success", `Desconto do cupom ${coupon.code} atualizado para ${discountForm.discount_type === "percent" ? `${discount_value}%` : formatMoneyCents(discount_value)}.`);
+    setEditingCoupon(null);
     load();
   };
 
@@ -268,7 +298,36 @@ export default function CouponsPage() {
                 return (
                   <tr key={coupon.id}>
                     <td><strong>{coupon.code}</strong>{coupon.description && <small>{coupon.description}</small>}</td>
-                    <td>{describe(coupon)}{coupon.discount_type === "percent" && coupon.discount_value === 100 ? " (grátis)" : ""}</td>
+                    <td>
+                      {editingCoupon === coupon.id ? (
+                        <div className="cp-inline">
+                          <select
+                            value={discountForm.discount_type}
+                            onChange={(e) => setDiscountForm((current) => ({ ...current, discount_type: e.target.value }))}
+                            disabled={discountSaving}
+                          >
+                            <option value="percent">%</option>
+                            <option value="fixed">R$</option>
+                          </select>
+                          <input
+                            value={discountForm.value}
+                            onChange={(e) => setDiscountForm((current) => ({ ...current, value: e.target.value }))}
+                            inputMode="decimal"
+                            style={{ width: 70 }}
+                            disabled={discountSaving}
+                            aria-label={`Desconto do cupom ${coupon.code}`}
+                          />
+                          <button type="button" className="admin-button primary" disabled={discountSaving} onClick={() => saveDiscount(coupon)}>
+                            {discountSaving ? "..." : "Salvar"}
+                          </button>
+                          <button type="button" className="admin-button adm-ghost" disabled={discountSaving} onClick={() => setEditingCoupon(null)}>
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <>{describe(coupon)}{coupon.discount_type === "percent" && coupon.discount_value === 100 ? " (grátis)" : ""}</>
+                      )}
+                    </td>
                     <td>{product ? product.title : "Todos"}{payLabel(coupon) && <small>{payLabel(coupon)}</small>}</td>
                     <td>
                       {coupon.starts_at || coupon.expires_at
@@ -285,6 +344,7 @@ export default function CouponsPage() {
                         label={`Ações do cupom ${coupon.code}`}
                         primary={{ label: "Copiar código", onClick: () => copy(coupon.code, "Código") }}
                         items={[
+                          { label: "Editar desconto", onClick: () => startEditDiscount(coupon) },
                           { label: "Copiar link com o cupom", hidden: !product, onClick: () => copy(`${window.location.origin}/checkout/${product.slug}?cupom=${coupon.code}`, "Link com o cupom") },
                           { label: coupon.active ? "Desativar cupom" : "Ativar cupom", onClick: () => toggle(coupon) },
                           { label: "Excluir cupom", danger: true, onClick: () => remove(coupon) },

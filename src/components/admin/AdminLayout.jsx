@@ -3,29 +3,34 @@ import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { icons } from "./AdminIcons";
 import { adminNavGroups, resolveAdminTitle } from "./adminNav";
+import useAdminNotifications from "./useAdminNotifications";
 import "../../styles/admin-shell.css";
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function AdminNav({ onNavigate, onExit, onPublicSite, onMemberArea }) {
+function AdminNav({ onNavigate, onExit, onPublicSite, onMemberArea, counts }) {
   return (
     <>
       <nav className="adm-nav" aria-label="Navegação do painel administrativo">
         {adminNavGroups.map((group, index) => (
           <div className="adm-nav-group" key={group.label || `g${index}`}>
             {group.label && <p className="adm-nav-label">{group.label}</p>}
-            {group.items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                className={({ isActive }) => `adm-nav-link${isActive ? " is-active" : ""}`}
-                onClick={onNavigate}
-              >
-                {icons[item.icon]}
-                <span>{item.label}</span>
-              </NavLink>
-            ))}
+            {group.items.map((item) => {
+              const count = item.badgeKey ? counts[item.badgeKey] || 0 : 0;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) => `adm-nav-link${isActive ? " is-active" : ""}`}
+                  onClick={onNavigate}
+                >
+                  {icons[item.icon]}
+                  <span>{item.label}</span>
+                  {count > 0 && <span className="adm-nav-badge" aria-label={`${count} notificação${count === 1 ? "" : "ões"}`}>{count > 99 ? "99+" : count}</span>}
+                </NavLink>
+              );
+            })}
           </div>
         ))}
       </nav>
@@ -66,6 +71,7 @@ export default function AdminLayout() {
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const counts = useAdminNotifications();
   const [open, setOpen] = useState(false);
   const menuButtonRef = useRef(null);
   const closeButtonRef = useRef(null);
@@ -161,7 +167,7 @@ export default function AdminLayout() {
     <div className="adm-shell">
       <aside className="adm-sidebar" aria-label="Menu do painel">
         <Brand />
-        <AdminNav onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} />
+        <AdminNav onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} counts={counts} />
       </aside>
 
       <div className="adm-body" ref={bodyRef}>
@@ -217,7 +223,7 @@ export default function AdminLayout() {
             {icons.close}
           </button>
         </div>
-        <AdminNav onNavigate={close} onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} />
+        <AdminNav onNavigate={close} onExit={exit} onPublicSite={goPublic} onMemberArea={goMemberArea} counts={counts} />
       </aside>
     </div>
   );
