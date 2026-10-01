@@ -550,7 +550,9 @@ export default function LessonsPage() {
             lesson_id: saved.id,
             product_id: id,
             position: id === productId ? Number(row.position) || 0 : nextPositionIn(id),
-            ...(id === productId && holdAvailable ? { available_in_hold: Boolean(row.available_in_hold) } : {}),
+            // precisa ir em TODAS as linhas do lote (ou em nenhuma): um upsert com algumas linhas tendo o
+            // campo e outras não faz o PostgREST mandar null nas que não têm, e a coluna é not null.
+            ...(holdAvailable ? { available_in_hold: id === productId ? Boolean(row.available_in_hold) : false } : {}),
           }));
         if (rows.length) {
           const { error } = await supabase.from("product_lesson_links").upsert(rows, { onConflict: "lesson_id,product_id" });

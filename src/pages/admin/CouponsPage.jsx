@@ -43,9 +43,7 @@ export default function CouponsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
-  const [editingCoupon, setEditingCoupon] = useState(null); // id do cupom com o desconto em edição
-  const [discountForm, setDiscountForm] = useState({ discount_type: "percent", value: "" });
-  const [discountSaving, setDiscountSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null); // null = criando cupom novo; id = editando esse cupom
 
   const notify = (type, text) => {
     setMessageType(type);
@@ -89,7 +87,7 @@ export default function CouponsPage() {
 
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.type === "checkbox" ? event.target.checked : event.target.value }));
 
-  const create = async (event) => {
+  const submit = async (event) => {
     event.preventDefault();
     const code = form.code.trim().toUpperCase().replace(/\s+/g, "");
     if (!CODE_RE.test(code)) return notify("error", "O código deve ter de 2 a 40 letras, números, “-” ou “_” (sem espaços nem acentos).");
@@ -109,11 +107,10 @@ export default function CouponsPage() {
     if (form.starts_on && form.expires_on && form.expires_on < form.starts_on) return notify("error", "A data final não pode ser antes da inicial.");
 
     if (!form.pay_online && !form.pay_boleto) return notify("error", "Marque pelo menos uma forma de pagamento em que o cupom vale.");
-    // as duas marcadas = vale para tudo (não grava nada); o campo só vai ao banco quando há restrição
+    // as duas marcadas = vale para tudo; o campo vai null (sem restrição)
     const restricted = form.pay_online && form.pay_boleto ? null : [form.pay_online ? "online" : "boleto"];
 
-    setSaving(true);
-    const { error } = await supabase.from("coupons").insert({
+    const payload = {
       code,
       description: form.description.trim() || null,
       discount_type: form.discount_type,
@@ -123,47 +120,48 @@ export default function CouponsPage() {
       expires_at: form.expires_on ? `${form.expires_on}T23:59:59-03:00` : null,
       max_uses: maxUses,
       one_per_customer: form.one_per_customer,
-      ...(restricted ? { payment_methods: restricted } : {}),
-      active: true,
-    });
+      payment_methods: restricted,
+    };
+
+    setSaving(true);
+    const { error } = editingId
+      ? await supabase.from("coupons").update(payload).eq("id", editingId)
+      : await supabase.from("coupons").insert({ ...payload, active: true });
     setSaving(false);
     if (error) {
       if (isMissingTable(error)) setMissing(true);
       else if (String(error.message).includes("payment_methods")) notify("error", "O banco ainda não tem a regra por forma de pagamento. Execute supabase/27_cupom_por_forma_de_pagamento.sql no SQL Editor e tente de novo.");
       else if (error.code === "23505") notify("error", `Já existe um cupom com o código ${code}.`);
-      else notify("error", `Não foi possível criar o cupom: ${error.message}`);
+      else notify("error", `Não foi possível salvar o cupom: ${error.message}`);
       return;
     }
-    notify("success", `Cupom ${code} criado.`);
+    notify("success", editingId ? `Cupom ${code} atualizado.` : `Cupom ${code} criado.`);
     setForm(emptyForm);
+    setEditingId(null);
     load();
   };
 
-  const startEditDiscount = (coupon) => {
-    setEditingCoupon(coupon.id);
-    setDiscountForm({
+  const startEdit = (coupon) => {
+    setEditingId(coupon.id);
+    setForm({
+      code: coupon.code,
+      description: coupon.description || "",
       discount_type: coupon.discount_type,
       value: coupon.discount_type === "percent" ? String(coupon.discount_value) : String(coupon.discount_value / 100).replace(".", ","),
+      product_id: coupon.product_id || "",
+      starts_on: coupon.starts_at ? coupon.starts_at.slice(0, 10) : "",
+      expires_on: coupon.expires_at ? coupon.expires_at.slice(0, 10) : "",
+      max_uses: coupon.max_uses ?? "",
+      one_per_customer: coupon.one_per_customer,
+      pay_online: !coupon.payment_methods || coupon.payment_methods.includes("online"),
+      pay_boleto: !coupon.payment_methods || coupon.payment_methods.includes("boleto"),
     });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const saveDiscount = async (coupon) => {
-    const raw = Number(String(discountForm.value).replace(",", "."));
-    let discount_value;
-    if (discountForm.discount_type === "percent") {
-      if (!Number.isFinite(raw) || raw < 1 || raw > 100 || !Number.isInteger(raw)) return notify("error", "A porcentagem deve ser um número inteiro de 1 a 100.");
-      discount_value = raw;
-    } else {
-      if (!Number.isFinite(raw) || raw <= 0) return notify("error", "Informe o valor do desconto em reais (ex.: 50 ou 49,90).");
-      discount_value = Math.round(raw * 100);
-    }
-    setDiscountSaving(true);
-    const { error } = await supabase.from("coupons").update({ discount_type: discountForm.discount_type, discount_value }).eq("id", coupon.id);
-    setDiscountSaving(false);
-    if (error) return notify("error", error.message);
-    notify("success", `Desconto do cupom ${coupon.code} atualizado para ${discountForm.discount_type === "percent" ? `${discount_value}%` : formatMoneyCents(discount_value)}.`);
-    setEditingCoupon(null);
-    load();
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const toggle = async (coupon) => {
@@ -233,8 +231,8 @@ export default function CouponsPage() {
 
       {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`} role="status">{message}</div>}
 
-      <form className="cp-form" onSubmit={create}>
-        <h3>Novo cupom</h3>
+      <form className="cp-form" onSubmit={submit}>
+        <h3>{editingId ? `Editar cupom ${form.code}` : "Novo cupom"}</h3>
         <div className="cp-grid">
           <label>Código
             <div className="cp-inline">
@@ -277,7 +275,16 @@ export default function CouponsPage() {
           <small>Pix e cartão são escolhidos pelo comprador na página da InfinitePay, por isso andam juntos. Deixe as duas marcadas para o cupom valer sempre.</small>
         </fieldset>
         <label className="cp-check"><input type="checkbox" checked={form.one_per_customer} onChange={set("one_per_customer")} /> Cada pessoa (e-mail ou CPF) pode usar este cupom uma vez só</label>
-        <button className="admin-button primary" type="submit" disabled={saving}>{saving ? "Criando..." : "Criar cupom"}</button>
+        <div className="form-actions">
+          <button className="admin-button primary" type="submit" disabled={saving}>
+            {saving ? "Salvando..." : editingId ? "Salvar alterações" : "Criar cupom"}
+          </button>
+          {editingId && (
+            <button className="admin-button adm-ghost" type="button" onClick={cancelEdit} disabled={saving}>
+              Cancelar edição
+            </button>
+          )}
+        </div>
       </form>
 
       {loading ? (
@@ -298,36 +305,7 @@ export default function CouponsPage() {
                 return (
                   <tr key={coupon.id}>
                     <td><strong>{coupon.code}</strong>{coupon.description && <small>{coupon.description}</small>}</td>
-                    <td>
-                      {editingCoupon === coupon.id ? (
-                        <div className="cp-inline">
-                          <select
-                            value={discountForm.discount_type}
-                            onChange={(e) => setDiscountForm((current) => ({ ...current, discount_type: e.target.value }))}
-                            disabled={discountSaving}
-                          >
-                            <option value="percent">%</option>
-                            <option value="fixed">R$</option>
-                          </select>
-                          <input
-                            value={discountForm.value}
-                            onChange={(e) => setDiscountForm((current) => ({ ...current, value: e.target.value }))}
-                            inputMode="decimal"
-                            style={{ width: 70 }}
-                            disabled={discountSaving}
-                            aria-label={`Desconto do cupom ${coupon.code}`}
-                          />
-                          <button type="button" className="admin-button primary" disabled={discountSaving} onClick={() => saveDiscount(coupon)}>
-                            {discountSaving ? "..." : "Salvar"}
-                          </button>
-                          <button type="button" className="admin-button adm-ghost" disabled={discountSaving} onClick={() => setEditingCoupon(null)}>
-                            Cancelar
-                          </button>
-                        </div>
-                      ) : (
-                        <>{describe(coupon)}{coupon.discount_type === "percent" && coupon.discount_value === 100 ? " (grátis)" : ""}</>
-                      )}
-                    </td>
+                    <td>{describe(coupon)}{coupon.discount_type === "percent" && coupon.discount_value === 100 ? " (grátis)" : ""}</td>
                     <td>{product ? product.title : "Todos"}{payLabel(coupon) && <small>{payLabel(coupon)}</small>}</td>
                     <td>
                       {coupon.starts_at || coupon.expires_at
@@ -344,7 +322,7 @@ export default function CouponsPage() {
                         label={`Ações do cupom ${coupon.code}`}
                         primary={{ label: "Copiar código", onClick: () => copy(coupon.code, "Código") }}
                         items={[
-                          { label: "Editar desconto", onClick: () => startEditDiscount(coupon) },
+                          { label: "Editar cupom", onClick: () => startEdit(coupon) },
                           { label: "Copiar link com o cupom", hidden: !product, onClick: () => copy(`${window.location.origin}/checkout/${product.slug}?cupom=${coupon.code}`, "Link com o cupom") },
                           { label: coupon.active ? "Desativar cupom" : "Ativar cupom", onClick: () => toggle(coupon) },
                           { label: "Excluir cupom", danger: true, onClick: () => remove(coupon) },
