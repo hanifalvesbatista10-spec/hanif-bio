@@ -2,17 +2,55 @@ import { useCallback, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 
-// Seções sem status de "pendente" natural: o número mostra o que apareceu depois da última vez que você
-// abriu aquela tela (guardado só neste navegador). Abrir a tela zera o contador na hora.
-const LAST_SEEN_ROUTES = {
-  "/admin/usuarios": "usuarios",
-  "/admin/pedidos": "pedidos",
-};
-const lastSeenKey = (badgeKey) => `ha_admin_last_seen_${badgeKey}`;
+// Cada seção mostra só o que é NOVO desde a última vez que você abriu aquela tela (guardado neste
+// navegador) — não o total acumulado. Assim um pedido de teste antigo parado em "aguardando" não fica
+// aparecendo pra sempre: ele só conta uma vez, até você abrir a tela, e depois some do contador.
+const BADGES = [
+  { key: "pedidos", route: "/admin/pedidos", table: "orders", timeCol: "created_at" },
+  {
+    key: "recuperacao",
+    route: "/admin/recuperacao-de-vendas",
+    table: "orders",
+    timeCol: "created_at",
+    build: (q) => q.in("status", ["pending", "failed"]),
+  },
+  { key: "afiliados", route: "/admin/afiliados", table: "affiliates", timeCol: "created_at" },
+  {
+    key: "feedbacks",
+    route: "/admin/feedbacks",
+    table: "student_feedbacks",
+    timeCol: "created_at",
+    build: (q) => q.eq("status", "review"),
+  },
+  {
+    key: "formularios",
+    route: "/admin/formularios",
+    table: "form_submissions",
+    timeCol: "submitted_at",
+    build: (q) => q.eq("pending_manual", true),
+  },
+  {
+    key: "comentarios",
+    route: "/admin/comentarios",
+    table: "lesson_comments",
+    timeCol: "created_at",
+    build: (q) => q.neq("author_role", "admin").eq("status", "visible"),
+  },
+  {
+    key: "usuarios",
+    route: "/admin/usuarios",
+    table: "profiles",
+    timeCol: "created_at",
+    build: (q) => q.eq("role", "student"),
+  },
+];
+
+const LAST_SEEN_ROUTES = Object.fromEntries(BADGES.map((b) => [b.route, b.key]));
+const lastSeenStorageKey = (badgeKey) => `ha_admin_last_seen_${badgeKey}`;
 
 function getLastSeen(badgeKey) {
   try {
-    return localStorage.getItem(lastSeenKey(badgeKey)) || new Date(0).toISOString();
+    return localStorage.getItem(lastSeenStorageKey(badgeKey)) || new Date(0).toISOString();
   } catch {
     return new Date(0).toISOString();
   }
@@ -20,24 +58,17 @@ function getLastSeen(badgeKey) {
 
 function setLastSeenNow(badgeKey) {
   try {
-    localStorage.setItem(lastSeenKey(badgeKey), new Date().toISOString());
+    localStorage.setItem(lastSeenStorageKey(badgeKey), new Date().toISOString());
   } catch {
-    // localStorage indisponível (modo privado etc.): sem contador "desde a última vez" pra essa seção, sem travar nada.
+    // localStorage indisponível (modo privado etc.): sem contador pra essa seção, sem travar nada.
   }
 }
 
-async function countExact(table, build) {
-  const { count, error } = await build(supabase.from(table).select("id", { count: "exact", head: true }));
+async function countNew(badge) {
+  let query = supabase.from(badge.table).select("id", { count: "exact", head: true }).gt(badge.timeCol, getLastSeen(badge.key));
+  if (badge.build) query = badge.build(query);
+  const { count, error } = await query;
   return error ? 0 : count || 0;
-}
-
-// Comentários não têm status de "não respondido": é preciso olhar a thread (comentário raiz, visível, de
-// aluno, sem nenhuma resposta do admin) — a mesma regra que CommentsPage.jsx já usa pra contar pendentes.
-async function countComentariosPendentes() {
-  const { data, error } = await supabase.from("lesson_comments").select("id,parent_id,author_role,status");
-  if (error || !data) return 0;
-  const repliedByAdmin = new Set(data.filter((c) => c.parent_id && c.author_role === "admin").map((c) => c.parent_id));
-  return data.filter((c) => !c.parent_id && c.status === "visible" && c.author_role !== "admin" && !repliedByAdmin.has(c.id)).length;
 }
 
 export default function useAdminNotifications() {
@@ -45,19 +76,11 @@ export default function useAdminNotifications() {
   const [counts, setCounts] = useState({});
 
   const refresh = useCallback(async () => {
-    const [afiliados, feedbacks, formularios, recuperacao, comentarios, usuarios, pedidos] = await Promise.all([
-      countExact("affiliates", (q) => q.eq("status", "pending")),
-      countExact("student_feedbacks", (q) => q.eq("status", "review")),
-      countExact("form_submissions", (q) => q.eq("pending_manual", true)),
-      countExact("orders", (q) => q.in("status", ["pending", "failed"])),
-      countComentariosPendentes(),
-      countExact("profiles", (q) => q.eq("role", "student").gt("created_at", getLastSeen("usuarios"))),
-      countExact("orders", (q) => q.gt("created_at", getLastSeen("pedidos"))),
-    ]);
-    setCounts({ afiliados, feedbacks, formularios, recuperacao, comentarios, usuarios, pedidos });
+    const entries = await Promise.all(BADGES.map(async (badge) => [badge.key, await countNew(badge)]));
+    setCounts(Object.fromEntries(entries));
   }, []);
 
-  // Ao entrar numa tela com contador "desde a última vez", marca agora como vista e já zera na tela.
+  // Ao entrar numa tela com contador, marca agora como vista e já zera na tela.
   useEffect(() => {
     const badgeKey = LAST_SEEN_ROUTES[location.pathname];
     if (badgeKey) {

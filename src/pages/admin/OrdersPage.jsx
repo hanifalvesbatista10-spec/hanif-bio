@@ -165,6 +165,25 @@ export default function OrdersPage() {
     setBusyId("");
   };
 
+  // Exclui o registro do pedido (ex.: testes). Não desfaz acesso liberado nem reembolso — faça isso antes,
+  // se o pedido estiver pago. Comissão de afiliado ligada a este pedido é apagada junto (cascade no banco).
+  const removeOrder = async (order) => {
+    const warn = order.status === "paid" ? " Esse pedido está PAGO: isso só apaga o registro, não tira o acesso liberado nem estorna o pagamento de verdade." : "";
+    if (!window.confirm(`Excluir o pedido de ${order.buyer_name} (${formatMoneyCents(order.amount_cents)})? Não tem como desfazer.${warn}`)) return;
+    setBusyId(order.id);
+    setMessage("");
+    const { error } = await supabase.from("orders").delete().eq("id", order.id);
+    setBusyId("");
+    if (error) {
+      setMessageType("error");
+      setMessage(`Não foi possível excluir: ${error.message}`);
+      return;
+    }
+    setMessageType("success");
+    setMessage(`Pedido de ${order.buyer_name} excluído.`);
+    load();
+  };
+
   const grantNow = async (order) => {
     setBusyId(order.id);
     setMessage("");
@@ -273,15 +292,14 @@ export default function OrdersPage() {
                       {order.status === "paid" && <small>{order.user_id ? "acesso liberado" : "sem conta ainda"}</small>}
                     </td>
                     <td>
-                      {order.status === "paid" && (
-                        <RowActions
-                          label={`Ações do pedido de ${order.buyer_name}`}
-                          items={[
-                            { label: "Liberar acesso", onClick: () => grantNow(order), disabled: busyId === order.id },
-                            { label: "Marcar como reembolsado", onClick: () => markRefunded(order), disabled: busyId === order.id, danger: true },
-                          ]}
-                        />
-                      )}
+                      <RowActions
+                        label={`Ações do pedido de ${order.buyer_name}`}
+                        items={[
+                          { label: "Liberar acesso", hidden: order.status !== "paid", onClick: () => grantNow(order), disabled: busyId === order.id },
+                          { label: "Marcar como reembolsado", hidden: order.status !== "paid", onClick: () => markRefunded(order), disabled: busyId === order.id, danger: true },
+                          { label: "Excluir pedido", onClick: () => removeOrder(order), disabled: busyId === order.id, danger: true },
+                        ]}
+                      />
                     </td>
                   </tr>
                 );
