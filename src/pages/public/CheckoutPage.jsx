@@ -17,6 +17,55 @@ const METHODS = [
   { id: "boleto", title: "Boleto", note: "Compensa em até 2 dias úteis", cta: "Gerar boleto" },
 ];
 
+const STAGES = [
+  { id: "dados", label: "Dados" },
+  { id: "pagamento", label: "Pagamento" },
+  { id: "liberacao", label: "Liberação" },
+];
+
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4.5" y="11" width="15" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}
+
+// Painel de triagem: as 3 etapas da compra acendem conforme avançam. É só leitura visual —
+// não trava nada, o formulário continua sendo validado por completo só no envio.
+function StageTrack({ stage }) {
+  const activeIndex = STAGES.findIndex((item) => item.id === stage.active);
+  const fillPercent = stage.active === "dados" ? 12 : stage.active === "pagamento" ? 55 : 90;
+  return (
+    <>
+      <div className="ck-progress" role="presentation">
+        <div className="ck-progress-fill" style={{ transform: `scaleX(${fillPercent / 100})` }} />
+      </div>
+      <div className="ck-stages" role="list" aria-label="Etapas da compra">
+        {STAGES.map((item, index) => {
+          const status = stage.done.includes(item.id) ? "is-done" : index === activeIndex ? "is-active" : "";
+          return (
+            <div className={`ck-stage ${status}`} role="listitem" key={item.id}>
+              <span className="ck-stage-dot" aria-hidden="true">{stage.done.includes(item.id) ? <CheckIcon /> : index + 1}</span>
+              <span className="ck-stage-label">{item.label}</span>
+              {index < STAGES.length - 1 && <span className="ck-stage-rule" aria-hidden="true" />}
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);
@@ -183,6 +232,17 @@ export default function CheckoutPage() {
   };
   const isFree = Boolean(coupon) && coupon.finalCents === 0 && bumpTotal === 0;
 
+  // Painel de triagem: leitura visual do progresso, calculada com as mesmas regras do validate()
+  // abaixo — nunca trava o preenchimento, só mostra onde o comprador está.
+  const dadosOk =
+    form.name.trim().split(/\s+/).filter(Boolean).length >= 2 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(form.email.trim()) &&
+    isValidCpf(form.cpf);
+  const stage = {
+    active: !dadosOk ? "dados" : !payment ? "pagamento" : "liberacao",
+    done: [...(dadosOk ? ["dados"] : []), ...(payment ? ["pagamento"] : [])],
+  };
+
   const validate = () => {
     const next = {};
     if (form.name.trim().split(/\s+/).filter(Boolean).length < 2) next.name = "Informe seu nome completo.";
@@ -254,17 +314,18 @@ export default function CheckoutPage() {
       <header className="ck-top">
         <div className="ck-top-inner">
           <Link to="/" className="ck-brand">HANIF ALVES<span>APH • URGÊNCIA • EMERGÊNCIA</span></Link>
-          <span className="ck-lock">🔒 Compra segura</span>
+          <span className="ck-lock"><LockIcon /> Compra segura</span>
         </div>
       </header>
 
       <main className="ck-main">
         <section className="ck-card ck-form-card" aria-label="Dados e pagamento">
           <h1>Finalizar compra</h1>
+          <StageTrack stage={stage} />
 
           {!payment ? (
             <form onSubmit={submit} noValidate>
-              <h2>1. Seus dados</h2>
+              <h2>Seus dados</h2>
               <p className="ck-help">Use o e-mail que você usa (ou vai usar) para entrar na plataforma: é com ele que o seu acesso é liberado.</p>
               <label>Nome completo
                 <input value={form.name} onChange={set("name")} autoComplete="name" aria-invalid={Boolean(errors.name)} />
@@ -284,7 +345,7 @@ export default function CheckoutPage() {
                 </label>
               </div>
 
-              <h2>2. Forma de pagamento</h2>
+              <h2>Forma de pagamento</h2>
               <div className="ck-methods" role="radiogroup" aria-label="Forma de pagamento">
                 {METHODS.map((item) => (
                   <button
@@ -301,25 +362,7 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              {bumps.length > 0 && (
-                <>
-                  <h2>Leve também</h2>
-                  <div className="ck-bumps">
-                    {bumps.map((row) => (
-                      <label key={row.id} className={`ck-bump ${selectedBumps.includes(row.id) ? "is-active" : ""}`}>
-                        <input type="checkbox" checked={selectedBumps.includes(row.id)} onChange={() => toggleBump(row.id)} />
-                        <div>
-                          <strong>{row.bump.title}</strong>
-                          {row.bump.short_description && <span>{row.bump.short_description}</span>}
-                        </div>
-                        <span className="ck-bump-price">+ {formatMoneyCents(row.price_cents)}</span>
-                      </label>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              <h2>3. Cupom de desconto</h2>
+              <h2>Cupom de desconto</h2>
               {coupon ? (
                 <div className="ck-coupon-applied" role="status">
                   <div>
@@ -386,6 +429,23 @@ export default function CheckoutPage() {
             <li>Pix, cartão de crédito (parcelado) ou boleto</li>
             <li>Acesso liberado automaticamente após a confirmação</li>
           </ul>
+
+          {bumps.length > 0 && (
+            <div className="ck-kit">
+              <span className="ck-kit-head">Equipamento adicional</span>
+              {bumps.map((row) => (
+                <label key={row.id} className="ck-kit-item">
+                  <input type="checkbox" checked={selectedBumps.includes(row.id)} onChange={() => toggleBump(row.id)} />
+                  <div>
+                    <strong>{row.bump.title}</strong>
+                    {row.bump.short_description && <span>{row.bump.short_description}</span>}
+                  </div>
+                  <span className="ck-kit-price">+ {formatMoneyCents(row.price_cents)}</span>
+                </label>
+              ))}
+            </div>
+          )}
+
           <Link className="ck-back" to={`/produto/${product.slug}`}>← Voltar ao produto</Link>
         </aside>
       </main>

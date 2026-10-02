@@ -1,17 +1,32 @@
-/* Checkout próprio (página de compra e de confirmação) */
+/* Checkout próprio (página de compra e de confirmação) — Painel de Triagem:
+   as etapas da compra (Dados, Pagamento, Liberação) acendem conforme avançam,
+   como um painel de status, e a oferta extra vira uma prateleira de
+   "equipamento adicional" dentro do próprio resumo. Herda o sistema de
+   tokens.css (mesma identidade do resto do site). */
+
 .ck-page {
   min-height: 100vh;
-  background: #f4f7fb;
-  color: #0b1b2d;
-  font-family: Inter, system-ui, sans-serif;
+  background: var(--brand-surface-muted);
+  color: var(--brand-text);
+  font-family: var(--font-sans);
+}
+
+.ck-page ::selection {
+  background: var(--brand-red-soft);
+  color: var(--brand-text);
+}
+
+.ck-page :where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
 }
 
 body:has(.ck-page) {
-  background: #f4f7fb;
+  background: var(--brand-surface-muted);
 }
 
 .ck-top {
-  background: #071426;
+  background: var(--brand-navy);
   color: #fff;
 }
 
@@ -28,22 +43,32 @@ body:has(.ck-page) {
 .ck-brand {
   display: grid;
   color: #fff;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-decoration: none;
 }
 
 .ck-brand span {
   font-size: 0.62rem;
   letter-spacing: 0.18em;
-  color: #9fb0c3;
+  color: var(--brand-on-dark-muted);
   font-weight: 700;
+  font-family: var(--font-sans);
 }
 
 .ck-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #cfe0f0;
+  color: var(--brand-on-dark-muted);
+}
+
+.ck-lock svg {
+  flex: none;
+  color: var(--brand-red);
 }
 
 .ck-main {
@@ -61,23 +86,27 @@ body:has(.ck-page) {
 }
 
 .ck-card {
-  background: #fff;
-  border: 1px solid #e3e9f0;
-  border-radius: 20px;
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-lg);
   padding: 28px;
-  box-shadow: 0 12px 32px rgba(7, 20, 38, 0.06);
+  box-shadow: var(--shadow-card);
 }
 
 .ck-card h1 {
-  margin: 0 0 18px;
-  font-size: 1.7rem;
-  color: #071426;
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.85rem;
+  color: var(--brand-navy);
 }
 
 .ck-card h2 {
-  margin: 22px 0 8px;
-  font-size: 1.05rem;
-  color: #071426;
+  margin: 26px 0 8px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--brand-navy);
 }
 
 .ck-summary h2 {
@@ -86,9 +115,102 @@ body:has(.ck-page) {
 
 .ck-help {
   margin: 0 0 8px;
-  color: #5b6f84;
+  color: var(--brand-text-soft);
   font-size: 0.92rem;
   line-height: 1.5;
+}
+
+/* Painel de triagem: barra fina de progresso + 3 etapas */
+.ck-progress {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-border);
+  overflow: hidden;
+  margin-bottom: 22px;
+}
+
+.ck-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--brand-red);
+  border-radius: inherit;
+  transform-origin: left;
+  transition: transform var(--transition-normal);
+}
+
+.ck-stages {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.ck-stage {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.ck-stage:last-child {
+  flex: none;
+}
+
+.ck-stage-dot {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--brand-border);
+  background: var(--brand-surface);
+  color: var(--brand-muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.ck-stage-label {
+  margin-left: 9px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand-muted);
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+
+.ck-stage-rule {
+  flex: 1;
+  height: 2px;
+  margin: 0 10px;
+  background: var(--brand-border);
+  transition: background var(--transition-fast);
+}
+
+.ck-stage.is-active .ck-stage-dot {
+  border-color: var(--brand-red);
+  color: var(--brand-red);
+}
+
+.ck-stage.is-active .ck-stage-label {
+  color: var(--brand-text);
+}
+
+.ck-stage.is-done .ck-stage-dot {
+  border-color: var(--brand-red);
+  background: var(--brand-red);
+  color: #fff;
+}
+
+.ck-stage.is-done .ck-stage-label {
+  color: var(--brand-text);
+}
+
+.ck-stage.is-done .ck-stage-rule {
+  background: var(--brand-red);
 }
 
 .ck-form-card label {
@@ -97,25 +219,28 @@ body:has(.ck-page) {
   margin-top: 14px;
   font-weight: 700;
   font-size: 0.9rem;
+  color: var(--brand-text);
 }
 
 .ck-form-card input {
   width: 100%;
   padding: 13px 14px;
-  border-radius: 12px;
-  border: 1px solid #d3dce6;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-border);
   font-size: 1rem;
-  background: #fff;
+  font-family: var(--font-sans);
+  background: var(--brand-surface);
+  color: var(--brand-text);
 }
 
 .ck-form-card input:focus {
   outline: none;
-  border-color: #d6152d;
-  box-shadow: 0 0 0 3px rgba(214, 21, 45, 0.12);
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
 }
 
 .ck-form-card input[aria-invalid="true"] {
-  border-color: #d6152d;
+  border-color: var(--brand-red);
 }
 
 .ck-row {
@@ -125,16 +250,16 @@ body:has(.ck-page) {
 }
 
 .ck-error {
-  color: #b3142a;
+  color: var(--brand-red-hover);
   font-weight: 600;
 }
 
 .ck-alert {
   margin-top: 14px;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: #fff0f1;
-  color: #a20e20;
+  border-radius: var(--radius-sm);
+  background: var(--brand-red-soft);
+  color: var(--brand-red-hover);
   font-size: 0.92rem;
 }
 
@@ -143,12 +268,19 @@ body:has(.ck-page) {
   margin-top: 20px;
   min-height: 52px;
   border: 0;
-  border-radius: 13px;
-  background: linear-gradient(135deg, #d6152d, #f0344b);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--brand-red), #f0344b);
   color: #fff;
-  font-weight: 800;
-  font-size: 1rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
   cursor: pointer;
+  transition: filter var(--transition-fast);
+}
+
+.ck-primary:hover:not(:disabled) {
+  filter: brightness(1.05);
 }
 
 .ck-primary:disabled {
@@ -159,10 +291,10 @@ body:has(.ck-page) {
 .ck-secondary {
   min-height: 52px;
   margin-top: 20px;
-  border-radius: 13px;
-  border: 1px solid #cdd7e2;
-  background: #fff;
-  color: #071426;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--brand-border);
+  background: var(--brand-surface);
+  color: var(--brand-navy);
   font-weight: 800;
   padding: 0 22px;
 }
@@ -187,7 +319,7 @@ body:has(.ck-page) {
 .ck-note {
   margin: 14px 0 0;
   font-size: 0.85rem;
-  color: #5b6f84;
+  color: var(--brand-text-soft);
   line-height: 1.5;
 }
 
@@ -197,9 +329,9 @@ body:has(.ck-page) {
   gap: 12px;
   align-items: center;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: #f4f7fb;
-  border: 1px solid #e3e9f0;
+  border-radius: var(--radius-sm);
+  background: var(--brand-surface-muted);
+  border: 1px solid var(--brand-border);
 }
 
 .ck-buyer div {
@@ -208,7 +340,7 @@ body:has(.ck-page) {
 }
 
 .ck-buyer span {
-  color: #5b6f84;
+  color: var(--brand-text-soft);
   font-size: 0.85rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -217,7 +349,7 @@ body:has(.ck-page) {
 .ck-link-button {
   border: 0;
   background: none;
-  color: #d6152d;
+  color: var(--brand-red);
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
@@ -232,13 +364,13 @@ body:has(.ck-page) {
   gap: 14px;
   align-items: center;
   padding-bottom: 16px;
-  border-bottom: 1px solid #edf1f5;
+  border-bottom: 1px solid var(--brand-border);
 }
 
 .ck-product img {
   width: 84px;
   height: 84px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   object-fit: cover;
   flex: none;
 }
@@ -248,8 +380,15 @@ body:has(.ck-page) {
   gap: 4px;
 }
 
+.ck-product strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--brand-navy);
+}
+
 .ck-product span {
-  color: #5b6f84;
+  color: var(--brand-text-soft);
   font-size: 0.85rem;
   line-height: 1.4;
 }
@@ -267,7 +406,7 @@ body:has(.ck-page) {
 }
 
 .ck-summary dt {
-  color: #5b6f84;
+  color: var(--brand-text-soft);
 }
 
 .ck-summary dd {
@@ -277,14 +416,15 @@ body:has(.ck-page) {
 
 .ck-total {
   padding-top: 10px;
-  border-top: 1px solid #edf1f5;
-  font-size: 1.2rem;
+  border-top: 1px solid var(--brand-border);
 }
 
 .ck-total dt,
 .ck-total dd {
-  color: #071426;
-  font-weight: 800;
+  color: var(--brand-navy);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.3rem;
 }
 
 .ck-perks {
@@ -293,29 +433,34 @@ body:has(.ck-page) {
   list-style: none;
   display: grid;
   gap: 8px;
-  color: #33475c;
+  color: var(--brand-text-soft);
   font-size: 0.9rem;
 }
 
+.ck-perks li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
 .ck-perks li::before {
-  content: "✓ ";
-  color: #1a8f4a;
-  font-weight: 800;
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-top: 0.45em;
+  border-radius: 50%;
+  background: var(--brand-red);
 }
 
 .ck-wait-list {
   text-align: left;
 }
 
-.ck-wait-list li::before {
-  content: "• ";
-  color: #d6152d;
-}
-
 .ck-back {
   display: inline-block;
   margin-top: 18px;
-  color: #52667b;
+  color: var(--brand-muted);
   font-weight: 700;
   text-decoration: none;
 }
@@ -325,7 +470,7 @@ body:has(.ck-page) {
 }
 
 .ck-thanks p {
-  color: #33475c;
+  color: var(--brand-text-soft);
   line-height: 1.6;
 }
 
@@ -336,8 +481,9 @@ body:has(.ck-page) {
   border-radius: 50%;
   display: grid;
   place-items: center;
+  font-family: var(--font-display);
   font-size: 2rem;
-  font-weight: 800;
+  font-weight: 700;
   color: #fff;
 }
 
@@ -346,7 +492,7 @@ body:has(.ck-page) {
 }
 
 .ck-badge.is-bad {
-  background: #d6152d;
+  background: var(--brand-red);
 }
 
 .ck-badge.is-wait {
@@ -369,6 +515,14 @@ body:has(.ck-page) {
   .ck-card {
     padding: 20px;
   }
+
+  .ck-stage-label {
+    display: none;
+  }
+
+  .ck-stage-rule {
+    margin: 0 6px;
+  }
 }
 
 /* Escolha da forma de pagamento e painéis de Pix / boleto */
@@ -384,24 +538,29 @@ body:has(.ck-page) {
   display: grid;
   gap: 4px;
   padding: 14px;
-  border-radius: 14px;
-  border: 1.5px solid #d3dce6;
-  background: #fff;
-  color: #0b1b2d;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--brand-border);
+  background: var(--brand-surface);
+  color: var(--brand-text);
   cursor: pointer;
   font: inherit;
 }
 
+.ck-method strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
 .ck-method span {
-  color: #5b6f84;
+  color: var(--brand-text-soft);
   font-size: 0.8rem;
   line-height: 1.35;
 }
 
 .ck-method.is-active {
-  border-color: #d6152d;
-  box-shadow: 0 0 0 3px rgba(214, 21, 45, 0.12);
-  background: #fff8f9;
+  border-color: var(--brand-red);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
+  background: var(--brand-red-soft);
 }
 
 .ck-method-panel {
@@ -412,13 +571,16 @@ body:has(.ck-page) {
 
 .ck-method-panel h3 {
   margin: 0;
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
+  color: var(--brand-navy);
 }
 
 .ck-steps {
   margin: 0;
   padding-left: 20px;
-  color: #33475c;
+  color: var(--brand-text-soft);
   font-size: 0.92rem;
   line-height: 1.6;
 }
@@ -427,10 +589,10 @@ body:has(.ck-page) {
   width: min(260px, 70%);
   aspect-ratio: 1;
   justify-self: center;
-  border: 1px solid #e3e9f0;
-  border-radius: 14px;
+  border: 1px solid var(--brand-border);
+  border-radius: var(--radius-md);
   padding: 10px;
-  background: #fff;
+  background: var(--brand-surface);
 }
 
 .ck-copy {
@@ -443,10 +605,10 @@ body:has(.ck-page) {
 .ck-copy textarea {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid #d3dce6;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-border);
   font: 0.8rem/1.4 ui-monospace, Consolas, monospace;
-  background: #f8fafc;
+  background: var(--brand-surface-muted);
   resize: none;
 }
 
@@ -467,8 +629,8 @@ body:has(.ck-page) {
   flex: 1;
   min-width: 0;
   padding: 13px 14px;
-  border-radius: 12px;
-  border: 1px solid #d3dce6;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--brand-border);
   font-size: 1rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -487,7 +649,7 @@ body:has(.ck-page) {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
   background: #ebfff3;
   border: 1px solid #b6e6c9;
   color: #116d3b;
@@ -505,10 +667,68 @@ body:has(.ck-page) {
   color: #1a8f4a;
 }
 
-.ck-bumps { display: grid; gap: 10px; margin: 12px 0 20px; }
-.ck-bump { display: flex; align-items: flex-start; gap: 12px; border: 1px solid #d6e0e9; border-radius: 12px; padding: 12px 14px; cursor: pointer; }
-.ck-bump.is-active { border-color: #d6152d; background: #fff5f6; }
-.ck-bump input { margin-top: 3px; width: 18px; height: 18px; }
-.ck-bump div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.ck-bump div span { font-size: .82rem; color: #7b8c9c; }
-.ck-bump-price { font-weight: 900; color: #d6152d; white-space: nowrap; }
+/* Equipamento adicional (order bump) — prateleira dentro do resumo */
+.ck-kit {
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--brand-border);
+  display: grid;
+  gap: 10px;
+}
+
+.ck-kit-head {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand-muted);
+}
+
+.ck-kit-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  padding: 10px;
+  margin: 0 -10px;
+  border-radius: var(--radius-sm);
+  transition: background var(--transition-fast);
+}
+
+.ck-kit-item:hover {
+  background: var(--brand-surface-muted);
+}
+
+.ck-kit-item input {
+  margin-top: 3px;
+  width: 18px;
+  height: 18px;
+  flex: none;
+  accent-color: var(--brand-red);
+}
+
+.ck-kit-item div {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ck-kit-item strong {
+  font-size: 0.92rem;
+  color: var(--brand-text);
+}
+
+.ck-kit-item span {
+  font-size: 0.8rem;
+  color: var(--brand-text-soft);
+  line-height: 1.35;
+}
+
+.ck-kit-price {
+  flex: none;
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--brand-red);
+  white-space: nowrap;
+}

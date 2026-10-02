@@ -5,6 +5,15 @@ import { fetchOrderStatus, formatMoneyCents } from "../../services/checkoutApi";
 import { reportPurchaseConversion } from "../../services/adsConversion";
 import "../../styles/checkout.css";
 
+function LockIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="4.5" y="11" width="15" height="10" rx="2" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
 const POLL_FAST_MS = 3000;
 const POLL_SLOW_MS = 10000;
 const POLL_GIVE_UP_MS = 30 * 60 * 1000; // depois disso paramos de consultar; o acesso é liberado sozinho na confirmação
@@ -133,7 +142,7 @@ export default function CheckoutThanksPage() {
       <header className="ck-top">
         <div className="ck-top-inner">
           <Link to="/" className="ck-brand">HANIF ALVES<span>APH • URGÊNCIA • EMERGÊNCIA</span></Link>
-          <span className="ck-lock">🔒 Compra segura</span>
+          <span className="ck-lock"><LockIcon /> Compra segura</span>
         </div>
       </header>
       <main className="ck-main ck-main-single">
