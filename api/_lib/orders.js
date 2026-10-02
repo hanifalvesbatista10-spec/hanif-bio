@@ -1,5 +1,6 @@
 // Regras de pedido compartilhadas pelos avisos de pagamento (InfinitePay e Asaas).
 import { sb } from "./checkout.js";
+import { notifyOwnerOfSale } from "./notify.js";
 
 const now = () => new Date().toISOString();
 
@@ -105,5 +106,6 @@ export async function markOrderPaid(order, method) {
   });
   await grantAccess({ ...order, status: "paid" });
   await recordAffiliateCommission(order).catch((error) => console.error("recordAffiliateCommission:", error.message));
+  await notifyOwnerOfSale(order).catch((error) => console.error("notifyOwnerOfSale:", error.message));
   return true;
 }
