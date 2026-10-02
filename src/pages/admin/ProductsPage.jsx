@@ -75,7 +75,8 @@ export default function ProductsPage() {
         .products-admin-header h2{margin:4px 0 0;color:#071426;font-size:2rem}
         .products-create-button{border:0;border-radius:12px;background:#d6152d;color:#fff;padding:13px 18px;font-weight:900;cursor:pointer}
         .products-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
-        .product-manage-card{overflow:hidden;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 12px 34px rgba(7,20,38,.06)}
+        .product-manage-card{position:relative;overflow:hidden;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 12px 34px rgba(7,20,38,.06)}
+        .product-manage-order{position:absolute;top:10px;left:10px;z-index:2;min-width:28px;height:28px;padding:0 8px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#071426;color:#fff;font-size:.74rem;font-weight:900;box-shadow:0 4px 10px rgba(7,20,38,.3)}
         .product-manage-image{width:100%;height:210px;object-fit:cover;background:#eaf0f6}
         .product-manage-placeholder{height:210px;display:grid;place-items:center;background:#eaf0f6;color:#77889b;font-weight:800}
         .product-manage-body{padding:20px}
@@ -120,6 +121,10 @@ export default function ProductsPage() {
         <div className="products-list">
           {rows.map((product) => (
             <article className="product-manage-card" key={product.id}>
+              <span className="product-manage-order" title="Ordem de exibição">
+                {product.display_order ?? 0}
+              </span>
+
               {product.cover_url ? (
                 <img
                   className="product-manage-image"
