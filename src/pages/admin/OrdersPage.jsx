@@ -78,6 +78,7 @@ export default function OrdersPage() {
   const [messageType, setMessageType] = useState("success");
   const [busyId, setBusyId] = useState("");
   const [testing, setTesting] = useState(false);
+  const [bumpTitles, setBumpTitles] = useState({});
 
   const load = async () => {
     setLoading(true);
@@ -93,9 +94,19 @@ export default function OrdersPage() {
         setMessage(`Não foi possível carregar os pedidos: ${error.message}`);
       }
       setOrders([]);
+      setLoading(false);
+      return;
+    }
+    setMissing(false);
+    const rows = data || [];
+    setOrders(rows);
+
+    const bumpIds = [...new Set(rows.flatMap((order) => order.bump_product_ids || []))];
+    if (bumpIds.length > 0) {
+      const { data: bumpProducts } = await supabase.from("products").select("id,title").in("id", bumpIds);
+      setBumpTitles(Object.fromEntries((bumpProducts || []).map((item) => [item.id, item.title])));
     } else {
-      setMissing(false);
-      setOrders(data || []);
+      setBumpTitles({});
     }
     setLoading(false);
   };
@@ -150,7 +161,8 @@ export default function OrdersPage() {
       const { error } = await supabase.from("orders").update({ status: "refunded", refunded_at: new Date().toISOString() }).eq("id", order.id);
       if (error) throw error;
       if (order.user_id) {
-        const { error: accessError } = await supabase.from("user_products").update({ access_status: "revoked" }).eq("user_id", order.user_id).eq("product_id", order.product_id);
+        const productIds = [order.product_id, ...(order.bump_product_ids || [])];
+        const { error: accessError } = await supabase.from("user_products").update({ access_status: "revoked" }).eq("user_id", order.user_id).in("product_id", productIds);
         if (accessError) throw accessError;
       }
       // Se o pedido usou o cupom de um afiliado, a comissão ainda não paga é anulada (não afeta o que já foi pago).
@@ -208,9 +220,10 @@ export default function OrdersPage() {
         const { error: linkError } = await supabase.from("orders").update({ user_id: userId }).eq("id", order.id);
         if (linkError) throw linkError;
       }
+      const productIds = [order.product_id, ...(order.bump_product_ids || [])];
       const { error } = await supabase
         .from("user_products")
-        .upsert({ user_id: userId, product_id: order.product_id, access_status: "active" }, { onConflict: "user_id,product_id" });
+        .upsert(productIds.map((productId) => ({ user_id: userId, product_id: productId, access_status: "active" })), { onConflict: "user_id,product_id" });
       if (error) throw error;
       setMessageType("success");
       setMessage(`Acesso a “${order.product?.title}” liberado para ${order.buyer_name}.`);
@@ -284,7 +297,12 @@ export default function OrdersPage() {
                   <tr key={order.id}>
                     <td>{dateTime(order.created_at)}</td>
                     <td><strong>{order.buyer_name}</strong><small>{order.buyer_email}</small><small>CPF {maskCpf(order.buyer_cpf)}</small></td>
-                    <td>{order.product?.title || "—"}</td>
+                    <td>
+                      {order.product?.title || "—"}
+                      {(order.bump_product_ids || []).length > 0 && (
+                        <small>+ {(order.bump_product_ids || []).map((pid) => bumpTitles[pid] || "produto extra").join(", ")}</small>
+                      )}
+                    </td>
                     <td>{formatMoneyCents(order.amount_cents)}{order.coupon_code && <small>cupom {order.coupon_code}{order.discount_cents ? ` (−${formatMoneyCents(order.discount_cents)})` : ""}</small>}</td>
                     <td>{METHOD[order.payment_method] || "—"}</td>
                     <td>
