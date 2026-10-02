@@ -451,7 +451,7 @@ export default function CheckoutPage() {
                     ) : (
                       <span className="ck-kit-thumb ck-kit-thumb-fallback" aria-hidden="true">{row.bump.title.trim().charAt(0).toUpperCase()}</span>
                     )}
-                    <div>
+                    <div className="ck-kit-info">
                       <strong>{row.bump.title}</strong>
                       {row.bump.short_description && <span>{row.bump.short_description}</span>}
                     </div>
