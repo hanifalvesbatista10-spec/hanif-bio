@@ -15,6 +15,7 @@ const emptyForm = {
   promotional_price: "",
   checkout_url: "",
   checkout_mode: "external",
+  whatsapp_url: "",
   access_hold_enabled: false,
   highlights_text: "",
   status: "active",
@@ -44,8 +45,9 @@ function normalizeProduct(data = {}) {
     price: data.price ?? "",
     promotional_price: data.promotional_price ?? "",
     checkout_url: asText(data.checkout_url),
-    checkout_mode: data.checkout_mode === "internal" ? "internal" : "external",
+    checkout_mode: ["internal", "whatsapp"].includes(data.checkout_mode) ? data.checkout_mode : "external",
     has_checkout_mode: "checkout_mode" in data, // false = o SQL 19 ainda não foi executado
+    whatsapp_url: asText(data.whatsapp_url),
     access_hold_enabled: data.access_hold_enabled !== false,
     has_access_hold: "access_hold_enabled" in data, // false = o SQL 30 ainda não foi executado
     highlights_text: Array.isArray(data.highlights) ? data.highlights.join("\n") : "",
@@ -228,10 +230,11 @@ export default function ProductEditorPageV4() {
       if (!title) throw new Error("Informe o título do produto.");
       if (!shortDescription) throw new Error("Informe a descrição curta.");
       const internal = form.checkout_mode === "internal";
+      const whatsapp = form.checkout_mode === "whatsapp";
       if (internal && !((parseMoney(form.promotional_price) || 0) > 0 || (parseMoney(form.price) || 0) > 0)) {
         throw new Error("Para usar o checkout do site, informe o preço do produto (mínimo R$ 5,00).");
       }
-      if (!internal && !checkoutUrl) throw new Error("Informe o link de venda (Hotmart, Kiwify ou outro) ou escolha o checkout do site.");
+      if (!internal && !whatsapp && !checkoutUrl) throw new Error("Informe o link de venda (Hotmart, Kiwify ou outro) ou escolha outro modo de venda.");
 
       const slug = slugify(asText(form.slug) || title);
       if (!slug) throw new Error("Informe um identificador válido para o endereço.");
@@ -251,8 +254,9 @@ export default function ProductEditorPageV4() {
         price: parseMoney(form.price),
         promotional_price: parseMoney(form.promotional_price),
         checkout_url: checkoutUrl || null,
+        whatsapp_url: asText(form.whatsapp_url).trim() || null,
         // só envia o campo se o banco já o tem (evita quebrar o salvamento antes do SQL 19)
-        ...(internal || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : "external" } : {}),
+        ...(internal || whatsapp || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : whatsapp ? "whatsapp" : "external" } : {}),
         ...(form.has_access_hold ? { access_hold_enabled: Boolean(form.access_hold_enabled) } : {}),
         ...(form.has_highlights ? { highlights: form.highlights_text.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, 6) } : {}),
         ...(form.has_ebook_file ? { ebook_file_path: ebookResult.path, ebook_file_name: ebookResult.name } : {}),
@@ -300,6 +304,8 @@ export default function ProductEditorPageV4() {
       setMessage(
         text.includes("row-level security") || text.includes("permission denied")
           ? "O Supabase bloqueou a gravação por permissão. Execute o arquivo 06_v4_fix_products_permissions.sql no SQL Editor e tente novamente."
+          : text.includes("products_checkout_mode_check")
+          ? "O banco ainda não aceita o modo de venda por WhatsApp. Execute supabase/42_venda_por_whatsapp.sql no SQL Editor e tente novamente."
           : text.includes("checkout_mode")
           ? "O banco ainda não tem o checkout próprio. Execute supabase/19_checkout_proprio.sql no SQL Editor e tente novamente."
           : text.includes("access_hold_enabled")
@@ -366,15 +372,25 @@ export default function ProductEditorPageV4() {
             <select value={form.checkout_mode} onChange={(e) => update("checkout_mode", e.target.value)}>
               <option value="external">Link de venda externo (Hotmart, Kiwify ou outro)</option>
               <option value="internal">Checkout do próprio site (Pix, cartão e boleto)</option>
+              <option value="whatsapp">Falar no WhatsApp (sem preço fixo)</option>
             </select>
             {form.checkout_mode === "internal" ? (
               <span className="pe4-help">O comprador paga no seu site e o acesso é liberado sozinho quando o pagamento é confirmado. Exige o preço abaixo e a InfinitePay configurada (veja docs/checkout.md). O preço cobrado é o promocional, se houver, ou o normal.</span>
+            ) : form.checkout_mode === "whatsapp" ? (
+              <span className="pe4-help">Sem checkout e sem preço fixo: o botão do site leva direto para uma conversa no seu WhatsApp. Use para produtos sob consulta (ex: valor combinado por turma ou cliente).</span>
             ) : (
               <span className="pe4-help">O botão Comprar leva para o link abaixo, e o acesso do aluno continua sendo liberado por você em Acessos dos alunos.</span>
             )}
           </div>
-          {form.checkout_mode !== "internal" && (
+          {form.checkout_mode === "external" && (
             <div className="pe4-field full"><label>Link de venda *</label><input type="url" value={asText(form.checkout_url)} onChange={(e) => update("checkout_url", e.target.value)} placeholder="https://pay.hotmart.com/..." /></div>
+          )}
+          {form.checkout_mode === "whatsapp" && (
+            <div className="pe4-field full">
+              <label>Link do WhatsApp (opcional)</label>
+              <input type="url" value={asText(form.whatsapp_url)} onChange={(e) => update("whatsapp_url", e.target.value)} placeholder="https://wa.me/55..." />
+              <span className="pe4-help">Deixe em branco para usar o WhatsApp padrão do site, configurado em Conteúdo do site.</span>
+            </div>
           )}
           <div className="pe4-field"><label>Categoria</label><input value={asText(form.category)} onChange={(e) => update("category", e.target.value)} placeholder="E-book, curso, mentoria..." /></div>
           <div className="pe4-field"><label>Status</label><select value={asText(form.status) || "active"} onChange={(e) => update("status", e.target.value)}><option value="active">Ativo — aparece no site</option><option value="unlisted">Oculto — só abre com o link direto</option><option value="draft">Rascunho</option><option value="inactive">Inativo</option><option value="archived">Arquivado</option></select></div>

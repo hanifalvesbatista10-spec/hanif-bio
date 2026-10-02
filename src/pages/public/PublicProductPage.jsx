@@ -1,4 +1,4 @@
-import { checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
+import { checkoutCtaLabel, checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
 import { useLessonCounts } from "../../services/productStats";
 import Installments from "../../components/ui/Installments";
 import { DiscountBadge, ProductHighlights } from "../../components/ui/ProductHighlights";
@@ -291,7 +291,8 @@ export default function PublicProductPage() {
 
   const currentPrice = product.promotional_price ?? product.price;
   const hasDiscount = product.promotional_price !== null && product.price !== null && Number(product.price) > Number(product.promotional_price);
-  const checkout = getProductCheckout(product);
+  const checkout = getProductCheckout(product, settings.whatsapp_url);
+  const ctaLabel = checkoutCtaLabel(product);
   const count = lessonCounts[product.id];
   const stats = [
     count > 0 && { kind: "lessons", text: `${count} ${count === 1 ? "aula" : "aulas"}` },
@@ -354,7 +355,7 @@ export default function PublicProductPage() {
             <Installments product={product} tone="dark" />
             <div className="pp-hero-actions">
               <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
-                {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+                {ctaLabel}
               </a>
             </div>
             <p className="pp-hero-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
@@ -424,7 +425,7 @@ export default function PublicProductPage() {
           <h2>Pronto para começar?</h2>
           <p>Garanta o seu acesso agora e comece a estudar {product.title.toLowerCase()} hoje mesmo.</p>
           <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
-            {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+            {ctaLabel}
           </a>
         </div>
       </section>
@@ -433,7 +434,7 @@ export default function PublicProductPage() {
 
       <div className="pp-mobile-buy">
         <a className="site-btn primary" href={checkout} {...checkoutLinkProps(checkout)}>
-          {usesInternalCheckout(product) ? "Comprar agora" : "Quero acessar agora"}
+          {ctaLabel}
         </a>
       </div>
     </div>
