@@ -13,6 +13,38 @@ function isLiveFresh(lesson) {
   return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
 }
 
+// Arquivo do produto (e-book): bucket privado, o link só é gerado na hora do clique e expira em
+// alguns minutos (SQL 40) — nunca fica um link fixo que pudesse vazar.
+function EbookDownload({ product }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const download = async () => {
+    setBusy(true);
+    setError("");
+    const { data, error: signError } = await supabase.storage
+      .from("product-files")
+      .createSignedUrl(product.ebook_file_path, 300, { download: product.ebook_file_name || true });
+    setBusy(false);
+    if (signError || !data?.signedUrl) {
+      setError("Não foi possível gerar o link de download agora. Tente novamente em instantes.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <div className="mb-alert" role="status">
+      <strong>{product.ebook_file_name || "Material do curso"}</strong>
+      <p style={{ margin: "6px 0 10px" }}>O arquivo deste produto está liberado para download.</p>
+      <button type="button" className="mb-btn" onClick={download} disabled={busy}>
+        {busy ? "Gerando o link..." : "Baixar material"}
+      </button>
+      {error && <p style={{ marginTop: 8 }}>{error}</p>}
+    </div>
+  );
+}
+
 export default function CourseLessonsPage() {
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
@@ -26,7 +58,7 @@ export default function CourseLessonsPage() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("products").select("id,title").eq("id", productId).maybeSingle(),
+      supabase.from("products").select("id,title,ebook_file_path,ebook_file_name").eq("id", productId).maybeSingle(),
       fetchProductLessons(productId),
       supabase.rpc("my_access_hold", { p_product_id: productId }),
     ]).then(([productResult, lessonsResult, holdResult]) => {
@@ -65,6 +97,8 @@ export default function CourseLessonsPage() {
         <h1>{product?.title || "Curso"}</h1>
       </div>
 
+      {product?.ebook_file_path && <EbookDownload product={product} />}
+
       {hold && (
         <div className="mb-alert" role="status">
           Você está no período de garantia de 7 dias: {hold.visible_lessons} de {hold.total_lessons} aula(s) já liberada(s). As demais liberam
@@ -80,11 +114,13 @@ export default function CourseLessonsPage() {
       ) : message ? (
         <div className="mb-alert is-error" role="alert">{message}</div>
       ) : lessons.length === 0 ? (
+        product?.ebook_file_path ? null : (
         <div className="mb-empty">
           <span className="mb-empty-icon">{icons.play}</span>
           <h2>As aulas ainda não foram publicadas</h2>
           <p>Assim que a equipe publicar a primeira aula deste curso, ela aparece aqui.</p>
         </div>
+        )
       ) : (
         <div className="mb-lessons">
           <div className="mb-player-col">

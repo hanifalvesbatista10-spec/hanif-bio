@@ -24,6 +24,8 @@ const emptyForm = {
   duration: "",
   availability_status: "",
   bumps: [],
+  ebook_file_path: "",
+  ebook_file_name: "",
 };
 
 const asText = (value) => (value === null || value === undefined ? "" : String(value));
@@ -56,6 +58,9 @@ function normalizeProduct(data = {}) {
     faq: Array.isArray(data.faq)
       ? data.faq.map((item) => ({ question: asText(item?.question), answer: asText(item?.answer) }))
       : [],
+    ebook_file_path: asText(data.ebook_file_path),
+    ebook_file_name: asText(data.ebook_file_name),
+    has_ebook_file: "ebook_file_path" in data, // false = o SQL 40 ainda não foi executado
   };
 }
 
@@ -82,6 +87,7 @@ export default function ProductEditorPageV4() {
   const navigate = useNavigate();
   const [form, setForm] = useState(emptyForm);
   const [imageFile, setImageFile] = useState(null);
+  const [ebookFile, setEbookFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
@@ -194,6 +200,22 @@ export default function ProductEditorPageV4() {
     return data?.publicUrl || null;
   };
 
+  // Arquivo do e-book: bucket privado — ninguém baixa pelo link direto, só quem comprou (ver SQL 40).
+  const uploadEbookFile = async () => {
+    if (!ebookFile) return { path: asText(form.ebook_file_path) || null, name: asText(form.ebook_file_name) || null };
+    if (ebookFile.type !== "application/pdf") throw new Error("O arquivo do e-book precisa ser um PDF.");
+    if (ebookFile.size > 50 * 1024 * 1024) throw new Error("O arquivo do e-book deve ter no máximo 50 MB.");
+
+    const path = `ebooks/${Date.now()}-${crypto.randomUUID()}.pdf`;
+    const { error } = await supabase.storage.from("product-files").upload(path, ebookFile, {
+      cacheControl: "3600",
+      contentType: "application/pdf",
+      upsert: false,
+    });
+    if (error) throw new Error(`Falha ao enviar o arquivo do e-book: ${error.message}`);
+    return { path, name: ebookFile.name };
+  };
+
   const save = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -219,6 +241,7 @@ export default function ProductEditorPageV4() {
       if (!slug) throw new Error("Informe um identificador válido para o endereço.");
 
       const coverUrl = await uploadCover();
+      const ebookResult = await uploadEbookFile();
       const payload = {
         title,
         slug,
@@ -236,6 +259,7 @@ export default function ProductEditorPageV4() {
         ...(internal || form.has_checkout_mode ? { checkout_mode: internal ? "internal" : "external" } : {}),
         ...(form.has_access_hold ? { access_hold_enabled: Boolean(form.access_hold_enabled) } : {}),
         ...(form.has_highlights ? { highlights: form.highlights_text.split("\n").map((line) => line.trim()).filter(Boolean).slice(0, 6) } : {}),
+        ...(form.has_ebook_file ? { ebook_file_path: ebookResult.path, ebook_file_name: ebookResult.name } : {}),
         status: asText(form.status) || "active",
         is_featured: Boolean(form.is_featured),
         display_order: Number(form.display_order) || 0,
@@ -256,6 +280,7 @@ export default function ProductEditorPageV4() {
       setSaved(normalized);
       setPreview(normalized.cover_url);
       setImageFile(null);
+      setEbookFile(null);
       setMessageType("success");
       setMessage(editing ? "Produto salvo com sucesso no banco de dados." : "Produto criado com sucesso no banco de dados.");
 
@@ -301,6 +326,8 @@ export default function ProductEditorPageV4() {
           ? "O banco ainda não tem a garantia de 7 dias. Execute supabase/30_garantia_7_dias.sql no SQL Editor e tente novamente."
           : text.includes("highlights")
           ? "O banco ainda não tem os destaques do produto. Execute supabase/31_produto_destaques.sql no SQL Editor e tente novamente."
+          : text.includes("ebook_file_path") || text.includes("product-files")
+          ? "O banco ainda não tem o arquivo de e-book. Execute supabase/40_ebook_arquivo_do_produto.sql no SQL Editor e tente novamente."
           : text.includes("column") && text.includes("does not exist")
           ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
           : text
@@ -336,6 +363,24 @@ export default function ProductEditorPageV4() {
             <span className="pe4-help">Aparece em bullets no card do produto (site e home), abaixo da descrição curta. Frases curtas e concretas funcionam melhor.</span>
           </div>
           <div className="pe4-field full"><label>Imagem de capa</label><input type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => setImageFile(e.target.files?.[0] || null)} /><span className="pe4-help">JPG, PNG ou WEBP. Máximo 5 MB.</span>{preview && <div className="pe4-preview"><img src={preview} alt="Prévia da capa" /></div>}</div>
+          <div className="pe4-field full">
+            <label>Arquivo do e-book (opcional)</label>
+            <input type="file" accept="application/pdf" onChange={(e) => setEbookFile(e.target.files?.[0] || null)} />
+            <span className="pe4-help">
+              PDF, até 50 MB. Fica num armazenamento privado — só quem comprou o produto consegue baixar, pela área de membros.
+              {ebookFile ? ` Selecionado agora: ${ebookFile.name} (salva ao clicar em "Salvar alterações").` : form.ebook_file_name ? ` Arquivo atual: ${form.ebook_file_name}.` : ""}
+            </span>
+            {!ebookFile && form.ebook_file_path && (
+              <button
+                type="button"
+                className="pe4-faq-add"
+                style={{ justifySelf: "start" }}
+                onClick={() => setForm((current) => ({ ...current, ebook_file_path: "", ebook_file_name: "" }))}
+              >
+                Remover arquivo atual
+              </button>
+            )}
+          </div>
           <div className="pe4-field full">
             <label>Como este produto é vendido</label>
             <select value={form.checkout_mode} onChange={(e) => update("checkout_mode", e.target.value)}>
