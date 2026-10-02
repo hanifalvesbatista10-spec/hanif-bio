@@ -181,7 +181,7 @@ export default function CheckoutPage() {
   const toggleBump = (bumpId) => {
     setSelectedBumps((current) => (current.includes(bumpId) ? current.filter((id) => id !== bumpId) : [...current, bumpId]));
   };
-  const isFree = Boolean(coupon) && coupon.finalCents === 0;
+  const isFree = Boolean(coupon) && coupon.finalCents === 0 && bumpTotal === 0;
 
   const validate = () => {
     const next = {};
