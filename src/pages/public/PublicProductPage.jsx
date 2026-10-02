@@ -1,4 +1,4 @@
-import { checkoutCtaLabel, checkoutLinkProps, getProductCheckout, usesInternalCheckout } from "../../services/productCheckout";
+import { checkoutCtaLabel, checkoutLinkProps, getProductCheckout, isWhatsappCheckout, usesInternalCheckout } from "../../services/productCheckout";
 import { useLessonCounts } from "../../services/productStats";
 import Installments from "../../components/ui/Installments";
 import { DiscountBadge, ProductHighlights } from "../../components/ui/ProductHighlights";
@@ -358,7 +358,11 @@ export default function PublicProductPage() {
                 {ctaLabel}
               </a>
             </div>
-            <p className="pp-hero-help">Ao clicar, você será direcionado para a página de compra cadastrada.</p>
+            <p className="pp-hero-help">
+              {isWhatsappCheckout(product)
+                ? "Ao clicar, você conversa direto comigo pelo WhatsApp."
+                : "Ao clicar, você será direcionado para a página de compra cadastrada."}
+            </p>
           </div>
           <div className="pp-hero-media">
             <DiscountBadge product={product} />
