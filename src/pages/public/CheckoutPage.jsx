@@ -62,6 +62,8 @@ export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const { user, profile } = useAuth();
   const [product, setProduct] = useState(undefined); // undefined = carregando, null = não encontrado
+  const [bumps, setBumps] = useState([]);
+  const [selectedBumps, setSelectedBumps] = useState([]);
   const [form, setForm] = useState({ name: "", email: "", cpf: "", phone: "" });
   const [method, setMethod] = useState("online");
   const [errors, setErrors] = useState({});
@@ -91,6 +93,20 @@ export default function CheckoutPage() {
       active = false;
     };
   }, [slug]);
+
+  useEffect(() => {
+    if (!product?.id) return;
+    let active = true;
+    supabase
+      .from("product_bumps")
+      .select("id,price_cents,bump:products!bump_product_id(id,title,short_description,cover_url)")
+      .eq("product_id", product.id)
+      .order("display_order")
+      .then(({ data }) => active && setBumps(data || []));
+    return () => {
+      active = false;
+    };
+  }, [product?.id]);
 
   // Quem já está logado (e tem os dados no perfil) não precisa digitar tudo de novo.
   useEffect(() => {
@@ -156,7 +172,15 @@ export default function CheckoutPage() {
     }
   }, [product]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const total = coupon ? coupon.finalCents : price;
+  const bumpTotal = useMemo(
+    () => bumps.filter((row) => selectedBumps.includes(row.id)).reduce((sum, row) => sum + Number(row.price_cents || 0), 0),
+    [bumps, selectedBumps]
+  );
+  const total = (coupon ? coupon.finalCents : price) + bumpTotal;
+
+  const toggleBump = (bumpId) => {
+    setSelectedBumps((current) => (current.includes(bumpId) ? current.filter((id) => id !== bumpId) : [...current, bumpId]));
+  };
   const isFree = Boolean(coupon) && coupon.finalCents === 0;
 
   const validate = () => {
@@ -174,7 +198,8 @@ export default function CheckoutPage() {
     if (!validate()) return;
     setSubmitting(true);
     try {
-      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone, coupon: coupon?.code || "" });
+      const bumpProductIds = bumps.filter((row) => selectedBumps.includes(row.id)).map((row) => row.bump.id);
+      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone, coupon: coupon?.code || "", bumps: bumpProductIds });
       if (result.free) {
         // cupom de 100%: acesso liberado na hora
         window.location.assign(`/checkout/obrigado?order=${result.orderId}`);
@@ -276,6 +301,24 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
+              {bumps.length > 0 && (
+                <>
+                  <h2>Leve também</h2>
+                  <div className="ck-bumps">
+                    {bumps.map((row) => (
+                      <label key={row.id} className={`ck-bump ${selectedBumps.includes(row.id) ? "is-active" : ""}`}>
+                        <input type="checkbox" checked={selectedBumps.includes(row.id)} onChange={() => toggleBump(row.id)} />
+                        <div>
+                          <strong>{row.bump.title}</strong>
+                          {row.bump.short_description && <span>{row.bump.short_description}</span>}
+                        </div>
+                        <span className="ck-bump-price">+ {formatMoneyCents(row.price_cents)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <h2>3. Cupom de desconto</h2>
               {coupon ? (
                 <div className="ck-coupon-applied" role="status">
@@ -333,6 +376,9 @@ export default function CheckoutPage() {
           <dl>
             {original > 0 && <div><dt>Valor</dt><dd><del>{formatMoneyCents(original)}</del></dd></div>}
             {coupon && coupon.discountCents > 0 && <div><dt>Cupom {coupon.code}</dt><dd className="ck-discount">− {formatMoneyCents(coupon.discountCents)}</dd></div>}
+            {bumps.filter((row) => selectedBumps.includes(row.id)).map((row) => (
+              <div key={row.id}><dt>{row.bump.title}</dt><dd>+ {formatMoneyCents(row.price_cents)}</dd></div>
+            ))}
             <div className="ck-total"><dt>Total</dt><dd>{formatMoneyCents(total)}</dd></div>
           </dl>
           {total > 0 && <Installments cents={total} className="ck-inst" />}

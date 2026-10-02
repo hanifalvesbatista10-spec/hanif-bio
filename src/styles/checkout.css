@@ -504,3 +504,11 @@ body:has(.ck-page) {
 .ck-discount {
   color: #1a8f4a;
 }
+
+.ck-bumps { display: grid; gap: 10px; margin: 12px 0 20px; }
+.ck-bump { display: flex; align-items: flex-start; gap: 12px; border: 1px solid #d6e0e9; border-radius: 12px; padding: 12px 14px; cursor: pointer; }
+.ck-bump.is-active { border-color: #d6152d; background: #fff5f6; }
+.ck-bump input { margin-top: 3px; width: 18px; height: 18px; }
+.ck-bump div { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ck-bump div span { font-size: .82rem; color: #7b8c9c; }
+.ck-bump-price { font-weight: 900; color: #d6152d; white-space: nowrap; }
