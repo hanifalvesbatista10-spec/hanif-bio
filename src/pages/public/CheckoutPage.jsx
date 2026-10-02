@@ -40,6 +40,14 @@ function CheckIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 // Painel de triagem: as 3 etapas da compra acendem conforme avançam. É só leitura visual —
 // não trava nada, o formulário continua sendo validado por completo só no envio.
 function StageTrack({ stage }) {
@@ -433,16 +441,27 @@ export default function CheckoutPage() {
           {bumps.length > 0 && (
             <div className="ck-kit">
               <span className="ck-kit-head">Equipamento adicional</span>
-              {bumps.map((row) => (
-                <label key={row.id} className="ck-kit-item">
-                  <input type="checkbox" checked={selectedBumps.includes(row.id)} onChange={() => toggleBump(row.id)} />
-                  <div>
-                    <strong>{row.bump.title}</strong>
-                    {row.bump.short_description && <span>{row.bump.short_description}</span>}
-                  </div>
-                  <span className="ck-kit-price">+ {formatMoneyCents(row.price_cents)}</span>
-                </label>
-              ))}
+              {bumps.map((row) => {
+                const active = selectedBumps.includes(row.id);
+                return (
+                  <label key={row.id} className={`ck-kit-item ${active ? "is-active" : ""}`}>
+                    <input type="checkbox" className="ck-kit-check" checked={active} onChange={() => toggleBump(row.id)} />
+                    {row.bump.cover_url ? (
+                      <img className="ck-kit-thumb" src={row.bump.cover_url} alt="" />
+                    ) : (
+                      <span className="ck-kit-thumb ck-kit-thumb-fallback" aria-hidden="true">{row.bump.title.trim().charAt(0).toUpperCase()}</span>
+                    )}
+                    <div>
+                      <strong>{row.bump.title}</strong>
+                      {row.bump.short_description && <span>{row.bump.short_description}</span>}
+                    </div>
+                    <div className="ck-kit-side">
+                      <span className="ck-kit-price">+ {formatMoneyCents(row.price_cents)}</span>
+                      <span className="ck-kit-toggle" aria-hidden="true">{active ? <CheckIcon /> : <PlusIcon />}</span>
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           )}
 

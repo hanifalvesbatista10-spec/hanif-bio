@@ -667,10 +667,10 @@ body:has(.ck-page) {
   color: #1a8f4a;
 }
 
-/* Equipamento adicional (order bump) — prateleira dentro do resumo */
+/* Equipamento adicional (order bump) — prateleira de cartões dentro do resumo */
 .ck-kit {
-  margin: 14px 0 0;
-  padding-top: 14px;
+  margin: 16px 0 0;
+  padding-top: 16px;
   border-top: 1px dashed var(--brand-border);
   display: grid;
   gap: 10px;
@@ -685,26 +685,58 @@ body:has(.ck-page) {
 }
 
 .ck-kit-item {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
   padding: 10px;
-  margin: 0 -10px;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--brand-border);
+  background: var(--brand-surface);
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .ck-kit-item:hover {
-  background: var(--brand-surface-muted);
+  border-color: var(--brand-red);
 }
 
-.ck-kit-item input {
-  margin-top: 3px;
-  width: 18px;
-  height: 18px;
+.ck-kit-item.is-active {
+  border-color: var(--brand-red);
+  background: var(--brand-red-soft);
+  box-shadow: 0 0 0 3px var(--brand-red-soft);
+}
+
+.ck-kit-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.ck-kit-check:focus-visible ~ .ck-kit-side .ck-kit-toggle {
+  outline: 2px solid var(--brand-red);
+  outline-offset: 2px;
+}
+
+.ck-kit-thumb {
   flex: none;
-  accent-color: var(--brand-red);
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.ck-kit-thumb-fallback {
+  display: grid;
+  place-items: center;
+  background: var(--brand-navy);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.2rem;
 }
 
 .ck-kit-item div {
@@ -723,12 +755,42 @@ body:has(.ck-page) {
   font-size: 0.8rem;
   color: var(--brand-text-soft);
   line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.ck-kit-side {
+  flex: none;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
 }
 
 .ck-kit-price {
-  flex: none;
   font-family: var(--font-display);
   font-weight: 700;
+  font-size: 0.86rem;
   color: var(--brand-red);
   white-space: nowrap;
+}
+
+.ck-kit-toggle {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid var(--brand-border);
+  color: var(--brand-muted);
+  background: var(--brand-surface);
+  transition: border-color var(--transition-fast), background var(--transition-fast), color var(--transition-fast);
+}
+
+.ck-kit-item.is-active .ck-kit-toggle {
+  border-color: var(--brand-red);
+  background: var(--brand-red);
+  color: #fff;
 }
