@@ -77,12 +77,16 @@ export default checkoutHandler(["POST"], async (req, res) => {
 
   // Order bump: produtos extras marcados no checkout, com preço próprio por par. O preço NUNCA vem do
   // navegador — só os ids marcados; o valor de verdade é conferido aqui contra product_bumps.
+  // Cada id precisa bater num formato de uuid antes de entrar no filtro cru do PostgREST (evita que
+  // caracteres como ")", "&" ou "," vindos do corpo da requisição quebrem a query inteira); um id que
+  // não bate é só descartado, igual a um uuid válido que não existe em product_bumps.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const bumpIds = Array.isArray(body.bumps)
-    ? [...new Set(body.bumps.map((value) => String(value || "").trim()).filter(Boolean))]
+    ? [...new Set(body.bumps.map((value) => String(value || "").trim()).filter((value) => UUID_RE.test(value)))]
     : [];
   let bumpRows = [];
   if (bumpIds.length > 0) {
-    const list = bumpIds.join(","); // ids são uuid puro (sem vírgula/espaço), não precisa de aspas no filtro
+    const list = bumpIds.join(","); // já validados como uuid puro (sem vírgula/espaço), não precisa de aspas no filtro
     bumpRows = await sb(
       `product_bumps?product_id=eq.${product.id}&bump_product_id=in.(${list})&select=bump_product_id,price_cents,bump:products!bump_product_id(title)`
     );
