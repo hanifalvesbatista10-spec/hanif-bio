@@ -1,4 +1,4 @@
-// Aviso instantâneo ao dono quando uma venda é paga: Telegram (bot) e e-mail (Resend).
+// Avisos instantâneos ao dono. Venda paga: Telegram + e-mail (Resend). Demais eventos: só Telegram.
 // Cada canal só roda se estiver configurado na Vercel e nunca derruba o pagamento: erro vira log.
 import { sb } from "./checkout.js";
 import { sendEmail, resendConfig } from "./resend.js";
@@ -6,6 +6,14 @@ import { sendEmail, resendConfig } from "./resend.js";
 const METHOD = { pix: "Pix", boleto: "Boleto", card: "Cartão" };
 const money = (cents) => (Number(cents || 0) / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+const EVENT_TITLE = {
+  pending: "Pedido aguardando pagamento",
+  gateway_error: "Erro ao iniciar o pagamento",
+  failed: "Pagamento recusado",
+  canceled: "Boleto vencido ou cancelado",
+  refunded: "Reembolso ou estorno",
+};
 
 async function describeOrder(order) {
   const ids = [order.product_id, ...(order.bump_product_ids || [])];
@@ -16,17 +24,23 @@ async function describeOrder(order) {
     const rows = await sb(`coupons?id=eq.${order.coupon_id}&select=code&limit=1`).catch(() => []);
     coupon = rows?.[0]?.code || "";
   }
+  const bumps = (order.bump_product_ids || []).map(titleOf);
+  const method = METHOD[order.payment_method] || (order.provider === "infinitepay" ? "Pix ou cartão" : "");
   return {
     main: titleOf(order.product_id),
-    bumps: (order.bump_product_ids || []).map(titleOf),
-    coupon,
-    method: METHOD[order.payment_method] || "",
     amount: money(order.amount_cents),
-    buyer: `${order.buyer_name || "Sem nome"} (${order.buyer_email || "sem e-mail"})`,
+    lines: [
+      `Valor: ${money(order.amount_cents)}${method ? ` (${method})` : ""}`,
+      `Produto: ${titleOf(order.product_id)}`,
+      ...(bumps.length ? [`Extras: ${bumps.join(", ")}`] : []),
+      `Comprador: ${order.buyer_name || "Sem nome"} (${order.buyer_email || "sem e-mail"})`,
+      ...(order.buyer_phone ? [`WhatsApp: ${order.buyer_phone}`] : []),
+      ...(coupon ? [`Cupom: ${coupon}`] : []),
+    ],
   };
 }
 
-async function sendTelegram(text) {
+export async function sendTelegram(text) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return;
@@ -42,6 +56,17 @@ async function sendTelegram(text) {
   }
 }
 
+// Evento de pedido que não é venda paga (aguardando, erro, recusado, cancelado, reembolso): só Telegram.
+export async function notifyOrderEvent(order, kind, detail = "") {
+  try {
+    if (!process.env.TELEGRAM_BOT_TOKEN || !process.env.TELEGRAM_CHAT_ID) return;
+    const d = await describeOrder(order);
+    await sendTelegram([EVENT_TITLE[kind] || "Pedido", ...d.lines, ...(detail ? [detail] : [])].join("\n"));
+  } catch (error) {
+    console.error(`notifyOrderEvent ${kind}:`, error.message);
+  }
+}
+
 export async function notifyOwnerOfSale(order) {
   const to = process.env.ADMIN_NOTIFY_EMAIL;
   const { apiKey, from } = resendConfig();
@@ -50,13 +75,6 @@ export async function notifyOwnerOfSale(order) {
   if (!telegramOn && !emailOn) return;
 
   const d = await describeOrder(order);
-  const lines = [
-    `Valor: ${d.amount}${d.method ? ` no ${d.method}` : ""}`,
-    `Produto: ${d.main}`,
-    ...(d.bumps.length ? [`Extras: ${d.bumps.join(", ")}`] : []),
-    `Comprador: ${d.buyer}`,
-    ...(d.coupon ? [`Cupom: ${d.coupon}`] : []),
-  ];
 
   // Se o Telegram não sair, o e-mail avisa o motivo (as chaves ficam ocultas na Vercel e os logs são difíceis de achar).
   let telegramProblem = "";
@@ -64,14 +82,14 @@ export async function notifyOwnerOfSale(order) {
     const missing = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"].filter((name) => !process.env[name]);
     telegramProblem = `Telegram não configurado: falta ${missing.join(" e ")} na Vercel (ou falta um redeploy).`;
   } else {
-    await sendTelegram(`Nova venda!\n${lines.join("\n")}`).catch((error) => {
+    await sendTelegram(["Nova venda!", ...d.lines].join("\n")).catch((error) => {
       console.error("notifyOwnerOfSale telegram:", error.message);
       telegramProblem = `O aviso no Telegram falhou: ${error.message}`;
     });
   }
 
   if (emailOn) {
-    const body = [...lines, ...(telegramProblem ? ["", telegramProblem] : [])];
+    const body = [...d.lines, ...(telegramProblem ? ["", telegramProblem] : [])];
     await sendEmail({
       to,
       subject: `Nova venda: ${d.main} (${d.amount})`,

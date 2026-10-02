@@ -21,6 +21,7 @@ import {
 import { createCheckoutLink } from "./_lib/infinitepay.js";
 import { resolveCoupon } from "./_lib/coupons.js";
 import { markOrderPaid } from "./_lib/orders.js";
+import { notifyOrderEvent } from "./_lib/notify.js";
 
 const now = () => new Date().toISOString();
 
@@ -182,6 +183,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
     await sb(`orders?id=eq.${order.id}`, { method: "PATCH", body: { status: "failed", updated_at: now() } }).catch(() => null);
     // o motivo real vai para o log da Vercel e para o teste de conexão do painel (Pedidos → Testar conexão)
     console.error(`${PROVIDER_BY_METHOD[method]} error:`, error.status || "", error.message);
+    await notifyOrderEvent(order, "gateway_error", `Motivo: ${error.message}`);
     throw new HttpError(502, "gateway_error", "Não foi possível iniciar o pagamento agora. Tente novamente em instantes.");
   }
 
@@ -189,6 +191,8 @@ export default checkoutHandler(["POST"], async (req, res) => {
     method: "PATCH",
     body: { provider_payment_id: providerPaymentId, payment_url: paymentUrl, updated_at: now() },
   });
+
+  await notifyOrderEvent(order, "pending", method === "boleto" ? "Boleto gerado, vence em 3 dias." : "Link de pagamento gerado, ainda não pagou.");
 
   res.status(201).setHeader("Cache-Control", "no-store").json({
     orderId: order.id,
