@@ -31,14 +31,14 @@ async function post(path, body) {
 }
 
 // Cria o link de pagamento (a página deles oferece Pix e cartão, com escolha de parcelas).
-export async function createCheckoutLink({ order, title, name, email, redirectUrl, webhookUrl }) {
+export async function createCheckoutLink({ order, title, name, email, redirectUrl, webhookUrl, items }) {
   const { infinitepayHandle } = checkoutConfig();
   const payload = {
     handle: infinitepayHandle,
     order_nsu: order.id,
     redirect_url: redirectUrl,
     webhook_url: webhookUrl,
-    items: [{ quantity: 1, price: order.amount_cents, description: String(title).slice(0, 200) }],
+    items: Array.isArray(items) && items.length > 0 ? items : [{ quantity: 1, price: order.amount_cents, description: String(title).slice(0, 200) }],
   };
   let data;
   try {
