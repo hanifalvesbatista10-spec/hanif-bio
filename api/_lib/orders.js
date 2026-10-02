@@ -16,17 +16,21 @@ export async function grantAccess(order) {
     if (userId) await sb(`orders?id=eq.${order.id}`, { method: "PATCH", body: { user_id: userId, updated_at: now() } });
   }
   if (!userId) return false;
+  // produto principal + cada produto extra (order bump) comprado junto neste pedido
+  const productIds = [order.product_id, ...(order.bump_product_ids || [])];
   await sb("user_products?on_conflict=user_id,product_id", {
     method: "POST",
     prefer: "resolution=merge-duplicates",
-    body: { user_id: userId, product_id: order.product_id, access_status: "active" },
+    body: productIds.map((productId) => ({ user_id: userId, product_id: productId, access_status: "active" })),
   });
   return true;
 }
 
 export async function revokeAccess(order) {
   if (!order.user_id) return;
-  await sb(`user_products?user_id=eq.${order.user_id}&product_id=eq.${order.product_id}`, {
+  const productIds = [order.product_id, ...(order.bump_product_ids || [])];
+  const list = productIds.join(","); // ids são uuid puro (sem vírgula/espaço), não precisa de aspas no filtro
+  await sb(`user_products?user_id=eq.${order.user_id}&product_id=in.(${list})`, {
     method: "PATCH",
     body: { access_status: "revoked" },
   });
