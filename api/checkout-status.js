@@ -8,7 +8,7 @@ import { checkoutConfig, checkoutHandler, requireCheckoutConfig, sb } from "./_l
 import { confirmOrder } from "./_lib/infinitepay.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COLUMNS = "id,status,provider,payment_method,amount_cents,user_id,buyer_email,product_id,product:products(title,slug)";
+const COLUMNS = "id,status,provider,payment_method,amount_cents,user_id,buyer_email,product_id,bump_product_ids,coupon_id,product:products(title,slug)";
 
 async function loadOrder(id) {
   const rows = await sb(`orders?id=eq.${id}&select=${COLUMNS}&limit=1`);

@@ -33,3 +33,34 @@ with check (public.is_admin());
 alter table public.orders
   add column if not exists bump_product_ids uuid[] not null default '{}',
   add column if not exists bump_cents integer not null default 0;
+
+-- Corrige o gatilho de "comprou antes de ter conta" (SQL 19) para também liberar os produtos do
+-- order bump quando o comprador cria a conta depois. O join com products garante que um bump
+-- apagado não trave a liberação do produto principal (sem isso, unnest sozinho tentaria inserir
+-- um product_id que não existe mais e a transação do trigger inteira falharia).
+create or replace function public.grant_paid_orders_to_new_profile()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if coalesce(new.email, '') = '' then
+    return new;
+  end if;
+
+  update public.orders
+     set user_id = new.id, updated_at = now()
+   where user_id is null and status = 'paid' and lower(buyer_email) = lower(new.email);
+
+  insert into public.user_products (user_id, product_id, access_status)
+  select distinct new.id, p.id, 'active'
+    from public.orders o
+    cross join lateral unnest(array[o.product_id] || coalesce(o.bump_product_ids, '{}')) as x(pid)
+    join public.products p on p.id = x.pid
+   where o.user_id = new.id and o.status = 'paid'
+  on conflict (user_id, product_id) do update set access_status = 'active';
+
+  return new;
+end;
+$$;

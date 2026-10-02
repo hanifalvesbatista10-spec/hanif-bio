@@ -102,7 +102,7 @@ export default function CheckoutPage() {
       .select("id,price_cents,bump:products!bump_product_id(id,title,short_description,cover_url)")
       .eq("product_id", product.id)
       .order("display_order")
-      .then(({ data }) => active && setBumps(data || []));
+      .then(({ data }) => active && setBumps((data || []).filter((row) => row.bump)));
     return () => {
       active = false;
     };

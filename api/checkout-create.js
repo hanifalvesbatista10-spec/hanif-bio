@@ -88,12 +88,15 @@ export default checkoutHandler(["POST"], async (req, res) => {
   if (bumpIds.length > 0) {
     const list = bumpIds.join(","); // já validados como uuid puro (sem vírgula/espaço), não precisa de aspas no filtro
     bumpRows = await sb(
-      `product_bumps?product_id=eq.${product.id}&bump_product_id=in.(${list})&select=bump_product_id,price_cents,bump:products!bump_product_id(title)`
+      `product_bumps?product_id=eq.${product.id}&bump_product_id=in.(${list})&select=bump_product_id,price_cents,bump:products!bump_product_id!inner(title)&bump.status=in.(active,unlisted)`
     );
   }
   const bumpCents = bumpRows.reduce((sum, row) => sum + Number(row.price_cents || 0), 0);
   const amount = mainCents + bumpCents;
   const free = amount === 0;
+  if (!free && amount < 500) {
+    throw new HttpError(409, "invalid_price", "O valor total ficou menor que o mínimo aceito pelos meios de pagamento (R$ 5,00). Ajuste o preço do bump ou do cupom.");
+  }
 
   // cada forma de pagamento exige as variáveis do seu provedor (pedido grátis não passa pelo gateway)
   if (!free) requireCheckoutConfig(method === "online" ? ["infinitepayHandle"] : ["asaasKey"]);
@@ -117,14 +120,14 @@ export default checkoutHandler(["POST"], async (req, res) => {
       buyer_phone: phone || null,
       amount_cents: amount,
       currency: "brl",
-      bump_product_ids: bumpRows.map((row) => row.bump_product_id),
-      bump_cents: bumpCents,
       status: "pending",
       // "online" (Pix ou cartão) só se sabe qual foi depois de pago; o aviso de pagamento preenche
       payment_method: method === "boleto" && !free ? "boleto" : null,
       provider: free ? "coupon" : PROVIDER_BY_METHOD[method],
       // campos do cupom só entram quando há cupom (assim o checkout continua igual antes do SQL 20)
       ...(coupon ? { coupon_id: coupon.id, coupon_code: coupon.code.toUpperCase(), discount_cents: discountCents, list_price_cents: listCents } : {}),
+      // campos do bump só entram quando há bump válido (assim o checkout continua igual antes do SQL 38)
+      ...(bumpRows.length > 0 ? { bump_product_ids: bumpRows.map((row) => row.bump_product_id), bump_cents: bumpCents } : {}),
     },
   });
   const order = created?.[0];
@@ -144,7 +147,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
     const bumpDescription = bumpRows.length > 0 ? ` + ${bumpRows.length} item${bumpRows.length > 1 ? "s" : ""} extra${bumpRows.length > 1 ? "s" : ""}` : "";
     if (method === "online") {
       const items = [
-        { quantity: 1, price: mainCents, description: product.title.slice(0, 200) },
+        ...(mainCents > 0 ? [{ quantity: 1, price: mainCents, description: product.title.slice(0, 200) }] : []),
         ...bumpRows.map((row) => ({ quantity: 1, price: row.price_cents, description: String(row.bump?.title || "Produto extra").slice(0, 200) })),
       ];
       paymentUrl = await createCheckoutLink({
