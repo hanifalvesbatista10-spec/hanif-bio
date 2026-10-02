@@ -278,6 +278,16 @@ export default function ProductEditorPageV4() {
           );
           if (insertError) throw new Error(`Não foi possível salvar as ofertas extras: ${insertError.message}`);
         }
+
+        // reflete na tela o que foi de fato persistido (o setForm(normalized) acima zerou form.bumps,
+        // pois a linha de "products" não tem o campo bumps — ele mora em product_bumps)
+        setForm((current) => ({
+          ...current,
+          bumps: validBumps.map((row) => ({
+            bump_product_id: row.bump_product_id,
+            price_reais: String(row.price_cents / 100).replace(".", ","),
+          })),
+        }));
       }
     } catch (error) {
       setMessageType("error");
