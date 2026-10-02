@@ -23,6 +23,7 @@ const emptyForm = {
   format: "",
   duration: "",
   availability_status: "",
+  bumps: [],
 };
 
 const asText = (value) => (value === null || value === undefined ? "" : String(value));
@@ -87,6 +88,15 @@ export default function ProductEditorPageV4() {
   const [saved, setSaved] = useState(null); // versão gravada no banco: os links usam o endereço salvo, não o que está sendo digitado
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
+  const [catalog, setCatalog] = useState([]); // todos os produtos, para escolher o bump
+
+  useEffect(() => {
+    supabase
+      .from("products")
+      .select("id,title,status")
+      .order("title")
+      .then(({ data }) => setCatalog(data || []));
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
@@ -100,6 +110,20 @@ export default function ProductEditorPageV4() {
         setForm(normalized);
         setSaved(normalized);
         setPreview(normalized.cover_url);
+
+        const { data: bumpRows } = await supabase
+          .from("product_bumps")
+          .select("id,bump_product_id,price_cents")
+          .eq("product_id", id)
+          .order("display_order");
+        setForm((current) => ({
+          ...current,
+          bumps: (bumpRows || []).map((row) => ({
+            id: row.id,
+            bump_product_id: row.bump_product_id,
+            price_reais: String(Number(row.price_cents) / 100).replace(".", ","),
+          })),
+        }));
       }
       setLoading(false);
     };
@@ -135,6 +159,22 @@ export default function ProductEditorPageV4() {
 
   const removeFaqItem = (index) => {
     setForm((current) => ({ ...current, faq: current.faq.filter((_, i) => i !== index) }));
+  };
+
+  const addBumpRow = () => {
+    setForm((current) => ({ ...current, bumps: [...current.bumps, { bump_product_id: "", price_reais: "" }] }));
+  };
+
+  const updateBumpRow = (index, key, value) => {
+    setForm((current) => {
+      const bumps = current.bumps.slice();
+      bumps[index] = { ...bumps[index], [key]: value };
+      return { ...current, bumps };
+    });
+  };
+
+  const removeBumpRow = (index) => {
+    setForm((current) => ({ ...current, bumps: current.bumps.filter((_, i) => i !== index) }));
   };
 
   const uploadCover = async () => {
@@ -220,6 +260,25 @@ export default function ProductEditorPageV4() {
       setMessage(editing ? "Produto salvo com sucesso no banco de dados." : "Produto criado com sucesso no banco de dados.");
 
       if (!editing) navigate(`/admin/produtos/${result.data.id}`, { replace: true });
+
+      if (editing) {
+        const validBumps = (form.bumps || [])
+          .map((row) => ({
+            bump_product_id: row.bump_product_id,
+            price_cents: Math.round((parseMoney(row.price_reais) || 0) * 100),
+          }))
+          .filter((row) => row.bump_product_id && row.price_cents > 0);
+
+        const { error: deleteError } = await supabase.from("product_bumps").delete().eq("product_id", id);
+        if (deleteError) throw new Error(`Não foi possível salvar as ofertas extras: ${deleteError.message}`);
+
+        if (validBumps.length > 0) {
+          const { error: insertError } = await supabase.from("product_bumps").insert(
+            validBumps.map((row, index) => ({ ...row, product_id: id, display_order: index }))
+          );
+          if (insertError) throw new Error(`Não foi possível salvar as ofertas extras: ${insertError.message}`);
+        }
+      }
     } catch (error) {
       setMessageType("error");
       const text = error?.message || "Não foi possível salvar o produto.";
@@ -322,6 +381,36 @@ export default function ProductEditorPageV4() {
             </div>
           ))}
         </div>
+
+        {editing && (
+          <div className="pe4-faq">
+            <div className="pe4-faq-head">
+              <label>Ofertas extras no checkout (order bump)</label>
+              <button type="button" className="pe4-faq-add" onClick={addBumpRow}>+ Adicionar oferta</button>
+            </div>
+            <span className="pe4-help">
+              Produtos que aparecem no checkout DESTE produto com 1 clique, por um preço especial (não é o preço de tabela do produto escolhido).
+            </span>
+            {form.bumps.length === 0 && <span className="pe4-help">Nenhuma oferta extra cadastrada ainda.</span>}
+            {form.bumps.map((row, index) => (
+              <div className="pe4-faq-item" key={index}>
+                <select value={row.bump_product_id} onChange={(e) => updateBumpRow(index, "bump_product_id", e.target.value)}>
+                  <option value="">Escolha o produto...</option>
+                  {catalog.filter((item) => item.id !== id).map((item) => (
+                    <option key={item.id} value={item.id}>{item.title}{item.status !== "active" && item.status !== "unlisted" ? ` (${item.status})` : ""}</option>
+                  ))}
+                </select>
+                <input
+                  inputMode="decimal"
+                  placeholder="Preço especial, ex.: 97,00"
+                  value={row.price_reais}
+                  onChange={(e) => updateBumpRow(index, "price_reais", e.target.value)}
+                />
+                <button type="button" className="pe4-faq-remove" onClick={() => removeBumpRow(index)}>Remover</button>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="pe4-actions"><button className="pe4-save" type="submit" disabled={saving}>{saving ? "Salvando no banco..." : "Salvar alterações"}</button><button className="pe4-cancel" type="button" onClick={() => navigate("/admin/produtos")}>Cancelar</button></div>
       </form>
