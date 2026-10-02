@@ -154,15 +154,7 @@ export default function ContentEditorPage() {
 
       if (result.error) throw result.error;
 
-      const normalized = normalize(result.data);
-      setForm(normalized);
-      setCoverPreview(normalized.cover_url);
-      setCoverFile(null);
-      setMaterialFile(null);
-      setMessageType("success");
-      setMessage(editing ? "Salvo com sucesso." : "Criado com sucesso.");
-
-      if (!editing) navigate(`/admin/conteudos/${result.data.id}`, { replace: true });
+      navigate("/admin/conteudos");
     } catch (error) {
       setMessageType("error");
       const text = error?.message || "Não foi possível salvar.";

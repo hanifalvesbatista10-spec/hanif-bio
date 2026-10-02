@@ -43,7 +43,7 @@ export default function FeedbackEditorPage() {
     const result = isNew ? await supabase.from("student_feedbacks").insert(payload).select("id").single() : await supabase.from("student_feedbacks").update(payload).eq("id",id).select("id").single();
     setSaving(false);
     if (result.error) setMessage(`Erro ao salvar: ${result.error.message}`);
-    else { setMessage("Feedback salvo com sucesso."); if (isNew) navigate(`/admin/feedbacks/${result.data.id}`, { replace:true }); }
+    else navigate("/admin/feedbacks");
   };
 
   return <section className="admin-section"><div className="admin-section-head"><div><span>FEEDBACK</span><h2>{isNew?"Novo feedback":"Editar feedback"}</h2></div><Link className="admin-button" to="/admin/feedbacks">Voltar</Link></div>

@@ -49,7 +49,7 @@ async function api(path, { method = "GET", body } = {}) {
 // Admin: pede um link de envio temporário e já sobe o PDF direto pro R2 (não passa pelo nosso servidor).
 export async function uploadFileToR2({ kind, file }) {
   if (file.type !== "application/pdf") throw new R2Error("invalid_type", "Escolha um arquivo em PDF.");
-  const { url, key } = await api("/api/r2-sign-upload", { method: "POST", body: { kind, contentType: file.type } });
+  const { url, key } = await api("/api/r2-sign", { method: "POST", body: { action: "upload", kind, contentType: file.type } });
   let putResponse;
   try {
     putResponse = await fetch(url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
@@ -62,4 +62,4 @@ export async function uploadFileToR2({ kind, file }) {
 
 // Aluno (ou admin): pede um link de download temporário (expira em poucos minutos) pro arquivo de
 // um produto ("product") ou de uma aula ("lesson").
-export const getR2DownloadUrl = (kind, id) => api("/api/r2-sign-download", { method: "POST", body: { kind, id } });
+export const getR2DownloadUrl = (kind, id) => api("/api/r2-sign", { method: "POST", body: { action: "download", kind, id } });

@@ -272,15 +272,7 @@ export default function ProductEditorPageV4() {
       if (!result.data) throw new Error("O banco não confirmou a gravação do produto.");
 
       const normalized = normalizeProduct(result.data);
-      setForm(normalized);
       setSaved(normalized);
-      setPreview(normalized.cover_url);
-      setImageFile(null);
-      setEbookFile(null);
-      setMessageType("success");
-      setMessage(editing ? "Produto salvo com sucesso no banco de dados." : "Produto criado com sucesso no banco de dados.");
-
-      if (!editing) navigate(`/admin/produtos/${result.data.id}`, { replace: true });
 
       if (editing) {
         const validBumps = (form.bumps || [])
@@ -299,17 +291,9 @@ export default function ProductEditorPageV4() {
           );
           if (insertError) throw new Error(`Não foi possível salvar as ofertas extras: ${insertError.message}`);
         }
-
-        // reflete na tela o que foi de fato persistido (o setForm(normalized) acima zerou form.bumps,
-        // pois a linha de "products" não tem o campo bumps — ele mora em product_bumps)
-        setForm((current) => ({
-          ...current,
-          bumps: validBumps.map((row) => ({
-            bump_product_id: row.bump_product_id,
-            price_reais: String(row.price_cents / 100).replace(".", ","),
-          })),
-        }));
       }
+
+      navigate("/admin/produtos");
     } catch (error) {
       setMessageType("error");
       const text = error?.message || "Não foi possível salvar o produto.";

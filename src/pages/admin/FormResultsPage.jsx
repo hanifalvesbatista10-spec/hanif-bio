@@ -407,14 +407,19 @@ function SubmissionDetail({ form, blocks, keys, submission, answers, busy, messa
   const draftOf = (answer) => drafts[answer.id] ?? { points: answer.points_awarded ?? "", feedback: answer.feedback ?? "" };
   const setDraft = (answer, patch) => setDrafts((current) => ({ ...current, [answer.id]: { ...draftOf(answer), ...patch } }));
 
-  const saveGrade = async (answer, block) => {
+  // pointsOverride: usado pelos botões de correção rápida (nota máxima / zerar), que já sabem a nota
+  // e não dependem do que está digitado no campo manual.
+  const saveGrade = async (answer, block, pointsOverride) => {
     const draft = draftOf(answer);
-    const points = Number(String(draft.points).replace(",", "."));
-    if (String(draft.points).trim() === "" || Number.isNaN(points)) return notify("error", "Informe a nota (pode ser 0).");
+    const points = pointsOverride !== undefined ? pointsOverride : Number(String(draft.points).replace(",", "."));
+    if (pointsOverride === undefined && (String(draft.points).trim() === "" || Number.isNaN(points))) {
+      return notify("error", "Informe a nota (pode ser 0).");
+    }
     setSaving(answer.id);
     const { error } = await supabase.rpc("form_grade_answer", { p_answer_id: answer.id, p_points: points, p_feedback: draft.feedback });
     setSaving("");
     if (error) return notify("error", friendlyFormError(error));
+    if (pointsOverride !== undefined) setDraft(answer, { points: String(points) });
     notify("success", `Nota salva${Number(block.points) ? ` (${formatScore(points)} de ${formatScore(block.points)})` : ""}.`);
     onReload();
   };
@@ -493,8 +498,16 @@ function SubmissionDetail({ form, blocks, keys, submission, answers, busy, messa
 
             {graded && answer && (
               <div className="fa-grade-form">
+                <div className="fa-actions" style={{ marginBottom: 10 }}>
+                  <button type="button" className="fa-btn is-small" disabled={saving === answer.id} onClick={() => saveGrade(answer, block, Number(block.points))}>
+                    Nota máxima ({formatScore(block.points)})
+                  </button>
+                  <button type="button" className="fa-btn is-ghost is-small" disabled={saving === answer.id} onClick={() => saveGrade(answer, block, 0)}>
+                    Zerar
+                  </button>
+                </div>
                 <label className="fa-field">
-                  <span>Nota (0 a {formatScore(block.points)})</span>
+                  <span>Ou ajuste a nota manualmente (0 a {formatScore(block.points)})</span>
                   <input className="fa-input" inputMode="decimal" value={draft.points} onChange={(e) => setDraft(answer, { points: e.target.value })} />
                 </label>
                 <label className="fa-field">

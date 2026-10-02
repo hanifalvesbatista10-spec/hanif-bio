@@ -302,11 +302,7 @@ export default function CertificateTemplateEditor() {
           : `Erro ao salvar: ${text}`);
       return;
     }
-    if (createNew) {
-      navigate(`/admin/certificados/modelo/${result.data.id}`, { replace: !asCopy, state: { created: true } });
-      if (asCopy === true) notify("success", "Novo modelo criado a partir deste (o original continua como estava). Renomeie e ajuste o parágrafo.");
-    }
-    else notify("success", "Modelo salvo. Os certificados já emitidos usam a versão atual do modelo ao serem baixados.");
+    navigate("/admin/certificados");
   };
 
   if (missing) {
