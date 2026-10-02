@@ -56,7 +56,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
     `products?slug=eq.${encodeURIComponent(slug)}&select=id,title,slug,price,promotional_price,status,checkout_mode&limit=1`
   );
   const product = products?.[0];
-  if (!product || product.status !== "active") throw new HttpError(404, "product_not_found", "Produto não encontrado.");
+  if (!product || !["active", "unlisted"].includes(product.status)) throw new HttpError(404, "product_not_found", "Produto não encontrado.");
   if (product.checkout_mode !== "internal") {
     throw new HttpError(409, "checkout_disabled", "Este produto não usa o checkout do site.");
   }

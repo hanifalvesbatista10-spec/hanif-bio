@@ -15,7 +15,7 @@ export default checkoutHandler(["POST"], async (req, res) => {
 
   const products = await sb(`products?slug=eq.${encodeURIComponent(slug)}&select=id,price,promotional_price,status,checkout_mode&limit=1`);
   const product = products?.[0];
-  if (!product || product.status !== "active" || product.checkout_mode !== "internal") {
+  if (!product || !["active", "unlisted"].includes(product.status) || product.checkout_mode !== "internal") {
     throw new HttpError(404, "product_not_found", "Produto não encontrado.");
   }
   const listCents = priceInCents(product);

@@ -254,7 +254,7 @@ export default function PublicProductPage() {
     window.scrollTo({ top: 0, behavior: "auto" });
     Promise.all([
       supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(),
-      supabase.from("products").select("*").eq("slug", slug).eq("status", "active").maybeSingle(),
+      supabase.from("products").select("*").eq("slug", slug).in("status", ["active", "unlisted"]).maybeSingle(),
     ]).then(([settingsResult, productResult]) => {
       if (settingsResult.data) setSettings((current) => ({ ...current, ...settingsResult.data }));
       if (productResult.error || !productResult.data) {

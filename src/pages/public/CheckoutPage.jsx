@@ -86,7 +86,7 @@ export default function CheckoutPage() {
       .select("id,title,slug,short_description,cover_url,price,promotional_price,checkout_mode,checkout_url,status")
       .eq("slug", slug)
       .maybeSingle()
-      .then(({ data }) => active && setProduct(data && data.status === "active" ? data : null));
+      .then(({ data }) => active && setProduct(data && ["active", "unlisted"].includes(data.status) ? data : null));
     return () => {
       active = false;
     };

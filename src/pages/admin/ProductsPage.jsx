@@ -6,6 +6,7 @@ import InstallmentsSettings from "../../components/admin/InstallmentsSettings";
 const statusLabels = {
   draft: "Rascunho",
   active: "Ativo",
+  unlisted: "Oculto (só com link)",
   inactive: "Inativo",
   archived: "Arquivado",
 };

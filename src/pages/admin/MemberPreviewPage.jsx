@@ -101,7 +101,7 @@ export default function MemberPreviewPage() {
           <select value={productId} onChange={(event) => setParam("produto", event.target.value)}>
             {products.map((product) => (
               <option key={product.id} value={product.id}>
-                {product.title}{product.status !== "active" ? " (inativo)" : ""}
+                {product.title}{product.status === "unlisted" ? " (oculto)" : product.status !== "active" ? " (inativo)" : ""}
               </option>
             ))}
           </select>

@@ -50,13 +50,16 @@ export default function ProductLinks({ product }) {
   const code = cleanCode(coupon);
   const pay = `${origin}/checkout/${product.slug}`;
   const isActive = product.status === "active";
+  const isUnlisted = product.status === "unlisted";
+  const opensToPublic = isActive || isUnlisted;
 
   return (
     <section className="pl-card" aria-labelledby="pl-title">
       <h3 id="pl-title">Links deste produto</h3>
       <p className="pl-intro">
         Links prontos para colocar no Instagram, no WhatsApp ou em anúncios.
-        {!isActive && <b> Este produto não está Ativo, então a página dele não abre para o público até você ativar.</b>}
+        {isUnlisted && <b> Este produto está Oculto: não aparece no catálogo do site, mas quem recebe o link consegue abrir e comprar normalmente.</b>}
+        {!opensToPublic && <b> Este produto não está Ativo, então a página dele não abre para o público até você ativar.</b>}
       </p>
 
       <LinkRow label="Página de apresentação" hint="Mostra o produto, o preço e o botão de compra." url={page} />
