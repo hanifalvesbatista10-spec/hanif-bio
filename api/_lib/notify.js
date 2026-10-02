@@ -36,7 +36,10 @@ async function sendTelegram(text) {
     body: JSON.stringify({ chat_id: chatId, text }),
     signal: AbortSignal.timeout(5000),
   });
-  if (!response.ok) throw new Error(`Telegram ${response.status}`);
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(`Telegram ${response.status}${data?.description ? ` - ${data.description}` : ""}`);
+  }
 }
 
 export async function notifyOwnerOfSale(order) {
@@ -55,14 +58,24 @@ export async function notifyOwnerOfSale(order) {
     ...(d.coupon ? [`Cupom: ${d.coupon}`] : []),
   ];
 
-  await Promise.allSettled([
-    telegramOn ? sendTelegram(`Nova venda!\n${lines.join("\n")}`) : null,
-    emailOn
-      ? sendEmail({
-          to,
-          subject: `Nova venda: ${d.main} (${d.amount})`,
-          html: `<h2>Nova venda</h2><p>${lines.map(escapeHtml).join("<br>")}</p>`,
-        })
-      : null,
-  ].filter(Boolean).map((p) => p.catch((error) => { console.error("notifyOwnerOfSale:", error.message); throw error; })));
+  // Se o Telegram não sair, o e-mail avisa o motivo (as chaves ficam ocultas na Vercel e os logs são difíceis de achar).
+  let telegramProblem = "";
+  if (!telegramOn) {
+    const missing = ["TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID"].filter((name) => !process.env[name]);
+    telegramProblem = `Telegram não configurado: falta ${missing.join(" e ")} na Vercel (ou falta um redeploy).`;
+  } else {
+    await sendTelegram(`Nova venda!\n${lines.join("\n")}`).catch((error) => {
+      console.error("notifyOwnerOfSale telegram:", error.message);
+      telegramProblem = `O aviso no Telegram falhou: ${error.message}`;
+    });
+  }
+
+  if (emailOn) {
+    const body = [...lines, ...(telegramProblem ? ["", telegramProblem] : [])];
+    await sendEmail({
+      to,
+      subject: `Nova venda: ${d.main} (${d.amount})`,
+      html: `<h2>Nova venda</h2><p>${body.map(escapeHtml).join("<br>")}</p>`,
+    }).catch((error) => console.error("notifyOwnerOfSale email:", error.message));
+  }
 }
