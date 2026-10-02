@@ -12,6 +12,7 @@ export const adminNavGroups = [
       { to: "/admin/pedidos", label: "Pedidos", icon: "orders", badgeKey: "pedidos" },
       { to: "/admin/cupons", label: "Cupons", icon: "coupon" },
       { to: "/admin/recuperacao-de-vendas", label: "Recuperação de vendas", icon: "orders", badgeKey: "recuperacao" },
+      { to: "/admin/marketing", label: "Marketing", icon: "marketing" },
       { to: "/admin/afiliados", label: "Afiliados", icon: "coupon", badgeKey: "afiliados" },
       { to: "/admin/conteudos", label: "Conteúdos e materiais", icon: "content" },
       { to: "/admin/faq", label: "Perguntas frequentes", icon: "faq" },

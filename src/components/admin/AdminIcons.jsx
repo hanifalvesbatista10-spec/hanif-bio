@@ -128,6 +128,12 @@ export const icons = {
       <path d="m9.5 14.5 5-5M9.7 9.7h.01M14.3 14.3h.01" />
     </Icon>
   ),
+  marketing: (
+    <Icon>
+      <path d="M4 10v4a1 1 0 0 0 1 1h2l5 4V5L7 9H5a1 1 0 0 0-1 1Z" />
+      <path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11" />
+    </Icon>
+  ),
   certificate: (
     <Icon>
       <rect x="3" y="4" width="18" height="13" rx="2" />
