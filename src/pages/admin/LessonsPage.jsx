@@ -4,6 +4,7 @@ import { icons } from "../../components/admin/AdminIcons";
 import RowActions from "../../components/admin/RowActions";
 import { supabase } from "../../services/supabase";
 import { createMuxUpload, deleteMuxAsset, formatDuration, getMuxUploadState, uploadFileToMux } from "../../services/mux";
+import { uploadFileToR2 } from "../../services/r2";
 import { youtubeId } from "../../services/video";
 import { fetchLessonsAndLinks, lessonsForProduct, productIdsOfLesson } from "../../services/lessons";
 
@@ -44,9 +45,14 @@ function formatSize(bytes) {
 function LessonDialog({ lesson, products, sharing, holdAvailable, currentProductId, saving, phase, progress, error, onSave, onClose }) {
   const [draft, setDraft] = useState(lesson);
   const [file, setFile] = useState(null);
+  const [attachFile, setAttachFile] = useState(null);
+  const [removeAttachment, setRemoveAttachment] = useState(false);
   const dialogRef = useRef(null);
   const firstFieldRef = useRef(null);
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(lesson) || Boolean(file), [draft, lesson, file]);
+  const dirty = useMemo(
+    () => JSON.stringify(draft) !== JSON.stringify(lesson) || Boolean(file) || Boolean(attachFile) || removeAttachment,
+    [draft, lesson, file, attachFile, removeAttachment]
+  );
 
   const requestClose = useCallback(() => {
     if (saving) return;
@@ -107,9 +113,25 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
     setFile(picked);
   };
 
+  const pickAttachment = (event) => {
+    const picked = event.target.files?.[0] || null;
+    if (picked && picked.type !== "application/pdf") {
+      window.alert("Escolha um arquivo em PDF.");
+      event.target.value = "";
+      return;
+    }
+    if (picked && picked.size > 50 * 1024 * 1024) {
+      window.alert("O arquivo passa de 50 MB. Reduza o PDF antes de enviar.");
+      event.target.value = "";
+      return;
+    }
+    setAttachFile(picked);
+    setRemoveAttachment(false);
+  };
+
   const submit = (event) => {
     event.preventDefault();
-    onSave(draft, file);
+    onSave(draft, file, attachFile, removeAttachment);
   };
 
   return (
@@ -168,6 +190,24 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
             )}
 
             <label>Descrição<textarea rows={3} value={draft.description || ""} onChange={(e) => set("description", e.target.value)} disabled={saving} /></label>
+
+            <div className="adm-mux-box">
+              {lesson.attachment_file_name && !attachFile && !removeAttachment && (
+                <p className="adm-mux-current">Material atual: <strong>{lesson.attachment_file_name}</strong></p>
+              )}
+              <label>
+                {lesson.attachment_file_name ? "Substituir o material (opcional)" : "Material da aula (PDF, opcional)"}
+                <input type="file" accept="application/pdf" onChange={pickAttachment} disabled={saving} />
+              </label>
+              {attachFile && <p className="adm-hint">{attachFile.name} · {formatSize(attachFile.size)}</p>}
+              {!attachFile && lesson.attachment_file_path && !removeAttachment && (
+                <button type="button" className="admin-button adm-ghost" disabled={saving} onClick={() => setRemoveAttachment(true)}>
+                  Remover material atual
+                </button>
+              )}
+              {removeAttachment && <p className="adm-hint">O material será removido ao salvar.</p>}
+              <p className="adm-hint">Fica num armazenamento privado — só quem tem acesso a esta aula consegue baixar.</p>
+            </div>
             <label>
               Temas que esta aula ensina (um por linha, opcional)
               <textarea
@@ -455,7 +495,7 @@ export default function LessonsPage() {
     setEditing({ ...lesson, position: lesson.position ?? 0, product_ids: coursesOf(lesson.id), topics_text: (lesson.topics || []).join("\n"), available_in_hold: Boolean(lesson.available_in_hold) });
   };
 
-  const saveLesson = async (row, file) => {
+  const saveLesson = async (row, file, attachFile, removeAttachment) => {
     const title = row.title.trim();
     const mux = isMux(row);
     const videoUrl = (row.video_url || "").trim();
@@ -522,6 +562,16 @@ export default function LessonsPage() {
         }
       }
 
+      if (attachFile) {
+        setPhase("Enviando material...");
+        const { key, name } = await uploadFileToR2({ kind: "lesson", file: attachFile });
+        payload.attachment_file_path = key;
+        payload.attachment_file_name = name;
+      } else if (removeAttachment) {
+        payload.attachment_file_path = null;
+        payload.attachment_file_name = null;
+      }
+
       setPhase("Salvando aula...");
       const result = row.id
         ? await supabase.from("product_lessons").update(payload).eq("id", row.id).select("*").single()
@@ -534,6 +584,8 @@ export default function LessonsPage() {
             ? "O banco ainda não tem os temas das aulas. Execute supabase/26_desempenho_turma_e_aluno.sql no Supabase e salve de novo."
             : text.includes("mux_") || text.includes("video_source") || text.includes("provider_check") || text.includes("null value")
             ? "O banco ainda não está pronto para o Mux. Execute supabase/14_mux_video.sql no SQL Editor do Supabase e tente de novo."
+            : text.includes("attachment_file_path")
+            ? "O banco ainda não tem o material da aula. Execute supabase/41_material_da_aula.sql no SQL Editor do Supabase e tente de novo."
             : `Erro ao salvar: ${text}`
         );
       }

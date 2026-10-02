@@ -5,6 +5,7 @@ import { memberIcons as icons } from "../../components/member/MemberIcons";
 import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
 import { supabase } from "../../services/supabase";
 import { fetchProductLessons } from "../../services/lessons";
+import { getR2DownloadUrl } from "../../services/r2";
 import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
 
@@ -13,30 +14,29 @@ function isLiveFresh(lesson) {
   return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
 }
 
-// Arquivo do produto (e-book): bucket privado, o link só é gerado na hora do clique e expira em
-// alguns minutos (SQL 40) — nunca fica um link fixo que pudesse vazar.
-function EbookDownload({ product }) {
+// Botão de download que só pede o link (Cloudflare R2, expira em poucos minutos) na hora do clique —
+// nunca um link fixo que pudesse vazar. Usado tanto pro arquivo do produto (e-book) quanto pelo
+// material de uma aula específica.
+function FileDownload({ kind, id, title, subtitle }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const download = async () => {
     setBusy(true);
     setError("");
-    const { data, error: signError } = await supabase.storage
-      .from("product-files")
-      .createSignedUrl(product.ebook_file_path, 300, { download: product.ebook_file_name || true });
-    setBusy(false);
-    if (signError || !data?.signedUrl) {
-      setError("Não foi possível gerar o link de download agora. Tente novamente em instantes.");
-      return;
+    try {
+      const { url } = await getR2DownloadUrl(kind, id);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (err) {
+      setError(err.message || "Não foi possível gerar o link de download agora. Tente novamente em instantes.");
     }
-    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    setBusy(false);
   };
 
   return (
     <div className="mb-alert" role="status">
-      <strong>{product.ebook_file_name || "Material do curso"}</strong>
-      <p style={{ margin: "6px 0 10px" }}>O arquivo deste produto está liberado para download.</p>
+      <strong>{title}</strong>
+      <p style={{ margin: "6px 0 10px" }}>{subtitle}</p>
       <button type="button" className="mb-btn" onClick={download} disabled={busy}>
         {busy ? "Gerando o link..." : "Baixar material"}
       </button>
@@ -97,7 +97,14 @@ export default function CourseLessonsPage() {
         <h1>{product?.title || "Curso"}</h1>
       </div>
 
-      {product?.ebook_file_path && <EbookDownload product={product} />}
+      {product?.ebook_file_path && (
+        <FileDownload
+          kind="product"
+          id={productId}
+          title={product.ebook_file_name || "Material do curso"}
+          subtitle="O arquivo deste produto está liberado para download."
+        />
+      )}
 
       {hold && (
         <div className="mb-alert" role="status">
@@ -155,6 +162,14 @@ export default function CourseLessonsPage() {
                 </div>
 
                 {activeLesson.description && <p className="member-description">{activeLesson.description}</p>}
+                {activeLesson.attachment_file_path && (
+                  <FileDownload
+                    kind="lesson"
+                    id={activeLesson.id}
+                    title={activeLesson.attachment_file_name || "Material desta aula"}
+                    subtitle="Arquivo liberado para download junto com esta aula."
+                  />
+                )}
                 <LessonComments lessonId={activeLesson.id} />
               </>
             )}

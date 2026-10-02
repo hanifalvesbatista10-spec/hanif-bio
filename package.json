@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1145.0",
+    "@aws-sdk/s3-request-presigner": "^3.1145.0",
     "@mux/mux-player-react": "^3.13.4",
     "@mux/upchunk": "^3.5.0",
     "@supabase/supabase-js": "^2.49.1",

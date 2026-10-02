@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { uploadFileToR2 } from "../../services/r2";
 import ProductLinks from "../../components/admin/ProductLinks";
 
 const emptyForm = {
@@ -200,20 +201,15 @@ export default function ProductEditorPageV4() {
     return data?.publicUrl || null;
   };
 
-  // Arquivo do e-book: bucket privado — ninguém baixa pelo link direto, só quem comprou (ver SQL 40).
+  // Arquivo do e-book: sobe direto pro Cloudflare R2 — ninguém baixa pelo link direto, só quem
+  // comprou (confere via /api/r2-sign-download, com o acesso ativo em user_products).
   const uploadEbookFile = async () => {
     if (!ebookFile) return { path: asText(form.ebook_file_path) || null, name: asText(form.ebook_file_name) || null };
     if (ebookFile.type !== "application/pdf") throw new Error("O arquivo do e-book precisa ser um PDF.");
     if (ebookFile.size > 50 * 1024 * 1024) throw new Error("O arquivo do e-book deve ter no máximo 50 MB.");
 
-    const path = `ebooks/${Date.now()}-${crypto.randomUUID()}.pdf`;
-    const { error } = await supabase.storage.from("product-files").upload(path, ebookFile, {
-      cacheControl: "3600",
-      contentType: "application/pdf",
-      upsert: false,
-    });
-    if (error) throw new Error(`Falha ao enviar o arquivo do e-book: ${error.message}`);
-    return { path, name: ebookFile.name };
+    const { key, name } = await uploadFileToR2({ kind: "product", file: ebookFile });
+    return { path: key, name };
   };
 
   const save = async (event) => {
@@ -326,7 +322,7 @@ export default function ProductEditorPageV4() {
           ? "O banco ainda não tem a garantia de 7 dias. Execute supabase/30_garantia_7_dias.sql no SQL Editor e tente novamente."
           : text.includes("highlights")
           ? "O banco ainda não tem os destaques do produto. Execute supabase/31_produto_destaques.sql no SQL Editor e tente novamente."
-          : text.includes("ebook_file_path") || text.includes("product-files")
+          : text.includes("ebook_file_path")
           ? "O banco ainda não tem o arquivo de e-book. Execute supabase/40_ebook_arquivo_do_produto.sql no SQL Editor e tente novamente."
           : text.includes("column") && text.includes("does not exist")
           ? "O banco ainda não tem os campos novos. Execute supabase/11_temas_e_etiquetas.sql no SQL Editor e tente novamente."
