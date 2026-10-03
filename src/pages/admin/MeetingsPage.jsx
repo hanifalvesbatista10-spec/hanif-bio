@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { meetingWindow } from "../../services/meeting";
 
@@ -20,6 +20,8 @@ function isMissingTable(error) {
 }
 
 export default function MeetingsPage() {
+  const navigate = useNavigate();
+  const [starting, setStarting] = useState(false);
   const [meetings, setMeetings] = useState([]);
   const [products, setProducts] = useState([]);
   const [form, setForm] = useState(emptyForm);
@@ -88,6 +90,30 @@ export default function MeetingsPage() {
     load();
   };
 
+  // Reunião na hora: cria o encontro com o horário de agora e já abre a sala como dono. Os alunos do produto
+  // veem o botão de entrar no curso (a sala já está dentro da janela de entrada).
+  const startNow = async () => {
+    if (!form.product_id) return notify("error", "Escolha o produto da reunião.");
+    const duration = Number(form.duration_minutes);
+    if (!Number.isInteger(duration) || duration < 15 || duration > 480) return notify("error", "A duração deve ser de 15 a 480 minutos.");
+
+    setStarting(true);
+    const { data, error } = await supabase
+      .from("live_meetings")
+      .insert({
+        product_id: form.product_id,
+        title: form.title.trim() || "Reunião ao vivo",
+        description: form.description.trim() || null,
+        starts_at: new Date().toISOString(),
+        duration_minutes: duration,
+      })
+      .select("id")
+      .single();
+    setStarting(false);
+    if (error) return notify("error", `Não foi possível iniciar a reunião: ${error.message}`);
+    navigate(`/minha-area/encontro/${data.id}`);
+  };
+
   const edit = (meeting) => {
     setEditingId(meeting.id);
     setForm({
@@ -135,9 +161,19 @@ export default function MeetingsPage() {
 
       {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`} role="status">{message}</div>}
 
+      <style>{`
+        .mt-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+        .mt-grid label{min-width:0}
+        .mt-grid select,.mt-grid input{width:100%;min-width:0;box-sizing:border-box}
+        .mt-wide{grid-column:1/-1}
+        .mt-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+        .mt-hint{margin:0;font-size:.78rem;color:#66798c}
+        @media(max-width:700px){.mt-grid{grid-template-columns:minmax(0,1fr)}}
+      `}</style>
+
       <form className="cp-form" onSubmit={submit}>
         <h3>{editingId ? "Editar encontro" : "Novo encontro"}</h3>
-        <div className="cp-grid">
+        <div className="cp-grid mt-grid">
           <label>Produto
             <select value={form.product_id} onChange={set("product_id")} required>
               <option value="">Escolha...</option>
@@ -155,14 +191,20 @@ export default function MeetingsPage() {
           <label>Duração (minutos)
             <input type="number" min="15" max="480" value={form.duration_minutes} onChange={set("duration_minutes")} required />
           </label>
-          <label>Descrição (opcional)
+          <label className="mt-wide">Descrição (opcional)
             <input value={form.description} onChange={set("description")} placeholder="O que será visto neste encontro" maxLength={300} />
           </label>
         </div>
-        <div className="form-actions">
-          <button className="admin-button primary" type="submit" disabled={saving}>{saving ? "Salvando..." : editingId ? "Salvar alterações" : "Agendar encontro"}</button>
+        <div className="mt-actions">
+          <button className="admin-button primary" type="submit" disabled={saving || starting}>{saving ? "Salvando..." : editingId ? "Salvar alterações" : "Agendar encontro"}</button>
+          {!editingId && (
+            <button className="admin-button" type="button" onClick={startNow} disabled={saving || starting}>
+              {starting ? "Abrindo a sala..." : "Iniciar reunião agora"}
+            </button>
+          )}
           {editingId && <button className="admin-button adm-ghost" type="button" onClick={reset}>Cancelar edição</button>}
         </div>
+        {!editingId && <p className="mt-hint">“Iniciar reunião agora” só precisa do produto: abre a sala na hora e os alunos do produto já veem o botão de entrar no curso.</p>}
       </form>
 
       {loading ? (
