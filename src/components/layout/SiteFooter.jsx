@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { openCookiePreferences } from "../../services/consent";
 
 export default function SiteFooter({ settings }) {
   return (
@@ -27,6 +28,7 @@ export default function SiteFooter({ settings }) {
           <Link to="/login">Área do aluno</Link>
           <Link to="/certificado">Verificar certificado</Link>
           <Link to="/privacidade">Política de privacidade</Link>
+          <a href="#cookies" onClick={(event) => { event.preventDefault(); openCookiePreferences(); }}>Preferências de cookies</a>
           <Link to="/seja-afiliado">Seja afiliado</Link>
           <Link to="/painel-afiliado">Painel do afiliado</Link>
           <Link to="/admin/login">Acesso administrativo</Link>

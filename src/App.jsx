@@ -24,6 +24,7 @@ import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import MeetingRoomPage from "./pages/student/MeetingRoomPage";
 import RadarPage from "./pages/public/RadarPage";
 import PrivacyPage from "./pages/public/PrivacyPage";
+import CookieBanner from "./components/site/CookieBanner";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
 import StudentCertificatesPage from "./pages/student/StudentCertificatesPage";
 import StudentActivitiesPage from "./pages/student/StudentActivitiesPage";
@@ -447,6 +448,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <CookieBanner />
       </AuthProvider>
     </BrowserRouter>
   );
