@@ -8,7 +8,7 @@
 // com um UPDATE condicional antes de ser analisado.
 import { sb } from "../checkout.js";
 import { sendTelegram } from "../notify.js";
-import { AiNotConfigured, analyze, triage } from "./ai.js";
+import { AiBusy, AiNotConfigured, analyze, triage } from "./ai.js";
 import { collectNaemsp, collectPubmed, fetchIlcorDocument, fetchPubmedRecords, listIlcorDocuments, titleFromSlug } from "./sources.js";
 
 const MIN = 60 * 1000;
@@ -155,17 +155,18 @@ async function analyzeOne(itemRow) {
     return true;
   } catch (error) {
     const attempts = (item.error_count || 0) + 1;
-    const giveUp = attempts >= MAX_ATTEMPTS && !(error instanceof AiNotConfigured);
+    const notItsFault = error instanceof AiNotConfigured || error instanceof AiBusy; // chave ausente ou limite de uso: não conta como falha do item
+    const giveUp = attempts >= MAX_ATTEMPTS && !notItsFault;
     await sb(`radar_items?id=eq.${item.id}`, {
       method: "PATCH",
-      body: { status: giveUp ? "discarded" : "pending_analysis", claimed_at: null, error_count: error instanceof AiNotConfigured ? item.error_count || 0 : attempts },
+      body: { status: giveUp ? "discarded" : "pending_analysis", claimed_at: null, error_count: notItsFault ? item.error_count || 0 : attempts },
     }).catch(() => null);
     await sb("radar_item_private?on_conflict=item_id", {
       method: "POST",
       prefer: "resolution=merge-duplicates",
       body: { item_id: item.id, last_error: String(error.message).slice(0, 400), ...(giveUp ? { discard_reason: `Falhou ${MAX_ATTEMPTS} vezes: ${String(error.message).slice(0, 200)}` } : {}) },
     }).catch(() => null);
-    if (error instanceof AiNotConfigured) throw error;
+    if (notItsFault) throw error;
     console.error("radar analyze:", error.message);
     return false;
   }

@@ -1,5 +1,8 @@
-// IA do Radar: triagem (quais itens valem) e análise (resumo fundamentado). Usa a API da Anthropic com a chave
-// ANTHROPIC_API_KEY, que fica SÓ no servidor (Vercel). Sem a chave, nada é simulado: devolve erro claro.
+// IA do Radar: triagem (quais itens valem) e análise (resumo fundamentado). O provedor é trocável:
+//  * GEMINI_API_KEY    -> Google Gemini (tem plano GRATUITO; chave em aistudio.google.com);
+//  * ANTHROPIC_API_KEY -> Claude (pago por uso).
+// Se as duas existirem, vale AI_PROVIDER ("gemini" ou "anthropic"); sem AI_PROVIDER, usa o Gemini (grátis).
+// As chaves ficam SÓ no servidor (Vercel). Sem nenhuma chave, nada é simulado: devolve erro claro.
 //
 // Segurança: todo texto coletado entra dentro de <fonte>...</fonte> como DADO. O modelo é instruído a nunca obedecer
 // instruções vindas de lá, e a resposta é validada pelo servidor (valores permitidos, links montados por nós,
@@ -13,23 +16,70 @@ export const ACTIONS = ["atualizar_agora", "acompanhar", "divulgar"];
 export const TOPIC_KEYS = ["rcp_dea", "trauma_hemorragia", "pediatria_neonatal", "coluna"];
 
 export class AiNotConfigured extends Error {}
+// limite de uso do provedor (ex.: plano gratuito): não conta como falha do item, tenta de novo depois
+export class AiBusy extends Error {}
 
 const clip = (value, max) => String(value ?? "").replace(/\r/g, "").replace(/\u0000/g, "").trim().slice(0, max);
 // o texto da fonte não pode fechar nem imitar a marcação que usamos para isolá-lo
 const asData = (value, max) => clip(value, max).replace(/</g, "‹").replace(/>/g, "›");
 
-async function callClaude({ model, system, user, maxTokens, timeoutMs }) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new AiNotConfigured("Falta a variável ANTHROPIC_API_KEY na Vercel (e um Redeploy). Sem ela a IA não roda.");
+function provider() {
+  const wanted = (process.env.AI_PROVIDER || "").toLowerCase();
+  if (wanted === "anthropic" && process.env.ANTHROPIC_API_KEY) return "anthropic";
+  if (wanted === "gemini" && process.env.GEMINI_API_KEY) return "gemini";
+  if (process.env.GEMINI_API_KEY) return "gemini";
+  if (process.env.ANTHROPIC_API_KEY) return "anthropic";
+  throw new AiNotConfigured("Falta a chave da IA na Vercel: GEMINI_API_KEY (gratuita) ou ANTHROPIC_API_KEY (paga), e um Redeploy. Sem ela a IA não roda.");
+}
+
+async function callAnthropic({ kind, system, user, maxTokens, timeoutMs }) {
+  const model = kind === "triage" ? process.env.ANTHROPIC_TRIAGE_MODEL || "claude-haiku-4-5-20251001" : process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5";
   const response = await fetch(API, {
     method: "POST",
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+    headers: { "x-api-key": process.env.ANTHROPIC_API_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json" },
     body: JSON.stringify({ model, max_tokens: maxTokens, system, messages: [{ role: "user", content: user }] }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const data = await response.json().catch(() => ({}));
+  if (response.status === 429 || response.status === 529) throw new AiBusy("A IA está com limite de uso no momento. A fila continua depois.");
   if (!response.ok) throw new Error(`Anthropic ${response.status}${data?.error?.message ? ` - ${data.error.message}` : ""}`);
   return (data.content || []).filter((block) => block.type === "text").map((block) => block.text).join("");
+}
+
+// Gemini: tenta o modelo configurado e, se ele não existir mais, o Flash estável de reserva.
+async function callGemini({ kind, system, user, maxTokens, timeoutMs }) {
+  const primary = (kind === "triage" ? process.env.GEMINI_TRIAGE_MODEL : process.env.GEMINI_MODEL) || process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const models = [...new Set([primary, "gemini-2.5-flash"])];
+  let lastError = null;
+  for (const model of models) {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+      method: "POST",
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: user }] }],
+        // folga grande: nos modelos com "raciocínio" o limite de saída também conta o raciocínio interno
+        generationConfig: { maxOutputTokens: Math.max(maxTokens * 2, 8192), temperature: 0.2, responseMimeType: "application/json" },
+      }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (response.status === 429) throw new AiBusy("O limite do plano gratuito do Gemini foi atingido por agora. A fila continua depois.");
+    if (response.status === 404 || (response.status === 400 && /model/i.test(data?.error?.message || ""))) {
+      lastError = new Error(`Gemini: modelo ${model} indisponível (${data?.error?.message || response.status})`);
+      continue;
+    }
+    if (!response.ok) throw new Error(`Gemini ${response.status}${data?.error?.message ? ` - ${data.error.message}` : ""}`);
+    if (data?.promptFeedback?.blockReason) throw new Error(`Gemini bloqueou o conteúdo (${data.promptFeedback.blockReason}).`);
+    const text = (data.candidates?.[0]?.content?.parts || []).map((part) => part.text || "").join("");
+    if (!text) throw new Error("Gemini não devolveu texto.");
+    return text;
+  }
+  throw lastError || new Error("Gemini indisponível.");
+}
+
+function callModel(args) {
+  return provider() === "gemini" ? callGemini(args) : callAnthropic(args);
 }
 
 // Quebras de linha de verdade dentro dos textos do JSON são comuns em respostas de IA e o JSON.parse as recusa.
@@ -94,8 +144,8 @@ export async function triage(candidates) {
   const list = candidates
     .map((c) => `<fonte id="${c.ref}">\nTítulo: ${asData(c.title_original, 300)}\nFonte: ${asData(c.source_name, 80)}\nTipos (PubMed): ${asData((c.pub_types || []).join(", "), 120)}\nTema sugerido: ${c.topic || "?"}\nResumo: ${asData(c.raw_text, 900)}\n</fonte>`)
     .join("\n\n");
-  const text = await callClaude({
-    model: process.env.ANTHROPIC_TRIAGE_MODEL || "claude-haiku-4-5-20251001",
+  const text = await callModel({
+    kind: "triage",
     system: TRIAGE_SYSTEM,
     user: `Faça a triagem destes ${candidates.length} itens:\n\n${list}`,
     maxTokens: 4000,
@@ -143,8 +193,8 @@ Responda SOMENTE com JSON:
 {"title_pt":"título em português","study_design":"desenho do estudo ou tipo de documento","publication_type":"diretriz_final|consulta_publica|revisao|estudo_original|preprint|opiniao|outro","population":"adulto|pediatrico|neonatal|misto|nao_se_aplica","summary_pt":"2 a 4 frases para o público","main_finding":"achado principal","what_changed":"... ou null","evidence_strength":"força/certeza da evidência e por quê, como análise crítica do texto recebido","limitations":"limitações","applicability_br":"aplicabilidade ao APH brasileiro (SAMU, recursos, formação), com cautela","course_updates":"o que vale atualizar nos cursos e na Mentoria APH: slides, algoritmos, questões ou práticas (ou 'nada por ora')","editorial_action":"atualizar_agora|acompanhar|divulgar","official_grade":"trecho copiado ou null"}`;
 
 export async function analyze(item) {
-  const text = await callClaude({
-    model: process.env.ANTHROPIC_MODEL || "claude-sonnet-5-5",
+  const text = await callModel({
+    kind: "analysis",
     system: ANALYSIS_SYSTEM,
     user: `Base da análise: ${item.analysis_basis === "pagina_da_fonte" ? "página da fonte" : "resumo (abstract)"}.\nTipos informados pela fonte: ${asData((item.pub_types || []).join(", ") || "não informado", 120)}.\n\n<fonte id="${item.ref}">\nTítulo: ${asData(item.title_original, 400)}\nFonte: ${asData(item.source_name, 120)}\nAutores/instituição: ${asData(item.authors || "não informado", 300)}\nPublicado em: ${item.published_date || "não informado"}\nSituação na fonte: ${asData(item.source_status || "não informado", 80)}\nTexto:\n${asData(item.raw_text, 6000)}\n</fonte>`,
     maxTokens: 2500,
