@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { BASIS_LABELS, POPULATION_LABELS, TOPIC_LABELS, TYPE_LABELS, formatDate, safeUrl } from "../../services/radar";
+import RadarLeadGate from "../../components/site/RadarLeadGate";
+import { getStoredLead } from "../../services/leads";
 import SiteHeader from "../../components/layout/SiteHeader";
 import SiteFooter from "../../components/layout/SiteFooter";
 import "./ConversionHomePage.css";
@@ -26,8 +28,9 @@ function Section({ title, children }) {
   );
 }
 
-function Detail({ item }) {
+function Detail({ item, communityUrl }) {
   const refs = Array.isArray(item.references) ? item.references : [];
+  const community = safeUrl(communityUrl);
   return (
     <div className="site-container" style={{ maxWidth: 820 }}>
       <Link className="site-about-link" to="/radar">← Voltar ao Radar</Link>
@@ -65,6 +68,16 @@ function Detail({ item }) {
           ))}
         </ul>
       </section>
+
+      {community && (
+        <section style={{ marginTop: 34, padding: 22, borderRadius: 18, background: "var(--brand-navy, #071426)", color: "#fff" }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: "1.25rem" }}>Continue essa conversa na comunidade APH Hardcore</h3>
+          <p style={{ margin: "0 0 16px", lineHeight: 1.65, color: "#c9d4df" }}>
+            Terminou a leitura? Entre no grupo para discutir esta análise com outros profissionais e estudantes de APH e receber as próximas novidades.
+          </p>
+          <a className="site-buy" href={community} target="_blank" rel="noopener noreferrer">Entrar na comunidade</a>
+        </section>
+      )}
     </div>
   );
 }
@@ -75,6 +88,7 @@ export default function RadarPage() {
   const [items, setItems] = useState([]);
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(true);
+  const [unlocked, setUnlocked] = useState(() => Boolean(getStoredLead()));
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -98,7 +112,9 @@ export default function RadarPage() {
         {loading ? (
           <div className="site-container"><div className="site-empty">Carregando...</div></div>
         ) : id ? (
-          items[0] ? <Detail item={items[0]} /> : (
+          items[0] ? (
+            unlocked ? <Detail item={items[0]} communityUrl={settings.community_url} /> : <RadarLeadGate item={items[0]} onUnlock={() => { setUnlocked(true); window.scrollTo({ top: 0, behavior: "auto" }); }} />
+          ) : (
             <div className="site-container">
               <div className="site-empty">Esta análise não está disponível.</div>
               <Link className="site-about-link" to="/radar">← Voltar ao Radar</Link>
@@ -114,7 +130,7 @@ export default function RadarPage() {
             </div>
             <p className="site-lead" style={{ maxWidth: 720 }}>
               Toda semana são monitoradas publicações sobre RCP e DEA, trauma e hemorragia, emergências pediátricas e neonatais e restrição de movimento da coluna.
-              Cada item abaixo foi analisado e <strong>revisado antes de ser publicado</strong>, com as referências originais.
+              Cada item abaixo foi analisado e <strong>revisado antes de ser publicado</strong>, com as referências originais. A leitura completa é gratuita: basta um cadastro rápido.
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "18px 0 24px" }}>
               <button type="button" className={`site-chip ${topic === "" ? "is-active" : ""}`} onClick={() => setTopic("")} style={chipStyle(topic === "")}>Todos</button>
