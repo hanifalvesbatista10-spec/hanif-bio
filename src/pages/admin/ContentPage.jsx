@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import RowActions from "../../components/admin/RowActions";
+import RadarPanel from "../../components/admin/radar/RadarPanel";
 
 const statusLabels = { draft: "Rascunho", review: "Em análise", published: "Publicado", hidden: "Oculto", archived: "Arquivado" };
 const typeLabels = { artigo: "Conteúdo gratuito", material: "Material para download" };
@@ -10,6 +11,7 @@ export default function ContentPage() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [tab, setTab] = useState("content");
   const navigate = useNavigate();
 
   const load = async () => {
@@ -52,7 +54,14 @@ export default function ContentPage() {
 
       {message && <div className="admin-alert">{message}</div>}
 
-      {loading ? (
+      <div style={{ display: "flex", gap: 8, margin: "4px 0 16px" }}>
+        <button type="button" className={`admin-button ${tab === "content" ? "primary" : ""}`} onClick={() => setTab("content")}>Conteúdos e materiais</button>
+        <button type="button" className={`admin-button ${tab === "radar" ? "primary" : ""}`} onClick={() => setTab("radar")}>Radar de Evidências</button>
+      </div>
+
+      {tab === "radar" ? (
+        <RadarPanel />
+      ) : loading ? (
         <div className="admin-empty">Carregando...</div>
       ) : rows.length === 0 ? (
         <div className="admin-empty">Nenhum conteúdo cadastrado ainda.</div>

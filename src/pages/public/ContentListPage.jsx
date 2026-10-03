@@ -59,6 +59,10 @@ export default function ContentListPage() {
             </div>
           </div>
 
+          <p style={{ margin: "0 0 18px" }}>
+            <Link className="site-about-link" to="/radar">Radar de Evidências: novidades científicas em APH, revisadas por Hanif Alves →</Link>
+          </p>
+
           {loading ? (
             <div className="site-empty">Carregando...</div>
           ) : items.length === 0 ? (

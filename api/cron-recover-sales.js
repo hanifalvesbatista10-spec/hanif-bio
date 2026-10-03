@@ -11,7 +11,8 @@
 // Protegido por CRON_SECRET: exige o cabeçalho "Authorization: Bearer <CRON_SECRET>". Sem essa variável
 // configurada, a rota fica BLOQUEADA (ninguém consegue chamar) até você configurá-la na Vercel.
 import crypto from "node:crypto";
-import { HttpError } from "./_lib/mux.js";
+import { HttpError, requireAdmin } from "./_lib/mux.js";
+import { RadarBusy, processQueue, reanalyze, startRun } from "./_lib/radar/pipeline.js";
 import { checkoutHandler, sb, siteUrl } from "./_lib/checkout.js";
 import { sendEmail } from "./_lib/resend.js";
 
@@ -82,8 +83,38 @@ async function processBatch({ base, settings, filter, stage, subject, intro }) {
   return { sent, errors };
 }
 
+// ?job=radar (Radar Semanal de Evidências): vive aqui para caber no limite de 12 funções do plano grátis da Vercel.
+//  GET  (agendador, com CRON_SECRET)   -> ação "run" (coleta semanal) ou "step" (continua a fila de análise)
+//  POST (botões do admin, sessão admin) -> "run", "step" ou "reanalyze&id=..."
+async function radarJob(req, res) {
+  const action = String(req.query?.action || "run");
+  const manual = req.method === "POST";
+  if (manual) await requireAdmin(req);
+  else if (!verifyCron(req)) throw new HttpError(401, "unauthorized", "Não autorizado.");
+
+  try {
+    let result;
+    if (action === "step") result = await processQueue({ deadline: Date.now() + 50 * 1000, maxItems: 2 });
+    else if (action === "reanalyze") {
+      if (!manual) throw new HttpError(405, "method_not_allowed", "Use o painel de administração.");
+      result = await reanalyze(String(req.query?.id || ""));
+    } else result = await startRun({ trigger: manual ? "manual" : "cron" });
+    res.status(200).setHeader("Cache-Control", "no-store").json(result);
+  } catch (error) {
+    if (error instanceof RadarBusy) {
+      res.status(409).setHeader("Cache-Control", "no-store").json({ error: "busy", message: error.message });
+      return;
+    }
+    throw error;
+  }
+}
+
 export default checkoutHandler(["GET", "POST"], async (req, res) => {
+  if (req.query?.job === "radar") return radarJob(req, res);
   if (!verifyCron(req)) throw new HttpError(401, "unauthorized", "Não autorizado.");
+
+  // Aproveita a chamada diária para adiantar a fila de análise do Radar (no máximo 1 item, só se houver fila).
+  await processQueue({ deadline: Date.now() + 45 * 1000, maxItems: 1 }).catch(() => null);
 
   const base = siteUrl();
   const settingsRows = await sb("recovery_settings?id=eq.1&select=*&limit=1").catch(() => null);
