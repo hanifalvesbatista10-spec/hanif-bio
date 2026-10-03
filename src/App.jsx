@@ -21,6 +21,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import BlockedPage from "./pages/auth/BlockedPage";
 import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
+import MeetingRoomPage from "./pages/student/MeetingRoomPage";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
 import StudentCertificatesPage from "./pages/student/StudentCertificatesPage";
 import StudentActivitiesPage from "./pages/student/StudentActivitiesPage";
@@ -54,6 +55,7 @@ const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
 const OrdersPage = lazy(() => import("./pages/admin/OrdersPage"));
 const CouponsPage = lazy(() => import("./pages/admin/CouponsPage"));
 const MarketingPage = lazy(() => import("./pages/admin/MarketingPage"));
+const MeetingsPage = lazy(() => import("./pages/admin/MeetingsPage"));
 const SalesRecoveryPage = lazy(() => import("./pages/admin/SalesRecoveryPage"));
 const AffiliatesPage = lazy(() => import("./pages/admin/AffiliatesPage"));
 const CheckoutPage = lazy(() => import("./pages/public/CheckoutPage"));
@@ -324,6 +326,14 @@ export default function App() {
               }
             />
             <Route
+              path="encontros"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <MeetingsPage />
+                </Suspense>
+              }
+            />
+            <Route
               path="marketing"
               element={
                 <Suspense fallback={<AdminFallback />}>
@@ -419,6 +429,7 @@ export default function App() {
             <Route path="configuracoes" element={<StudentProfilePage />} />
             <Route path="meus-dados" element={<Navigate to="/minha-area/configuracoes?aba=dados" replace />} />
             <Route path="curso/:productId" element={<CourseLessonsPage />} />
+            <Route path="encontro/:meetingId" element={<MeetingRoomPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

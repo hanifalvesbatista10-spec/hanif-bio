@@ -1,12 +1,27 @@
+// POST   /api/mux-asset                → cria uma "direct upload" assinada e devolve a URL para o navegador
+//                                        enviar o arquivo direto ao Mux (o vídeo não passa pelo nosso servidor)
 // GET    /api/mux-asset?uploadId=...  → estado do vídeo enviado (processando / pronto / erro)
 // DELETE /api/mux-asset?assetId=...   → apaga o vídeo no Mux (evita cobrança de armazenamento)
-// Somente administrador.
-import { HttpError, handler, muxRequest, requireAdmin, sendJson } from "./_lib/mux.js";
+// Somente administrador. (O POST era a função /api/mux-upload, juntada aqui por causa do limite de 12
+// funções do plano grátis da Vercel.)
+import { HttpError, handler, muxRequest, requireAdmin, requireMuxConfig, sendJson } from "./_lib/mux.js";
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{6,128}$/;
 
-export default handler(["GET", "DELETE"], async (req, res) => {
+export default handler(["GET", "DELETE", "POST"], async (req, res) => {
   await requireAdmin(req);
+
+  if (req.method === "POST") {
+    requireMuxConfig(["tokenId", "tokenSecret", "signingKeyId", "signingKeyPrivate"]);
+    const { data } = await muxRequest("/video/v1/uploads", {
+      method: "POST",
+      body: {
+        cors_origin: req.headers.origin || "*",
+        new_asset_settings: { playback_policies: ["signed"], video_quality: "basic" },
+      },
+    });
+    return sendJson(res, 201, { uploadId: data.id, url: data.url });
+  }
 
   if (req.method === "DELETE") {
     const assetId = String(req.query?.assetId || "");

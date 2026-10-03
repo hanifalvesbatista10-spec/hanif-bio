@@ -44,7 +44,7 @@ async function api(path, { method = "GET", body } = {}) {
   return payload;
 }
 
-export const createMuxUpload = () => api("/api/mux-upload", { method: "POST" });
+export const createMuxUpload = () => api("/api/mux-asset", { method: "POST" });
 
 export const getMuxUploadState = (uploadId) => api(`/api/mux-asset?uploadId=${encodeURIComponent(uploadId)}`);
 

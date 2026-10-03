@@ -34,7 +34,7 @@ o Mux hospeda e o aluno só assiste com um link assinado que expira. As chaves d
   para administrador ou aluno com acesso ativo ao produto (e aula publicada). Sem acesso → 403.
 - **Sem download e sem URL pública.** O ID de reprodução fica inútil sem o token. O arquivo original não é exposto.
 - **Marca d'água com nome e e-mail do espectador**, em posição que muda a cada 18 s, para desestimular gravação de tela.
-- **Só o administrador envia ou apaga vídeos** (`/api/mux-upload`, `/api/mux-asset` conferem `role = admin`).
+- **Só o administrador envia ou apaga vídeos** (`/api/mux-asset`, que cria, consulta e apaga, confere `role = admin`).
 - Ao **excluir uma aula** ou **substituir o vídeo**, o arquivo antigo é apagado do Mux (evita cobrança de armazenamento).
 
 ## Limites (para ser honesto)

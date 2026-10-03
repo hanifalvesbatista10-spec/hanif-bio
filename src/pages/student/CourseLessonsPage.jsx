@@ -6,6 +6,7 @@ import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
 import { supabase } from "../../services/supabase";
 import { fetchProductLessons } from "../../services/lessons";
 import { getR2DownloadUrl } from "../../services/r2";
+import { meetingWindow } from "../../services/meeting";
 import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
 
@@ -41,6 +42,48 @@ function FileDownload({ kind, id, title, subtitle }) {
         {busy ? "Gerando o link..." : "Baixar material"}
       </button>
       {error && <p style={{ marginTop: 8 }}>{error}</p>}
+    </div>
+  );
+}
+
+// Próximos encontros ao vivo do curso (a sala abre 30 min antes e fica disponível até 1 h depois do fim).
+function LiveMeetings({ productId }) {
+  const [meetings, setMeetings] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("live_meetings")
+      .select("id,title,description,starts_at,duration_minutes")
+      .eq("product_id", productId)
+      .gte("starts_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
+      .order("starts_at", { ascending: true })
+      .then(({ data, error }) => {
+        // sem a tabela (SQL 44 ainda não rodou) ou sem encontros: o bloco simplesmente não aparece
+        if (!error) setMeetings((data || []).filter((meeting) => meetingWindow(meeting) !== "ended"));
+      });
+  }, [productId]);
+
+  if (meetings.length === 0) return null;
+
+  return (
+    <div className="mb-alert" role="status">
+      <strong>Encontros ao vivo</strong>
+      {meetings.map((meeting) => {
+        const open = meetingWindow(meeting) === "open";
+        return (
+          <div key={meeting.id} style={{ margin: "10px 0 0" }}>
+            <div>
+              {meeting.title} — {new Date(meeting.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+            </div>
+            {meeting.description && <p style={{ margin: "4px 0" }}>{meeting.description}</p>}
+            {open ? (
+              <Link className="mb-btn" to={`/minha-area/encontro/${meeting.id}`}>Entrar no encontro</Link>
+            ) : (
+              <small>A sala abre 30 minutos antes do horário.</small>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -105,6 +148,8 @@ export default function CourseLessonsPage() {
           subtitle="O arquivo deste produto está liberado para download."
         />
       )}
+
+      <LiveMeetings productId={productId} />
 
       {hold && (
         <div className="mb-alert" role="status">

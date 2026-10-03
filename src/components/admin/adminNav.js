@@ -37,6 +37,7 @@ export const adminNavGroups = [
       { to: "/admin/formularios", label: "Provas e atividades", icon: "forms", badgeKey: "formularios" },
       { to: "/admin/desempenho", label: "Desempenho da turma", icon: "chart" },
       { to: "/admin/eventos", label: "Eventos e inscrições", icon: "events" },
+      { to: "/admin/encontros", label: "Encontros ao vivo", icon: "events" },
     ],
   },
 ];
