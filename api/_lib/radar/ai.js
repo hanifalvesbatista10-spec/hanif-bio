@@ -66,8 +66,10 @@ async function discoverGeminiModels() {
       .filter((model) => (model.supportedGenerationMethods || []).includes("generateContent"))
       .map((model) => String(model.name || "").replace(/^models\//, ""))
       .filter((name) => /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(name)) // só os estáveis: sem preview, imagem, voz ou experimentais
-      .sort((a, b) => version(b) - version(a) || a.includes("lite") - b.includes("lite"))
-      .slice(0, 4);
+      .sort((a, b) => version(b) - version(a) || a.includes("lite") - b.includes("lite"));
+    const full = list.filter((name) => !name.includes("lite")).slice(0, 2);
+    const lite = list.filter((name) => name.includes("lite")).slice(0, 2); // os "lite" são menos disputados quando os novos congestionam
+    list.splice(0, list.length, ...full, ...lite);
     modelCache = { at: Date.now(), list: list.length ? list : fallback };
     return modelCache.list;
   } catch {
@@ -184,7 +186,7 @@ Inclua todos os ids recebidos. publication_type: diretriz final só se for diret
 
 export async function triage(candidates) {
   const list = candidates
-    .map((c) => `<fonte id="${c.ref}">\nTítulo: ${asData(c.title_original, 300)}\nFonte: ${asData(c.source_name, 80)}\nTipos (PubMed): ${asData((c.pub_types || []).join(", "), 120)}\nTema sugerido: ${c.topic || "?"}\nResumo: ${asData(c.raw_text, 900)}\n</fonte>`)
+    .map((c) => `<fonte id="${c.ref}">\nTítulo: ${asData(c.title_original, 300)}\nFonte: ${asData(c.source_name, 80)}\nTipos (PubMed): ${asData((c.pub_types || []).join(", "), 120)}\nTema sugerido: ${c.topic || "?"}\nResumo: ${asData(c.raw_text, 700)}\n</fonte>`)
     .join("\n\n");
   const text = await callModel({
     kind: "triage",

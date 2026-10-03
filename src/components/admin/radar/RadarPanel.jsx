@@ -94,7 +94,7 @@ export default function RadarPanel() {
   useEffect(() => {
     loadAll().then((rows) => {
       // abriu o painel com itens na fila: continua a análise sozinho (uma vez)
-      if (!autoStarted.current && rows.some((row) => row.status === "pending_analysis")) {
+      if (!autoStarted.current && rows.some((row) => ["pending_analysis", "candidate"].includes(row.status))) {
         autoStarted.current = true;
         continueQueue();
       }
@@ -115,7 +115,7 @@ export default function RadarPanel() {
     else say("ok", result.status === "no_news" ? "Coleta concluída: nenhuma novidade relevante desta vez." : `Coleta concluída: ${result.selected} item(ns) selecionado(s).`);
     setBusy("");
     const rows = await loadAll();
-    if (rows.some((row) => row.status === "pending_analysis")) continueQueue();
+    if (rows.some((row) => ["pending_analysis", "candidate"].includes(row.status))) continueQueue();
   };
 
   const toggleSchedule = async (enabled) => {
@@ -185,7 +185,7 @@ export default function RadarPanel() {
     if (filters.text && !`${row.title_pt || ""} ${row.title_original}`.toLowerCase().includes(filters.text.toLowerCase())) return false;
     return true;
   });
-  const queued = items.filter((row) => row.status === "pending_analysis" || row.status === "analyzing").length;
+  const queued = items.filter((row) => ["pending_analysis", "analyzing", "candidate"].includes(row.status)).length;
   const lastOk = settings?.last_success_at;
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const pending = priv?.pending_version;

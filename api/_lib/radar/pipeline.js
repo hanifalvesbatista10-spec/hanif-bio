@@ -96,6 +96,29 @@ async function patchRun(id, fields) {
 
 // ---------------------------------------------------------------- fila de análise
 
+const TRIAGE_BATCH = 20;
+
+// Avalia os candidatos ainda não triados e move os escolhidos para a fila de análise. Devolve quantos foram escolhidos.
+export async function triagePending() {
+  const pending = (await sb(`radar_items?status=eq.candidate&select=id,topic,source_name,title_original,publication_type,radar_item_private(raw_text)&order=discovered_at.asc&limit=${TRIAGE_BATCH}`)) || [];
+  if (!pending.length) return 0;
+  let selected = 0;
+  const decisions = await triage(pending.map((p) => ({ ref: p.id, title_original: p.title_original, source_name: p.source_name, topic: p.topic, pub_types: [], raw_text: p.radar_item_private?.raw_text || "" })));
+  for (const p of pending) {
+    const d = decisions.get(p.id);
+    if (!d) continue; // a IA não respondeu sobre este: continua candidato para a próxima triagem
+    if (d.select) {
+      selected += 1;
+      await sb(`radar_items?id=eq.${p.id}`, { method: "PATCH", body: { status: "pending_analysis", topic: d.topic, population: d.population, publication_type: d.publication_type } });
+      await sb("radar_item_private?on_conflict=item_id", { method: "POST", prefer: "resolution=merge-duplicates", body: { item_id: p.id, relevance_note: d.reason } });
+    } else {
+      await sb(`radar_items?id=eq.${p.id}`, { method: "PATCH", body: { status: "discarded", topic: d.topic, population: d.population } });
+      await sb("radar_item_private?on_conflict=item_id", { method: "POST", prefer: "resolution=merge-duplicates", body: { item_id: p.id, discard_reason: d.reason || "Não relevante nesta triagem." } });
+    }
+  }
+  return selected;
+}
+
 async function releaseStaleClaims() {
   await sb(`radar_items?status=eq.analyzing&claimed_at=lt.${new Date(Date.now() - STALE_CLAIM_MS).toISOString()}`, {
     method: "PATCH",
@@ -177,7 +200,15 @@ export async function processQueue({ deadline = Date.now() + RUN_BUDGET_MS, maxI
   await releaseStaleClaims();
   let processed = 0;
   let aiError = null;
-  while (processed < maxItems && deadline - Date.now() > ANALYSIS_START_MARGIN_MS) {
+  const waiting = (await sb("radar_items?status=eq.candidate&select=id&limit=1"))?.length;
+  if (waiting) {
+    try {
+      await triagePending();
+    } catch (error) {
+      aiError = error.message;
+    }
+  }
+  while (!aiError && processed < maxItems && deadline - Date.now() > ANALYSIS_START_MARGIN_MS) {
     const next = (await sb("radar_items?status=eq.pending_analysis&select=id&order=discovered_at.asc&limit=1"))?.[0];
     if (!next) break;
     try {
@@ -188,7 +219,7 @@ export async function processQueue({ deadline = Date.now() + RUN_BUDGET_MS, maxI
       break;
     }
   }
-  const remaining = (await sb("radar_items?status=in.(pending_analysis,analyzing)&select=id"))?.length || 0;
+  const remaining = (await sb("radar_items?status=in.(candidate,pending_analysis,analyzing)&select=id"))?.length || 0;
   if (processed > 0 && remaining === 0) {
     const drafts = (await sb("radar_items?status=eq.draft&select=id"))?.length || 0;
     await sendTelegram(`Radar de Evidências: análise concluída\n${drafts} rascunho(s) esperando a sua revisão em Conteúdos e materiais > Radar.`).catch(() => null);
@@ -308,36 +339,30 @@ export async function startRun({ trigger }) {
 
     if (!primaryOk) throw new Error(problems.join(" | ") || "Falha na coleta.");
 
-    // 4) Triagem (todos os candidatos ainda não avaliados, inclusive de execuções anteriores)
-    const pending = (await sb("radar_items?status=eq.candidate&select=id,topic,source_name,title_original,publication_type,radar_item_private(raw_text)&order=discovered_at.asc&limit=30")) || [];
+    // 4) Triagem. Se a IA estiver ocupada ou sem chave, a coleta continua valendo: os candidatos ficam guardados e a
+    //    triagem é retomada sozinha (chamada diária, botão "Continuar análise" ou próxima coleta).
     let selected = 0;
-    if (pending.length) {
-      const decisions = await triage(pending.map((p) => ({ ref: p.id, title_original: p.title_original, source_name: p.source_name, topic: p.topic, pub_types: [], raw_text: p.radar_item_private?.raw_text || "" })));
-      for (const p of pending) {
-        const d = decisions.get(p.id);
-        if (!d) continue; // a IA não respondeu sobre este: continua candidato para a próxima triagem
-        if (d.select) {
-          selected += 1;
-          await sb(`radar_items?id=eq.${p.id}`, { method: "PATCH", body: { status: "pending_analysis", topic: d.topic, population: d.population, publication_type: d.publication_type } });
-          await sb("radar_item_private?on_conflict=item_id", { method: "POST", prefer: "resolution=merge-duplicates", body: { item_id: p.id, relevance_note: d.reason } });
-        } else {
-          await sb(`radar_items?id=eq.${p.id}`, { method: "PATCH", body: { status: "discarded", topic: d.topic, population: d.population } });
-          await sb("radar_item_private?on_conflict=item_id", { method: "POST", prefer: "resolution=merge-duplicates", body: { item_id: p.id, discard_reason: d.reason || "Não relevante nesta triagem." } });
-        }
-      }
+    let aiProblem = null;
+    try {
+      selected = await triagePending();
+    } catch (error) {
+      aiProblem = error.message;
+      problems.push(`IA: ${error.message}`);
     }
     await sb("radar_settings?id=eq.1", { method: "PATCH", body: { last_success_at: new Date(startedAt).toISOString(), updated_at: nowIso() } });
     await patchRun(run.id, { found, new_items: newItems, selected });
 
     // 5) Análise do que couber no tempo; o resto segue na fila
-    const queue = selected > 0 || (await sb("radar_items?status=eq.pending_analysis&select=id&limit=1"))?.length ? await processQueue({ deadline, maxItems: 5 }) : { processed: 0, remaining: 0 };
+    const hasQueue = selected > 0 || (await sb("radar_items?status=in.(candidate,pending_analysis)&select=id&limit=1"))?.length;
+    // só tenta analisar agora se a triagem funcionou; com a IA ocupada, a fila espera pelas próximas chamadas
+    const queue = hasQueue && !aiProblem ? await processQueue({ deadline, maxItems: 5 }) : { processed: 0, remaining: (await sb("radar_items?status=in.(candidate,pending_analysis,analyzing)&select=id"))?.length || 0, error: aiProblem };
     const remaining = queue.remaining;
     const status = selected === 0 && remaining === 0 ? "no_news" : remaining > 0 ? "partial" : "ok";
     const message =
       status === "no_news"
         ? `Nenhuma novidade relevante (${found} encontrada(s), ${newItems} nova(s) triada(s)).`
         : remaining > 0
-        ? `${selected} selecionado(s); ${remaining} aguardando análise (continua sozinho nos próximos dias ou pelo botão "Continuar análise").`
+        ? `${selected} selecionado(s); ${remaining} aguardando triagem/análise (continua sozinho nos próximos dias ou pelo botão "Continuar análise").`
         : `${selected} selecionado(s) e analisado(s): rascunhos prontos para revisão.`;
     await patchRun(run.id, { status, finished_at: nowIso(), found, new_items: newItems, selected, message: [message, ...problems].join(" | "), error: queue.error || null });
     if (status !== "no_news" && remaining > 0) {
