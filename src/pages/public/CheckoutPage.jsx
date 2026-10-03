@@ -156,7 +156,7 @@ export default function CheckoutPage() {
     let active = true;
     supabase
       .from("product_bumps")
-      .select("id,price_cents,bump:products!bump_product_id(id,title,short_description,cover_url)")
+      .select("id,price_cents,bump:products!bump_product_id(id,title,short_description,cover_url,price,promotional_price)")
       .eq("product_id", product.id)
       .order("display_order")
       .then(({ data }) => active && setBumps((data || []).filter((row) => row.bump)));
@@ -443,6 +443,10 @@ export default function CheckoutPage() {
               <span className="ck-kit-head">Equipamento adicional</span>
               {bumps.map((row) => {
                 const active = selectedBumps.includes(row.id);
+                // preço de tabela do produto extra (o promocional, se houver) para mostrar o quanto o comprador economiza
+                const listCents = Math.round(Number(row.bump.promotional_price ?? row.bump.price) * 100);
+                const savings = Number.isFinite(listCents) && listCents > row.price_cents ? listCents - row.price_cents : 0;
+                const percentOff = savings > 0 ? Math.round((savings / listCents) * 100) : 0;
                 return (
                   <label key={row.id} className={`ck-kit-item ${active ? "is-active" : ""}`}>
                     <input type="checkbox" className="ck-kit-check" checked={active} onChange={() => toggleBump(row.id)} />
@@ -456,7 +460,12 @@ export default function CheckoutPage() {
                       {row.bump.short_description && <span>{row.bump.short_description}</span>}
                     </div>
                     <div className="ck-kit-side">
-                      <span className="ck-kit-price">+ {formatMoneyCents(row.price_cents)}</span>
+                      <div className="ck-kit-pricebox">
+                        {percentOff > 0 && <span className="ck-kit-badge">-{percentOff}%</span>}
+                        {savings > 0 && <span className="ck-kit-was">de {formatMoneyCents(listCents)}</span>}
+                        <span className="ck-kit-price">+ {formatMoneyCents(row.price_cents)}</span>
+                        {savings > 0 && <span className="ck-kit-save">Você economiza {formatMoneyCents(savings)}</span>}
+                      </div>
                       <span className="ck-kit-toggle" aria-hidden="true">{active ? <CheckIcon /> : <PlusIcon />}</span>
                     </div>
                   </label>

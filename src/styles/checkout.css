@@ -770,11 +770,42 @@ body:has(.ck-page) {
   gap: 8px;
 }
 
+.ck-kit-pricebox {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.ck-kit-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-red);
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+}
+
+.ck-kit-was {
+  font-size: 0.76rem;
+  color: var(--brand-muted);
+  text-decoration: line-through;
+  white-space: nowrap;
+}
+
 .ck-kit-price {
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: 1rem;
   color: var(--brand-red);
+  white-space: nowrap;
+}
+
+.ck-kit-save {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--brand-text-soft);
   white-space: nowrap;
 }
 
@@ -808,5 +839,16 @@ body:has(.ck-page) {
     justify-content: space-between;
     align-items: center;
     margin-top: 2px;
+  }
+
+  .ck-kit-pricebox {
+    grid-auto-flow: column;
+    justify-content: start;
+    align-items: center;
+    gap: 4px 10px;
+  }
+
+  .ck-kit-save {
+    display: none;
   }
 }

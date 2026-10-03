@@ -76,6 +76,31 @@ function slugify(value = "") {
     .replace(/^-+|-+$/g, "");
 }
 
+const brl = (value) => Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+// Preço que o comprador paga hoje no produto (promocional, se houver) — referência para decidir o desconto do bump.
+function currentPriceOf(product) {
+  const value = Number(product?.promotional_price ?? product?.price);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+// Texto de apoio sob cada oferta: preço atual do produto escolhido e o desconto que o preço especial dá.
+function bumpPriceHint(product, bumpPriceText) {
+  if (!product) return "";
+  const current = currentPriceOf(product);
+  if (current === null) return "Este produto ainda não tem preço cadastrado em Produtos.";
+  const normal = Number(product.price);
+  const promo = product.promotional_price !== null && product.promotional_price !== undefined && Number(product.promotional_price) > 0;
+  let text = `Preço atual: ${brl(current)}${promo && Number.isFinite(normal) && normal > current ? ` (promocional; normal ${brl(normal)})` : ""}.`;
+  const typed = String(bumpPriceText || "").trim().replace(/\s/g, "").replace(",", ".");
+  const special = Number(typed);
+  if (typed !== "" && Number.isFinite(special) && special > 0) {
+    if (special >= current) text += ` Com ${brl(special)} não há desconto: o preço especial precisa ficar abaixo de ${brl(current)}.`;
+    else text += ` Com ${brl(special)} o desconto é de ${Math.round((1 - special / current) * 100)}% (economia de ${brl(current - special)}).`;
+  }
+  return text;
+}
+
 function parseMoney(value) {
   if (value === "" || value === null || value === undefined) return null;
   const normalized = String(value).trim().replace(/\s/g, "").replace(",", ".");
@@ -102,7 +127,7 @@ export default function ProductEditorPageV4() {
   useEffect(() => {
     supabase
       .from("products")
-      .select("id,title,status")
+      .select("id,title,status,price,promotional_price")
       .order("title")
       .then(({ data }) => setCatalog(data || []));
   }, []);
@@ -443,23 +468,34 @@ export default function ProductEditorPageV4() {
               Produtos que aparecem no checkout DESTE produto com 1 clique, por um preço especial (não é o preço de tabela do produto escolhido).
             </span>
             {form.bumps.length === 0 && <span className="pe4-help">Nenhuma oferta extra cadastrada ainda.</span>}
-            {form.bumps.map((row, index) => (
-              <div className="pe4-faq-item" key={index}>
-                <select value={row.bump_product_id} onChange={(e) => updateBumpRow(index, "bump_product_id", e.target.value)}>
-                  <option value="">Escolha o produto...</option>
-                  {catalog.filter((item) => item.id !== id).map((item) => (
-                    <option key={item.id} value={item.id}>{item.title}{item.status !== "active" && item.status !== "unlisted" ? ` (${item.status})` : ""}</option>
-                  ))}
-                </select>
-                <input
-                  inputMode="decimal"
-                  placeholder="Preço especial, ex.: 97,00"
-                  value={row.price_reais}
-                  onChange={(e) => updateBumpRow(index, "price_reais", e.target.value)}
-                />
-                <button type="button" className="pe4-faq-remove" onClick={() => removeBumpRow(index)}>Remover</button>
-              </div>
-            ))}
+            {form.bumps.map((row, index) => {
+              const chosen = catalog.find((item) => item.id === row.bump_product_id);
+              const hint = bumpPriceHint(chosen, row.price_reais);
+              return (
+                <div key={index} style={{ display: "grid", gap: 6 }}>
+                  <div className="pe4-faq-item" style={{ marginBottom: 0 }}>
+                    <select value={row.bump_product_id} onChange={(e) => updateBumpRow(index, "bump_product_id", e.target.value)}>
+                      <option value="">Escolha o produto...</option>
+                      {catalog.filter((item) => item.id !== id).map((item) => (
+                        <option key={item.id} value={item.id}>
+                          {item.title}
+                          {currentPriceOf(item) !== null ? ` — ${brl(currentPriceOf(item))}` : ""}
+                          {item.status !== "active" && item.status !== "unlisted" ? ` (${item.status})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      inputMode="decimal"
+                      placeholder="Preço especial, ex.: 97,00"
+                      value={row.price_reais}
+                      onChange={(e) => updateBumpRow(index, "price_reais", e.target.value)}
+                    />
+                    <button type="button" className="pe4-faq-remove" onClick={() => removeBumpRow(index)}>Remover</button>
+                  </div>
+                  {hint && <span className="pe4-help" style={{ marginBottom: 10 }}>{hint}</span>}
+                </div>
+              );
+            })}
           </div>
         )}
 
