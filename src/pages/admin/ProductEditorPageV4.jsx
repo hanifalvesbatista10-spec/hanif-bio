@@ -85,13 +85,17 @@ function currentPriceOf(product) {
 }
 
 // Texto de apoio sob cada oferta: preço atual do produto escolhido e o desconto que o preço especial dá.
-function bumpPriceHint(product, bumpPriceText) {
+function bumpPriceHint(product, bumpPriceText, listPriceText) {
   if (!product) return "";
-  const current = currentPriceOf(product);
-  if (current === null) return "Este produto ainda não tem preço cadastrado em Produtos.";
+  const listTyped = Number(String(listPriceText || "").trim().replace(/\s/g, "").replace(",", "."));
+  const hasOwnList = Number.isFinite(listTyped) && listTyped > 0;
+  const current = hasOwnList ? listTyped : currentPriceOf(product);
+  if (current === null) return "Este produto não tem preço cadastrado em Produtos. Preencha o “Preço de” desta oferta para mostrar o desconto no checkout.";
   const normal = Number(product.price);
   const promo = product.promotional_price !== null && product.promotional_price !== undefined && Number(product.promotional_price) > 0;
-  let text = `Preço atual: ${brl(current)}${promo && Number.isFinite(normal) && normal > current ? ` (promocional; normal ${brl(normal)})` : ""}.`;
+  let text = hasOwnList
+    ? `Aparece riscado no checkout: de ${brl(current)}.`
+    : `Preço atual: ${brl(current)}${promo && Number.isFinite(normal) && normal > current ? ` (promocional; normal ${brl(normal)})` : ""}.`;
   const typed = String(bumpPriceText || "").trim().replace(/\s/g, "").replace(",", ".");
   const special = Number(typed);
   if (typed !== "" && Number.isFinite(special) && special > 0) {
@@ -145,17 +149,23 @@ export default function ProductEditorPageV4() {
         setSaved(normalized);
         setPreview(normalized.cover_url);
 
+        // a coluna "preço de" vem do SQL 45: sem ela, o editor segue funcionando e avisa se alguém tentar usá-la
+        const probe = await supabase.from("product_bumps").select("list_price_cents").limit(1);
+        const hasListPrice = !probe.error;
         const { data: bumpRows } = await supabase
           .from("product_bumps")
-          .select("id,bump_product_id,price_cents")
+          .select(hasListPrice ? "id,bump_product_id,price_cents,list_price_cents" : "id,bump_product_id,price_cents")
           .eq("product_id", id)
           .order("display_order");
+        const toReais = (cents) => String(Number(cents) / 100).replace(".", ",");
         setForm((current) => ({
           ...current,
+          has_bump_list_price: hasListPrice,
           bumps: (bumpRows || []).map((row) => ({
             id: row.id,
             bump_product_id: row.bump_product_id,
-            price_reais: String(Number(row.price_cents) / 100).replace(".", ","),
+            price_reais: toReais(row.price_cents),
+            list_price_reais: row.list_price_cents ? toReais(row.list_price_cents) : "",
           })),
         }));
       }
@@ -196,7 +206,7 @@ export default function ProductEditorPageV4() {
   };
 
   const addBumpRow = () => {
-    setForm((current) => ({ ...current, bumps: [...current.bumps, { bump_product_id: "", price_reais: "" }] }));
+    setForm((current) => ({ ...current, bumps: [...current.bumps, { bump_product_id: "", price_reais: "", list_price_reais: "" }] }));
   };
 
   const updateBumpRow = (index, key, value) => {
@@ -254,6 +264,10 @@ export default function ProductEditorPageV4() {
 
       if (!title) throw new Error("Informe o título do produto.");
       if (!shortDescription) throw new Error("Informe a descrição curta.");
+      // confere antes de gravar qualquer coisa: com a coluna ausente, apagar e reinserir as ofertas perderia todas
+      if (editing && !form.has_bump_list_price && (form.bumps || []).some((row) => String(row.list_price_reais || "").trim() !== "")) {
+        throw new Error("O banco ainda não tem o “preço de” das ofertas extras. Execute supabase/45_bump_preco_de.sql no SQL Editor e tente novamente.");
+      }
       const internal = form.checkout_mode === "internal";
       const whatsapp = form.checkout_mode === "whatsapp";
       if (internal && !((parseMoney(form.promotional_price) || 0) > 0 || (parseMoney(form.price) || 0) > 0)) {
@@ -305,10 +319,15 @@ export default function ProductEditorPageV4() {
 
       if (editing) {
         const validBumps = (form.bumps || [])
-          .map((row) => ({
-            bump_product_id: row.bump_product_id,
-            price_cents: Math.round((parseMoney(row.price_reais) || 0) * 100),
-          }))
+          .map((row) => {
+            const listCents = Math.round((parseMoney(row.list_price_reais) || 0) * 100);
+            return {
+              bump_product_id: row.bump_product_id,
+              price_cents: Math.round((parseMoney(row.price_reais) || 0) * 100),
+              // só entra no envio quando preenchido, para o salvamento seguir igual antes do SQL 45
+              ...(listCents > 0 ? { list_price_cents: listCents } : {}),
+            };
+          })
           .filter((row) => row.bump_product_id && row.price_cents > 0);
 
         const { error: deleteError } = await supabase.from("product_bumps").delete().eq("product_id", id);
@@ -354,6 +373,12 @@ export default function ProductEditorPageV4() {
     <section className="admin-section">
       <style>{`
         .pe4-head{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:20px}.pe4-head h2{margin:4px 0 0;color:#071426;font-size:2rem}.pe4-head span{color:#d6152d;font-size:.72rem;font-weight:900;letter-spacing:.12em}.pe4-back{border:1px solid #dbe3eb;border-radius:11px;background:#fff;padding:11px 15px;font-weight:900;cursor:pointer}.pe4-card{background:#fff;border:1px solid #e0e7ee;border-radius:20px;padding:24px;box-shadow:0 14px 40px rgba(7,20,38,.06)}.pe4-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pe4-field{display:grid;gap:7px}.pe4-field.full{grid-column:1/-1}.pe4-field label{font-size:.8rem;font-weight:900;color:#273d53}.pe4-field input,.pe4-field textarea,.pe4-field select{width:100%;border:1px solid #d6e0e9;border-radius:11px;padding:12px 13px;font:inherit;color:#13283c;background:#fff}.pe4-field textarea{min-height:105px;resize:vertical}.pe4-check{display:flex;align-items:center;gap:9px;font-weight:900;color:#273d53}.pe4-check input{width:18px;height:18px}.pe4-preview{margin-top:8px;max-width:360px;border-radius:14px;overflow:hidden;border:1px solid #e1e7ed}.pe4-preview img{display:block;width:100%;aspect-ratio:16/9;object-fit:cover}.pe4-actions{display:flex;gap:10px;margin-top:22px}.pe4-save{flex:1;min-height:52px;border:0;border-radius:12px;background:#d6152d;color:#fff;font-weight:950;cursor:pointer}.pe4-save:disabled{opacity:.55}.pe4-cancel{min-height:52px;border:1px solid #dbe3eb;border-radius:12px;background:#fff;padding:0 18px;font-weight:900;cursor:pointer}.pe4-message{margin-bottom:18px;padding:14px 16px;border-radius:12px;font-weight:850}.pe4-message.success{background:#edf8f1;color:#236842;border:1px solid #c8e5d2}.pe4-message.error{background:#fff0f2;color:#a60d25;border:1px solid #f1c8cf}.pe4-help{font-size:.74rem;color:#7b8c9c}.pe4-faq{margin-top:22px;padding-top:20px;border-top:1px solid #e7edf2}.pe4-faq-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.pe4-faq-head label{font-size:.8rem;font-weight:900;color:#273d53}.pe4-faq-add{border:1px solid #d6e0e9;border-radius:10px;background:#fff;padding:8px 12px;font-weight:900;font-size:.8rem;cursor:pointer;color:#13283c}.pe4-faq-item{display:grid;grid-template-columns:1fr 1.4fr auto;gap:10px;align-items:start;margin-bottom:10px}.pe4-faq-item input,.pe4-faq-item textarea{border:1px solid #d6e0e9;border-radius:10px;padding:10px 12px;font:inherit;color:#13283c}.pe4-faq-item textarea{min-height:44px;resize:vertical}.pe4-faq-remove{border:1px solid #f1c8cf;border-radius:10px;background:#fff0f2;color:#a60d25;font-weight:900;font-size:.78rem;padding:0 12px;cursor:pointer;height:44px}@media(max-width:700px){.pe4-faq-item{grid-template-columns:1fr}.pe4-head{align-items:stretch;flex-direction:column}.pe4-grid{grid-template-columns:1fr}.pe4-field.full{grid-column:auto}.pe4-actions{flex-direction:column}.pe4-card{padding:18px}}
+      `}</style>
+
+      <style>{`
+        .pe4-bump-row{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) minmax(0,1fr) auto}
+        .pe4-bump-row select,.pe4-bump-row input{min-width:0;width:100%;box-sizing:border-box}
+        @media(max-width:700px){.pe4-bump-row{grid-template-columns:1fr}}
       `}</style>
 
       <div className="pe4-head">
@@ -465,15 +490,15 @@ export default function ProductEditorPageV4() {
               <button type="button" className="pe4-faq-add" onClick={addBumpRow}>+ Adicionar oferta</button>
             </div>
             <span className="pe4-help">
-              Produtos que aparecem no checkout DESTE produto com 1 clique, por um preço especial (não é o preço de tabela do produto escolhido).
+              Produtos que aparecem no checkout DESTE produto com 1 clique, por um preço especial (não é o preço de tabela do produto escolhido). O “Preço de” é o valor riscado que o comprador vê para sentir o desconto; deixe em branco para usar o preço do próprio produto.
             </span>
             {form.bumps.length === 0 && <span className="pe4-help">Nenhuma oferta extra cadastrada ainda.</span>}
             {form.bumps.map((row, index) => {
               const chosen = catalog.find((item) => item.id === row.bump_product_id);
-              const hint = bumpPriceHint(chosen, row.price_reais);
+              const hint = bumpPriceHint(chosen, row.price_reais, row.list_price_reais);
               return (
                 <div key={index} style={{ display: "grid", gap: 6 }}>
-                  <div className="pe4-faq-item" style={{ marginBottom: 0 }}>
+                  <div className="pe4-faq-item pe4-bump-row" style={{ marginBottom: 0 }}>
                     <select value={row.bump_product_id} onChange={(e) => updateBumpRow(index, "bump_product_id", e.target.value)}>
                       <option value="">Escolha o produto...</option>
                       {catalog.filter((item) => item.id !== id).map((item) => (
@@ -486,7 +511,15 @@ export default function ProductEditorPageV4() {
                     </select>
                     <input
                       inputMode="decimal"
+                      placeholder="Preço de (riscado), ex.: 497,00"
+                      aria-label="Preço de, o valor riscado mostrado no checkout (opcional)"
+                      value={row.list_price_reais || ""}
+                      onChange={(e) => updateBumpRow(index, "list_price_reais", e.target.value)}
+                    />
+                    <input
+                      inputMode="decimal"
                       placeholder="Preço especial, ex.: 97,00"
+                      aria-label="Preço especial cobrado no checkout"
                       value={row.price_reais}
                       onChange={(e) => updateBumpRow(index, "price_reais", e.target.value)}
                     />
