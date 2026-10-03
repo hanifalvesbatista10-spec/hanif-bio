@@ -46,41 +46,78 @@ async function callAnthropic({ kind, system, user, maxTokens, timeoutMs }) {
   return (data.content || []).filter((block) => block.type === "text").map((block) => block.text).join("");
 }
 
-// Gemini: tenta o modelo configurado e, se ele não existir mais, o Flash estável de reserva.
-async function callGemini({ kind, system, user, maxTokens, timeoutMs }) {
-  const primary = (kind === "triage" ? process.env.GEMINI_TRIAGE_MODEL : process.env.GEMINI_MODEL) || process.env.GEMINI_MODEL || "gemini-3.8-flash";
-  const models = [...new Set([primary, "gemini-2.5-flash"])];
-  let lastError = null;
-  for (const model of models) {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: [{ role: "user", parts: [{ text: user }] }],
-        // folga grande: nos modelos com "raciocínio" o limite de saída também conta o raciocínio interno
-        generationConfig: { maxOutputTokens: Math.max(maxTokens * 2, 8192), temperature: 0.2, responseMimeType: "application/json" },
-      }),
-      signal: AbortSignal.timeout(timeoutMs),
+// Gemini: os nomes de modelo mudam e o Google aposenta os antigos para contas novas. Por isso o servidor pergunta à
+// API quais modelos "Flash" existem para a chave (lista guardada na memória por 6 h) e tenta em ordem, do mais novo
+// ao mais antigo, até um responder. GEMINI_MODEL / GEMINI_TRIAGE_MODEL, se definidos, vão na frente.
+let modelCache = null;
+
+async function discoverGeminiModels() {
+  if (modelCache && Date.now() - modelCache.at < 6 * 60 * 60 * 1000) return modelCache.list;
+  const fallback = ["gemini-3.8-flash", "gemini-3.5-flash", "gemini-3.1-flash-lite"];
+  try {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200", {
+      headers: { "x-goog-api-key": process.env.GEMINI_API_KEY },
+      signal: AbortSignal.timeout(8000),
     });
-    const data = await response.json().catch(() => ({}));
-    if (response.status === 429) throw new AiBusy("O limite do plano gratuito do Gemini foi atingido por agora. A fila continua depois.");
-    if (response.status === 404 || (response.status === 400 && /model/i.test(data?.error?.message || ""))) {
-      lastError = new Error(`Gemini: modelo ${model} indisponível (${data?.error?.message || response.status})`);
-      continue;
-    }
-    // sobrecarga passageira do Google (500/502/503/504): tenta o outro modelo; se todos falharem, a fila espera
-    if ([500, 502, 503, 504].includes(response.status)) {
-      lastError = new AiBusy(`O Gemini está sobrecarregado agora (${response.status}). Tente de novo em alguns minutos; nada foi perdido.`);
-      continue;
-    }
-    if (!response.ok) throw new Error(`Gemini ${response.status}${data?.error?.message ? ` - ${data.error.message}` : ""}`);
-    if (data?.promptFeedback?.blockReason) throw new Error(`Gemini bloqueou o conteúdo (${data.promptFeedback.blockReason}).`);
-    const text = (data.candidates?.[0]?.content?.parts || []).map((part) => part.text || "").join("");
-    if (!text) throw new Error("Gemini não devolveu texto.");
-    return text;
+    if (!response.ok) return fallback;
+    const data = await response.json();
+    const version = (name) => Number(name.match(/gemini-(\d+(?:\.\d+)?)/)?.[1] || 0);
+    const list = (data.models || [])
+      .filter((model) => (model.supportedGenerationMethods || []).includes("generateContent"))
+      .map((model) => String(model.name || "").replace(/^models\//, ""))
+      .filter((name) => /^gemini-\d+(\.\d+)?-flash(-lite)?$/.test(name)) // só os estáveis: sem preview, imagem, voz ou experimentais
+      .sort((a, b) => version(b) - version(a) || a.includes("lite") - b.includes("lite"))
+      .slice(0, 4);
+    modelCache = { at: Date.now(), list: list.length ? list : fallback };
+    return modelCache.list;
+  } catch {
+    return fallback;
   }
-  throw lastError || new Error("Gemini indisponível.");
+}
+
+async function callGemini({ kind, system, user, maxTokens, timeoutMs }) {
+  const preferred = [kind === "triage" ? process.env.GEMINI_TRIAGE_MODEL : null, process.env.GEMINI_MODEL].filter(Boolean);
+  const models = [...new Set([...preferred, ...(await discoverGeminiModels())])].slice(0, 5);
+  const deadline = Date.now() + timeoutMs;
+  const attempts = [];
+  let transient = false;
+
+  for (const model of models) {
+    const left = deadline - Date.now();
+    if (left < 4000) break;
+    let response;
+    try {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: "user", parts: [{ text: user }] }],
+          // folga grande: nos modelos com "raciocínio" o limite de saída também conta o raciocínio interno
+          generationConfig: { maxOutputTokens: Math.max(maxTokens * 2, 8192), temperature: 0.2, responseMimeType: "application/json" },
+        }),
+        signal: AbortSignal.timeout(left),
+      });
+    } catch (error) {
+      attempts.push(`${model}: sem resposta a tempo`);
+      transient = true;
+      continue;
+    }
+    const data = await response.json().catch(() => ({}));
+    if (response.ok) {
+      if (data?.promptFeedback?.blockReason) throw new Error(`Gemini bloqueou o conteúdo (${data.promptFeedback.blockReason}).`);
+      const text = (data.candidates?.[0]?.content?.parts || []).map((part) => part.text || "").join("");
+      if (text) return text;
+      attempts.push(`${model}: resposta vazia`);
+      continue;
+    }
+    attempts.push(`${model}: ${response.status}`);
+    if ([429, 500, 502, 503, 504].includes(response.status)) transient = true; // limite ou sobrecarga: vale tentar outro modelo
+  }
+
+  const detail = attempts.join("; ") || "nenhum modelo disponível";
+  if (transient) throw new AiBusy(`O Gemini está sobrecarregado ou no limite do plano gratuito agora (${detail}). A fila continua depois; nada foi perdido.`);
+  throw new Error(`Gemini: nenhum modelo respondeu (${detail}).`);
 }
 
 function callModel(args) {
