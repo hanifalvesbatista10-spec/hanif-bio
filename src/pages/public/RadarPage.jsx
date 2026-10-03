@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { BASIS_LABELS, POPULATION_LABELS, TOPIC_LABELS, TYPE_LABELS, formatDate, safeUrl } from "../../services/radar";
-import RadarLeadGate from "../../components/site/RadarLeadGate";
+import RadarLeadModal from "../../components/site/RadarLeadModal";
 import { getStoredLead } from "../../services/leads";
 import SiteHeader from "../../components/layout/SiteHeader";
 import SiteFooter from "../../components/layout/SiteFooter";
@@ -25,6 +25,19 @@ function Section({ title, children }) {
       <h3 style={{ margin: "0 0 8px", fontSize: "1.1rem" }}>{title}</h3>
       <p style={{ margin: 0, color: "var(--brand-text-soft)", lineHeight: 1.75, whiteSpace: "pre-line" }}>{children}</p>
     </section>
+  );
+}
+
+// Análise ainda travada: só título e resumo (vitrine) e o chamado para o cadastro, que também abre sozinho em popup.
+function LockedTeaser({ item, onOpen }) {
+  return (
+    <div className="site-container" style={{ maxWidth: 820 }}>
+      <Link className="site-about-link" to="/radar">← Voltar ao Radar</Link>
+      <span className="site-eyebrow" style={{ display: "block", marginTop: 18 }}>{TOPIC_LABELS[item.topic] || "Radar de Evidências"}</span>
+      <h1 style={{ margin: "8px 0 14px", fontSize: "clamp(1.8rem,4vw,2.6rem)", lineHeight: 1.15 }}>{item.title_pt || item.title_original}</h1>
+      <p style={{ margin: "0 0 22px", color: "var(--brand-text-soft)", lineHeight: 1.75 }}>{item.summary_pt}</p>
+      <button type="button" className="site-btn primary" onClick={onOpen}>Cadastre-se grátis para ler a análise completa</button>
+    </div>
   );
 }
 
@@ -52,7 +65,7 @@ function Detail({ item, communityUrl }) {
       <Section title="Limitações">{item.limitations}</Section>
       <Section title="Aplicabilidade ao APH brasileiro">{item.applicability_br}</Section>
 
-      <p style={{ marginTop: 26, padding: 14, borderRadius: 12, background: "var(--brand-surface-alt, #f3f6f9)", color: "var(--brand-text-soft)", fontSize: ".9rem", lineHeight: 1.6 }}>
+      <p style={{ marginTop: 26, padding: 16, borderRadius: 14, border: "1px solid var(--brand-border)", background: "rgba(255,255,255,.05)", color: "var(--brand-text-soft)", fontSize: ".9rem", lineHeight: 1.6 }}>
         {BASIS_LABELS[item.analysis_basis] || "Análise baseada no material público da fonte"}. As conclusões se limitam ao conteúdo consultado; para decidir
         qualquer conduta, leia a fonte original. Conteúdo educacional: não substitui protocolos, treinamento nem legislação vigentes.
       </p>
@@ -63,19 +76,19 @@ function Detail({ item, communityUrl }) {
         <ul style={{ margin: 0, paddingLeft: 20, lineHeight: 1.9 }}>
           {refs.filter((ref) => safeUrl(ref.url)).map((ref) => (
             <li key={ref.url}>
-              <a href={safeUrl(ref.url)} target="_blank" rel="noopener noreferrer">{ref.label}{ref.pmid ? ` ${ref.pmid}` : ""}{ref.doi ? ` ${ref.doi}` : ""}</a>
+              <a href={safeUrl(ref.url)} target="_blank" rel="noopener noreferrer" style={{ color: "#ff9aa8", textDecoration: "underline", textUnderlineOffset: 3 }}>{ref.label}{ref.pmid ? ` ${ref.pmid}` : ""}{ref.doi ? ` ${ref.doi}` : ""}</a>
             </li>
           ))}
         </ul>
       </section>
 
       {community && (
-        <section style={{ marginTop: 34, padding: 22, borderRadius: 18, background: "var(--brand-navy, #071426)", color: "#fff" }}>
-          <h3 style={{ margin: "0 0 8px", fontSize: "1.25rem" }}>Continue essa conversa na comunidade APH Hardcore</h3>
+        <section style={{ marginTop: 34, padding: "clamp(20px,4vw,28px)", borderRadius: 18, border: "1px solid rgba(240,50,74,.45)", background: "linear-gradient(160deg, rgba(214,21,45,.18), rgba(255,255,255,.03))", color: "#fff" }}>
+          <h3 style={{ margin: "0 0 8px", fontSize: "1.35rem", fontFamily: "var(--font-display)" }}>Continue essa conversa na comunidade APH Hardcore</h3>
           <p style={{ margin: "0 0 16px", lineHeight: 1.65, color: "#c9d4df" }}>
             Terminou a leitura? Entre no grupo para discutir esta análise com outros profissionais e estudantes de APH e receber as próximas novidades.
           </p>
-          <a className="site-buy" href={community} target="_blank" rel="noopener noreferrer">Entrar na comunidade</a>
+          <a className="site-btn primary" href={community} target="_blank" rel="noopener noreferrer">Entrar na comunidade</a>
         </section>
       )}
     </div>
@@ -89,6 +102,14 @@ export default function RadarPage() {
   const [topic, setTopic] = useState("");
   const [loading, setLoading] = useState(true);
   const [unlocked, setUnlocked] = useState(() => Boolean(getStoredLead()));
+  const [modalOpen, setModalOpen] = useState(false);
+  const [pendingId, setPendingId] = useState(null);
+  const navigate = useNavigate();
+
+  // Ao entrar no Radar (lista ou análise) sem cadastro, o popup abre sozinho.
+  useEffect(() => {
+    if (!getStoredLead()) setModalOpen(true);
+  }, [id]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -103,6 +124,24 @@ export default function RadarPage() {
     });
   }, [id]);
 
+  const unlock = () => {
+    setUnlocked(true);
+    setModalOpen(false);
+    window.scrollTo({ top: 0, behavior: "auto" });
+    if (pendingId && pendingId !== id) navigate(`/radar/${pendingId}`);
+    setPendingId(null);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setPendingId(null);
+  };
+
+  const openModal = (itemId = null) => {
+    setPendingId(itemId);
+    setModalOpen(true);
+  };
+
   const visible = topic ? items.filter((item) => item.topic === topic) : items;
 
   return (
@@ -113,7 +152,7 @@ export default function RadarPage() {
           <div className="site-container"><div className="site-empty">Carregando...</div></div>
         ) : id ? (
           items[0] ? (
-            unlocked ? <Detail item={items[0]} communityUrl={settings.community_url} /> : <RadarLeadGate item={items[0]} onUnlock={() => { setUnlocked(true); window.scrollTo({ top: 0, behavior: "auto" }); }} />
+            unlocked ? <Detail item={items[0]} communityUrl={settings.community_url} /> : <LockedTeaser item={items[0]} onOpen={() => openModal(items[0].id)} />
           ) : (
             <div className="site-container">
               <div className="site-empty">Esta análise não está disponível.</div>
@@ -130,8 +169,14 @@ export default function RadarPage() {
             </div>
             <p className="site-lead" style={{ maxWidth: 720 }}>
               Toda semana são monitoradas publicações sobre RCP e DEA, trauma e hemorragia, emergências pediátricas e neonatais e restrição de movimento da coluna.
-              Cada item abaixo foi analisado e <strong>revisado antes de ser publicado</strong>, com as referências originais. A leitura completa é gratuita: basta um cadastro rápido.
+              Cada item abaixo foi analisado e <strong>revisado antes de ser publicado</strong>, com as referências originais. 
             </p>
+            {!unlocked && (
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", margin: "18px 0 0", padding: "14px 16px", borderRadius: 14, border: "1px solid rgba(240,50,74,.45)", background: "rgba(214,21,45,.12)" }}>
+                <span style={{ lineHeight: 1.5 }}>A leitura completa das análises é grátis: faça um cadastro rápido para liberar.</span>
+                <button type="button" className="site-btn primary" style={{ minHeight: 44 }} onClick={() => openModal(null)}>Cadastrar agora</button>
+              </div>
+            )}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", margin: "18px 0 24px" }}>
               <button type="button" className={`site-chip ${topic === "" ? "is-active" : ""}`} onClick={() => setTopic("")} style={chipStyle(topic === "")}>Todos</button>
               {Object.entries(TOPIC_LABELS).map(([key, label]) => (
@@ -153,7 +198,7 @@ export default function RadarPage() {
                       </div>
                       <div className="site-content-meta">Revisado por {item.reviewer_name || "Hanif Alves"} em {formatDate(item.approved_at)}</div>
                       <div className="site-product-actions">
-                        <Link className="site-buy" to={`/radar/${item.id}`} style={{ gridColumn: "1 / -1" }}>Ver análise e referências</Link>
+                        <Link className="site-buy" to={`/radar/${item.id}`} style={{ gridColumn: "1 / -1" }} onClick={(event) => { if (!unlocked) { event.preventDefault(); openModal(item.id); } }}>Ver análise e referências</Link>
                       </div>
                     </div>
                   </article>
@@ -164,6 +209,7 @@ export default function RadarPage() {
         )}
       </section>
       <SiteFooter settings={settings} />
+      <RadarLeadModal open={modalOpen && !unlocked} itemId={pendingId || id || null} onClose={closeModal} onUnlock={unlock} />
     </div>
   );
 }
