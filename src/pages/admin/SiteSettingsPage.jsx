@@ -16,6 +16,7 @@ const fields = [
   ["whatsapp_url", "Link do WhatsApp"],
   ["instagram_url", "Link do Instagram"],
   ["community_url", "Link do grupo da comunidade APH Hardcore (WhatsApp)"],
+  ["contact_email", "E-mail de contato (aparece na política de privacidade)"],
   ["footer_description", "Descrição do rodapé"],
   ["footer_disclaimer", "Aviso legal do rodapé"],
   ["copyright_text", "Copyright"],

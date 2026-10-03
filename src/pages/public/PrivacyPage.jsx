@@ -47,6 +47,14 @@ export default function PrivacyPage() {
   }, []);
 
   const contact = safeUrl(settings.whatsapp_url);
+  const email = String(settings.contact_email || "").trim();
+  const contactEmail = /^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email) ? email : "";
+  const contactLinks = (
+    <>
+      {contact ? <a href={contact} target="_blank" rel="noopener noreferrer" style={linkStyle}>WhatsApp do site</a> : "WhatsApp do site"}
+      {contactEmail && <> ou pelo e-mail <a href={`mailto:${contactEmail}`} style={linkStyle}>{contactEmail}</a></>}
+    </>
+  );
 
   return (
     <div className="site-page">
@@ -65,7 +73,7 @@ export default function PrivacyPage() {
           <p style={pStyle}>
             O responsável pelo tratamento dos seus dados é <strong>Hanif Alves</strong>, instrutor de APH e titular deste site. Para qualquer assunto
             sobre seus dados, fale conosco pelo{" "}
-            {contact ? <a href={contact} target="_blank" rel="noopener noreferrer" style={linkStyle}>WhatsApp do site</a> : "WhatsApp do site"}.
+            {contactLinks}.
           </p>
 
           <h2 style={h2Style}>2. Quais dados coletamos e quando</h2>
@@ -134,7 +142,7 @@ export default function PrivacyPage() {
           </ul>
           <p style={pStyle}>
             Para exercer qualquer um desses direitos, fale conosco pelo{" "}
-            {contact ? <a href={contact} target="_blank" rel="noopener noreferrer" style={linkStyle}>WhatsApp do site</a> : "WhatsApp do site"}.
+            {contactLinks}.
             Se achar que algo não foi resolvido, você também pode recorrer à Autoridade Nacional de Proteção de Dados (ANPD).
           </p>
 
