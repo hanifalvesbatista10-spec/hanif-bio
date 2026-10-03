@@ -97,13 +97,24 @@ async function patchRun(id, fields) {
 // ---------------------------------------------------------------- fila de análise
 
 const TRIAGE_BATCH = 20;
+const WEEKLY_LIMIT = 5;
 
 // Avalia os candidatos ainda não triados e move os escolhidos para a fila de análise. Devolve quantos foram escolhidos.
 export async function triagePending() {
   const pending = (await sb(`radar_items?status=eq.candidate&select=id,topic,source_name,title_original,publication_type,radar_item_private(raw_text)&order=discovered_at.asc&limit=${TRIAGE_BATCH}`)) || [];
   if (!pending.length) return 0;
   let selected = 0;
-  const decisions = await triage(pending.map((p) => ({ ref: p.id, title_original: p.title_original, source_name: p.source_name, topic: p.topic, pub_types: [], raw_text: p.radar_item_private?.raw_text || "" })));
+  // limite de 5 itens por semana na fila de revisão (somando os lotes): o que já está na fila ou virou rascunho há menos de 7 dias conta
+  const inFlow = (await sb("radar_items?status=in.(pending_analysis,analyzing)&select=id"))?.length || 0;
+  const recentDrafts = (await sb(`radar_items?status=eq.draft&discovered_at=gte.${new Date(Date.now() - 7 * DAY).toISOString()}&select=id`))?.length || 0;
+  const allowance = Math.max(0, WEEKLY_LIMIT - inFlow - recentDrafts);
+  if (allowance === 0) {
+    const ids = pending.map((p) => p.id);
+    await sb(`radar_items?id=in.(${ids.join(",")})`, { method: "PATCH", body: { status: "discarded" } });
+    await sb("radar_item_private?on_conflict=item_id", { method: "POST", prefer: "resolution=merge-duplicates", body: ids.map((id) => ({ item_id: id, discard_reason: `Limite de ${WEEKLY_LIMIT} itens por semana já atingido.` })) });
+    return 0;
+  }
+  const decisions = await triage(pending.map((p) => ({ ref: p.id, title_original: p.title_original, source_name: p.source_name, topic: p.topic, pub_types: [], raw_text: p.radar_item_private?.raw_text || "" })), { max: allowance });
   for (const p of pending) {
     const d = decisions.get(p.id);
     if (!d) continue; // a IA não respondeu sobre este: continua candidato para a próxima triagem

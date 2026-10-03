@@ -45,7 +45,7 @@ function Detail({ item }) {
       <Section title="Achado principal">{item.main_finding}</Section>
       <Section title="O que mudou">{item.what_changed}</Section>
       <Section title="Força da evidência">{item.evidence_strength}</Section>
-      {item.official_grade && <Section title="Classificação oficial (copiada da fonte)">{item.official_grade}</Section>}
+      {item.official_grade && <Section title="Classificação formal da fonte (copiada)">{item.official_grade}</Section>}
       <Section title="Limitações">{item.limitations}</Section>
       <Section title="Aplicabilidade ao APH brasileiro">{item.applicability_br}</Section>
 

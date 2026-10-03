@@ -332,7 +332,7 @@ export default function RadarPanel() {
             <Field label="Força da evidência (análise crítica)"><textarea value={form.evidence_strength} onChange={set("evidence_strength")} /></Field>
             <Field label="Limitações"><textarea value={form.limitations} onChange={set("limitations")} /></Field>
             <Field label="Aplicabilidade ao APH brasileiro" wide><textarea value={form.applicability_br} onChange={set("applicability_br")} /></Field>
-            <Field label="Classificação oficial (só se vier da própria fonte)" wide><input value={form.official_grade} onChange={set("official_grade")} placeholder="vazio = sem classificação oficial citada" /></Field>
+            <Field label="Classificação formal da fonte (GRADE, classe de recomendação — só se existir)" wide><input value={form.official_grade} onChange={set("official_grade")} placeholder="vazio = sem classificação oficial citada" /></Field>
             <Field label="Conduta editorial (interno, não aparece no site)"><select value={form.editorial_action} onChange={set("editorial_action")}><option value="">—</option>{Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
             <Field label="O que vale atualizar nos cursos e na Mentoria APH (interno)" wide><textarea value={form.course_updates} onChange={set("course_updates")} /></Field>
           </div>

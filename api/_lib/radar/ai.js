@@ -179,19 +179,19 @@ ${UNTRUSTED_RULE}
 
 Temas aceitos (campo "topic"): rcp_dea (RCP e DEA), trauma_hemorragia (trauma, controle de hemorragias e choque), pediatria_neonatal (emergências pediátricas e ressuscitação neonatal), coluna (restrição de movimento da coluna, NEXUS, Canadian C-Spine Rule).
 
-Escolha NO MÁXIMO 5 itens realmente relevantes para quem atua no APH. Critérios: diretrizes e consensos finais, revisões sistemáticas e metanálises, ensaios clínicos e estudos grandes que possam mudar a prática. Descarte: fora dos temas ou do contexto pré-hospitalar/emergência, relatos de caso, estudos pequenos ou fracos, opinião sem método, conteúdo sem resumo útil, novidade irrelevante. NÃO complete a lista só para atingir um número: se nada presta, devolva zero selecionados.
+Escolha NO MÁXIMO o número de itens informado na mensagem do usuário (nunca mais que 5) realmente relevantes para quem atua no APH. Critérios: diretrizes e consensos finais, revisões sistemáticas e metanálises, ensaios clínicos e estudos grandes que possam mudar a prática. Descarte: fora dos temas ou do contexto pré-hospitalar/emergência, relatos de caso, estudos pequenos ou fracos, opinião sem método, conteúdo sem resumo útil, novidade irrelevante. NÃO complete a lista só para atingir um número: se nada presta, devolva zero selecionados.
 
 Responda SOMENTE com JSON: {"items":[{"id":"...","select":true|false,"topic":"...","population":"adulto|pediatrico|neonatal|misto|nao_se_aplica","publication_type":"diretriz_final|consulta_publica|revisao|estudo_original|preprint|opiniao|outro","reason":"1 frase"}]}
 Inclua todos os ids recebidos. publication_type: diretriz final só se for diretriz/consenso já publicado como final; rascunho para consulta é consulta_publica; preprint só se for explicitamente preprint.`;
 
-export async function triage(candidates) {
+export async function triage(candidates, { max = 5 } = {}) {
   const list = candidates
     .map((c) => `<fonte id="${c.ref}">\nTítulo: ${asData(c.title_original, 300)}\nFonte: ${asData(c.source_name, 80)}\nTipos (PubMed): ${asData((c.pub_types || []).join(", "), 120)}\nTema sugerido: ${c.topic || "?"}\nResumo: ${asData(c.raw_text, 700)}\n</fonte>`)
     .join("\n\n");
   const text = await callModel({
     kind: "triage",
     system: TRIAGE_SYSTEM,
-    user: `Faça a triagem destes ${candidates.length} itens:\n\n${list}`,
+    user: `Escolha no máximo ${max} item(ns). Faça a triagem destes ${candidates.length} itens:\n\n${list}`,
     maxTokens: 4000,
     timeoutMs: 40000,
   });
@@ -209,12 +209,12 @@ export async function triage(candidates) {
       reason: clip(row.reason, 300),
     });
   }
-  // o servidor aplica o limite de 5, independente do que a IA devolveu
+  // o servidor aplica o limite, independente do que a IA devolveu
   let selected = 0;
   for (const decision of decisions.values()) {
     if (decision.select) {
       selected += 1;
-      if (selected > 5) decision.select = false;
+      if (selected > max) decision.select = false;
     }
   }
   return decisions;
@@ -230,7 +230,7 @@ Regras inegociáveis:
 - A análise é baseada em "resumo" ou na "página da fonte" (informado a você). Nunca finja ter lido o texto completo e limite as conclusões ao conteúdo recebido.
 - Não apresente estudo isolado como mudança de protocolo. Diferencie diretriz final, consulta pública, revisão, estudo original, preprint e opinião.
 - "what_changed": só compare com o conhecimento anterior se a própria fonte permitir (ela diz o que muda ou cita a recomendação anterior). Caso contrário use null.
-- "official_grade": copie, exatamente como escrito, um trecho da fonte que mencione a classificação/nível de evidência oficial (ex.: GRADE, classe de recomendação). Se a fonte não trouxer, use null. Nunca crie classificação.
+- "official_grade": SOMENTE se o texto trouxer uma classificação formal de uma diretriz ou entidade (ex.: GRADE com nível, classe de recomendação e nível de evidência AHA/ERC/ILCOR), copie esse trecho exatamente como está. A frase em que os próprios autores descrevem a certeza dos seus resultados NÃO é classificação oficial: nesse caso use null. Na dúvida, use null. Nunca crie classificação.
 - Português do Brasil, texto puro, sem markdown. Conteúdo educacional: não prescreva conduta para casos individuais.
 
 Responda SOMENTE com JSON:
