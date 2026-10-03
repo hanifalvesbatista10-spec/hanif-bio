@@ -96,7 +96,8 @@ export default function RadarLeadModal({ open, itemId, onClose, onUnlock }) {
             <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
             <span>
               Autorizo Hanif Alves a usar meu nome, WhatsApp e e-mail para me enviar conteúdos de APH e o convite da comunidade. Posso pedir
-              para sair a qualquer momento.
+              para sair a qualquer momento. Leia a{" "}
+              <a href="/privacidade" target="_blank" rel="noopener noreferrer" style={{ color: "#ff9aa8", textDecoration: "underline", textUnderlineOffset: 3 }}>política de privacidade</a>.
             </span>
           </label>
           {error && <div className="rm-error" role="alert">{error}</div>}

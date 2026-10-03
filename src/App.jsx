@@ -23,6 +23,7 @@ import StudentCoursesPage from "./pages/student/StudentCoursesPage";
 import CourseLessonsPage from "./pages/student/CourseLessonsPage";
 import MeetingRoomPage from "./pages/student/MeetingRoomPage";
 import RadarPage from "./pages/public/RadarPage";
+import PrivacyPage from "./pages/public/PrivacyPage";
 import StudentProfilePage from "./pages/student/StudentProfilePage";
 import StudentCertificatesPage from "./pages/student/StudentCertificatesPage";
 import StudentActivitiesPage from "./pages/student/StudentActivitiesPage";
@@ -92,6 +93,7 @@ export default function App() {
           <Route path="/sobre" element={<SobrePage />} />
           <Route path="/conteudos" element={<ContentListPage />} />
           <Route path="/conteudos/:slug" element={<ContentDetailPage />} />
+          <Route path="/privacidade" element={<PrivacyPage />} />
           <Route path="/radar" element={<RadarPage />} />
           <Route path="/radar/:id" element={<RadarPage />} />
           <Route path="/evento/aulao-barro" element={<LegacyEventRedirect />} />
