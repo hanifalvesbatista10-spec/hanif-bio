@@ -12,6 +12,7 @@ import FeaturedProduct from "../../components/sections/FeaturedProduct";
 import ProductEcosystem from "../../components/sections/ProductEcosystem";
 import Method from "../../components/sections/Method";
 import ContentShowcase from "../../components/sections/ContentShowcase";
+import RadarSpotlight from "../../components/sections/RadarSpotlight";
 import Authority from "../../components/sections/Authority";
 import FaqSection from "../../components/sections/FaqSection";
 import FinalCta from "../../components/sections/FinalCta";
@@ -166,6 +167,7 @@ export default function ConversionHomePage() {
           <PublicFeedbacks limit={8} />
         </div>
 
+        <RadarSpotlight />
         <ContentShowcase items={content} />
         <Authority settings={settings} />
         <FaqSection faqs={faqs} />

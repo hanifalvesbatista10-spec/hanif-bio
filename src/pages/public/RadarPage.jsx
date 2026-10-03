@@ -80,7 +80,7 @@ export default function RadarPage() {
     window.scrollTo({ top: 0, behavior: "auto" });
     document.title = "Radar de Evidências em APH | Hanif Alves";
     setLoading(true);
-    let query = supabase.from("radar_items").select("*").eq("status", "published").order("published_at", { ascending: false });
+    let query = supabase.from("radar_items").select("*").eq("status", "published").order("featured", { ascending: false }).order("published_at", { ascending: false });
     if (id) query = query.eq("id", id);
     Promise.all([supabase.from("site_settings").select("*").eq("id", 1).maybeSingle(), query]).then(([settingsResult, itemsResult]) => {
       if (settingsResult.data) setSettings((current) => ({ ...current, ...settingsResult.data }));
@@ -129,7 +129,7 @@ export default function RadarPage() {
                 {visible.map((item) => (
                   <article className="site-product" key={item.id}>
                     <div className="site-product-body">
-                      <span className="site-product-tag">{TOPIC_LABELS[item.topic] || "Radar"}</span>
+                      <span className="site-product-tag">{item.featured ? "Destaque · " : ""}{TOPIC_LABELS[item.topic] || "Radar"}</span>
                       <h3>{item.title_pt || item.title_original}</h3>
                       <p>{item.summary_pt}</p>
                       <div className="site-content-meta">

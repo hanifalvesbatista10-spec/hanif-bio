@@ -69,6 +69,7 @@ export default function RadarPanel() {
       ...Object.fromEntries(EDITABLE.map((key) => [key, itemResult.data?.[key] ?? ""])),
       course_updates: privResult.data?.course_updates ?? "",
       editorial_action: privResult.data?.editorial_action ?? "",
+      featured: Boolean(itemResult.data?.featured),
     });
   }, []);
 
@@ -129,7 +130,7 @@ export default function RadarPanel() {
     setBusy("save");
     const content = Object.fromEntries(EDITABLE.map((key) => [key, String(form[key] ?? "").trim() || null]));
     const [a, b] = await Promise.all([
-      supabase.from("radar_items").update(content).eq("id", item.id),
+      supabase.from("radar_items").update({ ...content, featured: Boolean(form.featured) }).eq("id", item.id),
       supabase.from("radar_item_private").upsert({ item_id: item.id, course_updates: String(form.course_updates || "").trim() || null, editorial_action: form.editorial_action || null }, { onConflict: "item_id" }),
     ]);
     setBusy("");
@@ -333,6 +334,10 @@ export default function RadarPanel() {
             <Field label="Limitações"><textarea value={form.limitations} onChange={set("limitations")} /></Field>
             <Field label="Aplicabilidade ao APH brasileiro" wide><textarea value={form.applicability_br} onChange={set("applicability_br")} /></Field>
             <Field label="Classificação formal da fonte (GRADE, classe de recomendação — só se existir)" wide><input value={form.official_grade} onChange={set("official_grade")} placeholder="vazio = sem classificação oficial citada" /></Field>
+            <label className="rd-wide" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <input type="checkbox" checked={Boolean(form.featured)} onChange={(e) => setForm((current) => ({ ...current, featured: e.target.checked }))} style={{ width: "auto" }} />
+              Destacar na página inicial e no topo do Radar (vale para itens publicados; clique em “Salvar edições”)
+            </label>
             <Field label="Conduta editorial (interno, não aparece no site)"><select value={form.editorial_action} onChange={set("editorial_action")}><option value="">—</option>{Object.entries(ACTION_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
             <Field label="O que vale atualizar nos cursos e na Mentoria APH (interno)" wide><textarea value={form.course_updates} onChange={set("course_updates")} /></Field>
           </div>

@@ -14,6 +14,7 @@ export default function SiteFooter({ settings }) {
           <a href="/#produtos">Produtos</a>
           <Link to="/sobre">Sobre</Link>
           <Link to="/conteudos">Conteúdos</Link>
+          <Link to="/radar">Radar de Evidências</Link>
           <a href="/#depoimentos">Depoimentos</a>
         </div>
         <div>

@@ -60,6 +60,7 @@ export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
           <a href={anchor("produtos")} onClick={closeMenu}>Produtos</a>
           <Link to="/sobre" onClick={closeMenu}>Sobre</Link>
           <Link to="/conteudos" onClick={closeMenu}>Conteúdos</Link>
+          <Link to="/radar" onClick={closeMenu}>Radar</Link>
           <a href={anchor("depoimentos")} onClick={closeMenu}>Depoimentos</a>
           <a className="site-nav-cta" href={anchor("produtos")} onClick={closeMenu}>
             {primaryLabel}
