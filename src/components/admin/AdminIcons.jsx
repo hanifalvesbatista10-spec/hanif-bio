@@ -122,6 +122,14 @@ export const icons = {
       <circle cx="16.5" cy="19" r="1.3" />
     </Icon>
   ),
+  finance: (
+    <Icon>
+      <path d="M4 19V5" />
+      <path d="M4 19h16" />
+      <path d="m7.5 14.5 3.2-3.6 3 2.4 4.3-5.3" />
+      <path d="M15.5 8h3v3" />
+    </Icon>
+  ),
   coupon: (
     <Icon>
       <path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z" />

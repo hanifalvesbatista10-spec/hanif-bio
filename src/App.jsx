@@ -58,6 +58,7 @@ const AccessPage = lazy(() => import("./pages/admin/AccessPage"));
 const OrdersPage = lazy(() => import("./pages/admin/OrdersPage"));
 const CouponsPage = lazy(() => import("./pages/admin/CouponsPage"));
 const MarketingPage = lazy(() => import("./pages/admin/MarketingPage"));
+const FinancePage = lazy(() => import("./pages/admin/FinancePage"));
 const MeetingsPage = lazy(() => import("./pages/admin/MeetingsPage"));
 const LeadsPage = lazy(() => import("./pages/admin/LeadsPage"));
 const SalesRecoveryPage = lazy(() => import("./pages/admin/SalesRecoveryPage"));
@@ -345,6 +346,14 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <MeetingsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="financeiro"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <FinancePage />
                 </Suspense>
               }
             />

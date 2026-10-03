@@ -32,7 +32,7 @@ src/services/                           acesso a dados e clientes das APIs (supa
 src/styles/                             tokens.css e CSS por área
 src/App.jsx                             todas as rotas (admin em /admin/*, aluno em /minha-area/*)
 api/                                    funções serverless; api/_lib/ = código compartilhado
-supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 47)
+supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 50)
 docs/                                   guias de operação (checkout, mux, afiliados, provas...)
 ```
 
