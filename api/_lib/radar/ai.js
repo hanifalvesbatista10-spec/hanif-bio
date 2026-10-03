@@ -69,6 +69,11 @@ async function callGemini({ kind, system, user, maxTokens, timeoutMs }) {
       lastError = new Error(`Gemini: modelo ${model} indisponível (${data?.error?.message || response.status})`);
       continue;
     }
+    // sobrecarga passageira do Google (500/502/503/504): tenta o outro modelo; se todos falharem, a fila espera
+    if ([500, 502, 503, 504].includes(response.status)) {
+      lastError = new AiBusy(`O Gemini está sobrecarregado agora (${response.status}). Tente de novo em alguns minutos; nada foi perdido.`);
+      continue;
+    }
     if (!response.ok) throw new Error(`Gemini ${response.status}${data?.error?.message ? ` - ${data.error.message}` : ""}`);
     if (data?.promptFeedback?.blockReason) throw new Error(`Gemini bloqueou o conteúdo (${data.promptFeedback.blockReason}).`);
     const text = (data.candidates?.[0]?.content?.parts || []).map((part) => part.text || "").join("");
