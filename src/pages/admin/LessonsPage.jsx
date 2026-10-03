@@ -60,6 +60,11 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
     onClose();
   }, [dirty, saving, onClose]);
 
+  // O fechamento muda a cada alteração do formulário; o efeito abaixo guarda a versão atual em uma ref para
+  // rodar só uma vez. Se ele dependesse de requestClose, o foco voltaria ao título na primeira letra digitada.
+  const requestCloseRef = useRef(requestClose);
+  requestCloseRef.current = requestClose;
+
   useEffect(() => {
     const html = document.documentElement;
     const previous = document.activeElement;
@@ -69,7 +74,7 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
     const onKeyDown = (event) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        requestClose();
+        requestCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -92,7 +97,7 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
       html.classList.remove("adm-scroll-lock");
       previous?.focus?.();
     };
-  }, [requestClose]);
+  }, []);
 
   const set = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
   const mux = isMux(draft);
