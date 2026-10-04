@@ -53,14 +53,24 @@ function buildMessage({ products, clientName, includePrice, coupon }) {
     const facts = [product.duration, product.format].filter(Boolean).join(" · ");
     if (facts) lines.push(facts);
     const price = product.promotional_price ?? product.price;
+    const original = Number(product.price);
+    const hasMarkdown = Number(product.promotional_price) > 0 && original > Number(product.promotional_price);
     if (includePrice && product.checkout_mode !== "whatsapp" && price !== null && price !== undefined && Number(price) > 0) {
-      lines.push(`Investimento: ${money(price)}`);
+      if (hasMarkdown) {
+        // O valor original riscado ao lado do atual dá a noção do desconto que o cliente já está levando.
+        const saved = original - Number(price);
+        lines.push(`De ~${money(original)}~ por *${money(price)}*`);
+        lines.push(`Você economiza ${money(saved)} (${Math.round((saved / original) * 100)}% de desconto)`);
+      } else {
+        lines.push(`Investimento: ${money(price)}`);
+      }
     }
     lines.push(`Saiba mais: ${origin}/produto/${product.slug}`);
     if (couponApplies(coupon, product)) {
       const final = discountedPrice(coupon, product);
       if (includePrice && final !== null) {
-        lines.push(`Com o cupom ${coupon.code}: de ${money(basePrice(product))} por ${final === 0 ? "grátis" : money(final)}`);
+        const finalText = final === 0 ? "grátis" : money(final);
+        lines.push(hasMarkdown ? `Com o cupom ${coupon.code}: por ${finalText}` : `Com o cupom ${coupon.code}: de ${money(basePrice(product))} por ${finalText}`);
       }
       lines.push(`Garanta com o desconto: ${origin}/checkout/${product.slug}?cupom=${coupon.code}`);
     }
@@ -257,7 +267,7 @@ export default function MarketingPage() {
                 }}
                 placeholder="Marque ao menos um curso para a mensagem aparecer aqui."
               />
-              <span className="mk-help">Pode editar à vontade. Os asteriscos deixam o título em negrito no WhatsApp.</span>
+              <span className="mk-help">Pode editar à vontade. No WhatsApp, os asteriscos deixam o texto em negrito e o til (~) risca o preço original.</span>
             </label>
             <div className="mk-actions">
               <button type="button" className="admin-button mk-wa" onClick={openWhatsapp} disabled={!canSend}>
