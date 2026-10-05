@@ -56,6 +56,8 @@ export default checkoutHandler(["GET", "POST"], async (req, res) => {
     status: order.status,
     paymentMethod: order.payment_method,
     amount: order.amount_cents,
+    // ids dos produtos do pedido (principal + extras), usados no evento de compra do Pixel da Meta
+    contentIds: [order.product_id, ...(order.bump_product_ids || [])].filter(Boolean),
     productTitle: order.product?.title || "",
     productSlug: order.product?.slug || "",
     hasAccount: Boolean(order.user_id),

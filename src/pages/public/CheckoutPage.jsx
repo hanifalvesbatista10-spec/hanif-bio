@@ -5,6 +5,7 @@ import { supabase } from "../../services/supabase";
 import { checkCoupon, createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
 import { formatCpf, isValidCpf } from "../../services/studentData";
 import Installments from "../../components/ui/Installments";
+import { getMetaTrackingData, onMetaPixelReady, trackInitiateCheckout } from "../../services/metaPixel";
 import "../../styles/checkout.css";
 
 const METHODS = [
@@ -188,6 +189,17 @@ export default function CheckoutPage() {
   }, [product]);
   const original = product && Number(product.promotional_price) > 0 && Number(product.price) > Number(product.promotional_price) ? Math.round(Number(product.price) * 100) : 0;
 
+  // Pixel da Meta: o checkout foi aberto (uma vez por produto; só dispara se o visitante aceitou os cookies de anúncios)
+  const initiateSent = useRef("");
+  useEffect(() => {
+    if (!product?.id || product.checkout_mode !== "internal" || price <= 0) return undefined;
+    return onMetaPixelReady(() => {
+      if (initiateSent.current === product.id) return;
+      initiateSent.current = product.id;
+      trackInitiateCheckout(product, price);
+    });
+  }, [product, price]);
+
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
   const applyCoupon = async (codeOverride, methodOverride) => {
@@ -267,7 +279,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     try {
       const bumpProductIds = bumps.filter((row) => selectedBumps.includes(row.id)).map((row) => row.bump.id);
-      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone, coupon: coupon?.code || "", bumps: bumpProductIds });
+      const result = await createCheckout({ slug, method, name: form.name, email: form.email, cpf: form.cpf, phone: form.phone, coupon: coupon?.code || "", bumps: bumpProductIds, meta: getMetaTrackingData() });
       if (result.free) {
         // cupom de 100%: acesso liberado na hora
         window.location.assign(`/checkout/obrigado?order=${result.orderId}`);

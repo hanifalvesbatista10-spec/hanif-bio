@@ -7,6 +7,7 @@ import SiteFooter from "../../components/layout/SiteFooter";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { onMetaPixelReady, trackViewContent } from "../../services/metaPixel";
 import "./ConversionHomePage.css";
 
 function formatPrice(value) {
@@ -266,6 +267,11 @@ export default function PublicProductPage() {
       setLoading(false);
     });
   }, [slug]);
+
+  // Pixel da Meta: avisa que o curso foi visto (só dispara se o visitante aceitou os cookies de anúncios)
+  useEffect(() => {
+    if (product) return onMetaPixelReady(() => trackViewContent(product));
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <main className="site-empty" style={{ minHeight: "100vh" }}>Carregando produto...</main>;
 

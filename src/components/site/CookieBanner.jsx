@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { OPEN_PREFERENCES_EVENT, clearAdsCookies, getConsent, loadGoogleAds, setConsent } from "../../services/consent";
+import { loadMetaPixel } from "../../services/metaPixel";
 
 // Aviso de cookies: aparece na primeira visita e pode ser reaberto por "Preferências de cookies" no rodapé.
 // Não aparece no painel de administração.
@@ -22,6 +23,7 @@ export default function CookieBanner() {
     setOpen(false);
     if (marketing) {
       loadGoogleAds();
+      loadMetaPixel();
     } else if (hadAccepted) {
       // quem tinha aceitado e agora recusa: limpa os cookies e recarrega para a etiqueta sair da página
       clearAdsCookies();
@@ -40,8 +42,8 @@ export default function CookieBanner() {
         @media(max-width:600px){.ck-banner .ck-actions{width:100%}.ck-banner .site-btn{flex:1}}
       `}</style>
       <p>
-        Usamos cookies essenciais para o site funcionar. Com a sua permissão, usamos também cookies do Google Ads para medir se nossos anúncios
-        funcionam. Você pode mudar a escolha quando quiser. Saiba mais na <a href="/privacidade">política de privacidade</a>.
+        Usamos cookies essenciais para o site funcionar. Com a sua permissão, usamos também cookies do Google e da Meta para medir se nossos
+        anúncios funcionam. Você pode mudar a escolha quando quiser. Saiba mais na <a href="/privacidade">política de privacidade</a>.
       </p>
       <div className="ck-actions">
         <button type="button" className="site-btn secondary" onClick={() => choose(false)}>Recusar</button>

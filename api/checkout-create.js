@@ -22,6 +22,7 @@ import { createCheckoutLink } from "./_lib/infinitepay.js";
 import { resolveCoupon } from "./_lib/coupons.js";
 import { markOrderPaid } from "./_lib/orders.js";
 import { notifyOrderEvent } from "./_lib/notify.js";
+import { trackingColumns } from "./_lib/meta.js";
 
 const now = () => new Date().toISOString();
 
@@ -127,6 +128,8 @@ export default checkoutHandler(["POST"], async (req, res) => {
       provider: free ? "coupon" : PROVIDER_BY_METHOD[method],
       // campos do cupom só entram quando há cupom (assim o checkout continua igual antes do SQL 20)
       ...(coupon ? { coupon_id: coupon.id, coupon_code: coupon.code.toUpperCase(), discount_cents: discountCents, list_price_cents: listCents } : {}),
+      // rastreamento da Meta (SQL 51): só entra se o comprador aceitou os cookies de anúncios
+      ...trackingColumns(body.meta, req),
       // campos do bump só entram quando há bump válido (assim o checkout continua igual antes do SQL 38)
       ...(bumpRows.length > 0 ? { bump_product_ids: bumpRows.map((row) => row.bump_product_id), bump_cents: bumpCents } : {}),
     },

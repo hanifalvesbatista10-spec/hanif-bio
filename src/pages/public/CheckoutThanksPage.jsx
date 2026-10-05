@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { fetchOrderStatus, formatMoneyCents } from "../../services/checkoutApi";
 import { reportPurchaseConversion } from "../../services/adsConversion";
+import { reportMetaPurchase } from "../../services/metaPixel";
 import "../../styles/checkout.css";
 
 function LockIcon() {
@@ -40,7 +41,11 @@ export default function CheckoutThanksPage() {
         if (!active) return;
         setOrder(data);
         setError("");
-        if (data.status === "paid") reportPurchaseConversion(orderId);
+        if (data.status === "paid") {
+          reportPurchaseConversion(orderId);
+          // Pixel da Meta: mesmo eventID do servidor (id do pedido), então a Meta conta uma venda só
+          reportMetaPurchase({ orderId, amountCents: data.amount, contentIds: data.contentIds });
+        }
         if (["paid", "failed", "canceled", "refunded"].includes(data.status)) return;
       } catch (err) {
         if (!active) return;

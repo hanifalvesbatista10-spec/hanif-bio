@@ -1,6 +1,6 @@
-// Consentimento de cookies. A etiqueta do Google Ads só é carregada DEPOIS que o visitante aceita: antes disso ela
-// nem existe na página (window.gtag fica indefinido), então nenhum cookie nem requisição do Google acontece, e a
-// conversão de compra (adsConversion.js) também não dispara. A escolha fica guardada neste navegador.
+// Consentimento de cookies. As etiquetas de anúncios (Google Ads e Pixel da Meta) só são carregadas DEPOIS que o visitante
+// aceita: antes disso elas nem existem na página (window.gtag e window.fbq ficam indefinidos), então nenhum cookie nem
+// requisição de terceiros acontece, e as conversões de compra também não disparam. A escolha fica guardada neste navegador.
 const STORAGE_KEY = "ha_cookie_consent_v1";
 const ADS_ID = "AW-18404535998";
 
@@ -45,12 +45,12 @@ export function initConsent() {
   if (getConsent()?.marketing) loadGoogleAds();
 }
 
-// Ao revogar o consentimento, apaga os cookies de anúncios do Google deste site.
+// Ao revogar o consentimento, apaga os cookies de anúncios (Google e Meta) deste site.
 export function clearAdsCookies() {
   const hosts = [location.hostname, `.${location.hostname.replace(/^www\./, "")}`];
   document.cookie.split(";").forEach((cookie) => {
     const name = cookie.split("=")[0].trim();
-    if (!/^(_gcl_|_gac_|_gads|_gpi)/.test(name)) return;
+    if (!/^(_gcl_|_gac_|_gads|_gpi|_fbp|_fbc)/.test(name)) return;
     hosts.forEach((host) => {
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${host}`;
     });

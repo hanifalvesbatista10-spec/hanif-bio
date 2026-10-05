@@ -15,7 +15,7 @@ const fallbackSettings = {
   copyright_text: "© 2026 Hanif Alves. Todos os direitos reservados.",
 };
 
-const UPDATED = "3 de outubro de 2026";
+const UPDATED = "5 de outubro de 2026";
 
 // Serviços que recebem dados para o site funcionar. Mantenha esta lista igual ao que o projeto realmente usa.
 const PROCESSORS = [
@@ -28,6 +28,7 @@ const PROCESSORS = [
   ["Daily.co", "encontros ao vivo na área de membros"],
   ["Telegram", "avisos internos ao responsável pelo site, que incluem nome, WhatsApp e e-mail de novos cadastros"],
   ["Google (Google Ads)", "medição de resultados de anúncios, somente se você aceitar os cookies de anúncios"],
+  ["Meta (Facebook e Instagram)", "medição de resultados de anúncios, somente se você aceitar os cookies de anúncios; nesse caso recebe também dados da compra (e-mail, telefone e nome em formato criptografado, valor e produto) para identificar qual anúncio gerou a venda"],
 ];
 
 const linkStyle = { color: "#ff9aa8", textDecoration: "underline", textUnderlineOffset: 3 };
@@ -83,7 +84,7 @@ export default function PrivacyPage() {
             <li><strong>Compras:</strong> nome, e-mail, CPF, telefone, produto, valor, forma de pagamento e situação do pedido. Os dados do seu cartão são digitados na página do processador de pagamento e <strong>não passam nem ficam guardados no nosso site</strong>.</li>
             <li><strong>Inscrições em eventos e programa de afiliados:</strong> os dados que você preenche no formulário, como nome, contato, cidade, ocupação e, no caso de afiliados, a chave Pix para pagamento de comissões.</li>
             <li><strong>Depoimentos e comentários:</strong> o texto que você enviar e o nome que acompanha.</li>
-            <li><strong>Dados de navegação:</strong> informações técnicas como endereço IP, tipo de aparelho e páginas acessadas, geradas pela hospedagem e, se você aceitar os cookies de anúncios, pela etiqueta do Google.</li>
+            <li><strong>Dados de navegação:</strong> informações técnicas como endereço IP, tipo de aparelho e páginas acessadas, geradas pela hospedagem e, se você aceitar os cookies de anúncios, pelas etiquetas do Google e da Meta.</li>
           </ul>
 
           <h2 style={h2Style}>3. Para que usamos seus dados</h2>
@@ -117,7 +118,7 @@ export default function PrivacyPage() {
             <li><strong>Sessão de login:</strong> mantém você conectado na área de membros.</li>
             <li><strong>Cadastro do Radar:</strong> guardamos no seu navegador o nome, o e-mail e o WhatsApp que você informou, para não pedir de novo nas próximas visitas.</li>
             <li><strong>Preferências do app:</strong> por exemplo, se você escondeu o aviso de instalação.</li>
-            <li><strong>Google Ads (só se você aceitar):</strong> se você aceitar no aviso de cookies, a etiqueta do Google grava cookies para medir se um anúncio levou a uma compra. Sem a sua permissão ela não é carregada. Você pode mudar a escolha a qualquer momento em “Preferências de cookies”, no rodapé do site.</li>
+            <li><strong>Google Ads e Meta (só se você aceitar):</strong> se você aceitar no aviso de cookies, as etiquetas do Google e da Meta gravam cookies para medir se um anúncio levou a uma compra. Nesse caso, guardamos junto do pedido dados técnicos da sua visita (endereço IP, navegador e os identificadores dos cookies da Meta) para informar a compra à Meta. Sem a sua permissão essas etiquetas não são carregadas e nada disso é guardado ou enviado. Você pode mudar a escolha a qualquer momento em “Preferências de cookies”, no rodapé do site.</li>
           </ul>
           <p style={pStyle}>
             Você pode apagar os dados guardados no navegador e bloquear cookies de terceiros a qualquer momento nas configurações dele. Se fizer isso, o

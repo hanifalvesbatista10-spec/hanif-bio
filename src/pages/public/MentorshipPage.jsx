@@ -3,6 +3,7 @@ import Installments from "../../components/ui/Installments";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { onMetaPixelReady, trackViewContent } from "../../services/metaPixel";
 
 function formatPrice(value) {
   if (value === null || value === undefined || value === "") return "";
@@ -46,6 +47,10 @@ export default function MentorshipPage() {
 
     return () => { document.title = previous; };
   }, []);
+
+  useEffect(() => {
+    if (product) return onMetaPixelReady(() => trackViewContent(product));
+  }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const centeredState = {
     minHeight: "100vh",

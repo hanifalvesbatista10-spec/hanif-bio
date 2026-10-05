@@ -9,7 +9,7 @@ Plataforma de Hanif Alves (instrutor de APH, urgência e emergência): site púb
 - **Frontend:** React 18 + Vite 6 + React Router 7 (SPA), JavaScript (`.jsx`), CSS puro com tokens em `src/styles/tokens.css`. Sem TypeScript, Tailwind ou shadcn.
 - **Backend:** funções serverless na Vercel em `api/` (ajudantes em `api/_lib/`). Plano grátis (Hobby).
 - **Banco:** Supabase (Postgres + RLS + Auth + Storage). Projeto `hanif-alves-plataforma` (ref `qgenfhyzobauknptwsex`).
-- **Integrações:** Mux (vídeo das aulas), Cloudflare R2 (arquivos para download), InfinitePay (Pix/cartão), Asaas (boleto), Resend (e-mail), Telegram (avisos ao dono), Daily.co (encontros ao vivo), Gemini ou Anthropic (IA do Radar de Evidências).
+- **Integrações:** Mux (vídeo das aulas), Cloudflare R2 (arquivos para download), InfinitePay (Pix/cartão), Asaas (boleto), Resend (e-mail), Telegram (avisos ao dono), Daily.co (encontros ao vivo), Meta (Pixel + API de Conversões, só com aceite dos cookies de anúncios), Gemini ou Anthropic (IA do Radar de Evidências).
 - **Hospedagem:** Vercel, projeto `hanif-bio`, domínio `www.aphhardcore.com`. Deploy automático a cada push na `main`.
 
 ## Comandos
@@ -32,7 +32,7 @@ src/services/                           acesso a dados e clientes das APIs (supa
 src/styles/                             tokens.css e CSS por área
 src/App.jsx                             todas as rotas (admin em /admin/*, aluno em /minha-area/*)
 api/                                    funções serverless; api/_lib/ = código compartilhado
-supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 50)
+supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 51)
 docs/                                   guias de operação (checkout, mux, afiliados, provas...)
 ```
 
