@@ -15,7 +15,7 @@ const fallbackSettings = {
   copyright_text: "© 2026 Hanif Alves. Todos os direitos reservados.",
 };
 
-const UPDATED = "5 de outubro de 2026";
+const UPDATED = "11 de outubro de 2026";
 
 // Serviços que recebem dados para o site funcionar. Mantenha esta lista igual ao que o projeto realmente usa.
 const PROCESSORS = [
@@ -83,6 +83,7 @@ export default function PrivacyPage() {
             <li><strong>Conta de aluno:</strong> nome, e-mail e senha (a senha fica protegida pelo serviço de login e não é lida por nós), mais telefone e CPF se você informar no perfil. Dentro da área de membros registramos seu progresso, provas e atividades, comentários e certificados.</li>
             <li><strong>Compras:</strong> nome, e-mail, CPF, telefone, produto, valor, forma de pagamento e situação do pedido. Os dados do seu cartão são digitados na página do processador de pagamento e <strong>não passam nem ficam guardados no nosso site</strong>.</li>
             <li><strong>Inscrições em eventos e programa de afiliados:</strong> os dados que você preenche no formulário, como nome, contato, cidade, ocupação e, no caso de afiliados, a chave Pix para pagamento de comissões.</li>
+            <li><strong>Provas de parceiros:</strong> quando você responde uma prova enviada por um parceiro (por exemplo, um profissional que usa esta plataforma para aplicar pré e pós-testes aos próprios alunos), seu nome, e-mail e respostas ficam guardados aqui, mas quem decide o uso desses dados é o parceiro identificado no topo da prova. Nós apenas armazenamos e não usamos esses dados para outros fins.</li>
             <li><strong>Depoimentos e comentários:</strong> o texto que você enviar e o nome que acompanha.</li>
             <li><strong>Dados de navegação:</strong> informações técnicas como endereço IP, tipo de aparelho e páginas acessadas, geradas pela hospedagem e, se você aceitar os cookies de anúncios, pelas etiquetas do Google e da Meta.</li>
           </ul>

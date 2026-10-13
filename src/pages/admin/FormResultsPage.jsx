@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import RowActions from "../../components/admin/RowActions";
+import { useFormsArea } from "../../services/formsArea";
 import { supabase } from "../../services/supabase";
 import {
   blockLabel,
@@ -42,6 +43,7 @@ const FILTERS = [
 export default function FormResultsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { partner, base, userId } = useFormsArea();
   const [params] = useSearchParams();
   const [form, setForm] = useState(null);
   const [blocks, setBlocks] = useState([]);
@@ -73,6 +75,12 @@ export default function FormResultsPage() {
       setLoading(false);
       return;
     }
+    // Parceiro: só abre prova que é dele (o banco já esconde as respostas de outras, isto evita mostrar a tela vazia de uma prova alheia)
+    if (partner && f.created_by !== userId) {
+      notify("error", "Prova não encontrada.");
+      setLoading(false);
+      return;
+    }
     setForm(f);
     setBlocks(b || []);
     setSubmissions(s || []);
@@ -86,11 +94,12 @@ export default function FormResultsPage() {
       else setAnswers(a || []);
     } else setAnswers([]);
     setLoading(false);
-  }, [id]);
+  }, [id, partner, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (partner && !userId) return;
     load();
-  }, [load]);
+  }, [load]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // link vindo da ficha do aluno: abre direto a resposta dele
   useEffect(() => {
@@ -167,7 +176,12 @@ export default function FormResultsPage() {
         ...questions.map((q) => answerText(map[q.id]?.answer)),
       ];
     });
-    const esc = (value) => `"${String(value).replaceAll('"', '""')}"`;
+    // texto que começa com = + - @ viria a ser uma fórmula ao abrir no Excel (o aluno digita o nome): ganha um apóstrofo na frente
+    const esc = (value) => {
+      let text = String(value);
+      if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+      return `"${text.replaceAll('"', '""')}"`;
+    };
     const csv = [header, ...rows].map((row) => row.map(esc).join(",")).join("\n");
     const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
     const link = document.createElement("a");
@@ -217,11 +231,11 @@ export default function FormResultsPage() {
           <p className="fa-sub">{typeLabel(form.type)} · {form.audience === "students" ? "só alunos logados" : "link público"} · resultados</p>
         </div>
         <div className="fa-top-actions">
-          <button className="fa-btn is-ghost" type="button" onClick={() => navigate("/admin/formularios")}>Voltar</button>
-          <button className="fa-btn is-ghost" type="button" onClick={() => navigate(`/admin/formularios/${id}`)}>Editar prova</button>
-          <button className="fa-btn" type="button" disabled={busy || stats.toRelease === 0} onClick={releaseAll}>
+          <button className="fa-btn is-ghost" type="button" onClick={() => navigate(base)}>Voltar</button>
+          <button className="fa-btn is-ghost" type="button" onClick={() => navigate(`${base}/${id}`)}>Editar prova</button>
+          {!partner && <button className="fa-btn" type="button" disabled={busy || stats.toRelease === 0} onClick={releaseAll}>
             {stats.toRelease > 0 ? `Liberar ${stats.toRelease} ${stats.toRelease === 1 ? "resultado" : "resultados"}` : "Nada para liberar"}
-          </button>
+          </button>}
           <RowActions
             label="Mais ações"
             items={[
@@ -289,8 +303,8 @@ export default function FormResultsPage() {
                           label={`Ações da resposta de ${s.respondent_name || "anônimo"}`}
                           primary={{ label: s.pending_manual ? "Corrigir" : "Ver", onClick: () => setSelectedId(s.id) }}
                           items={[
-                            { label: "Liberar ao aluno", hidden: s.status !== "graded" || Boolean(s.results_released_at), onClick: () => release([s.id]) },
-                            { label: "Ocultar do aluno", hidden: !s.results_released_at, onClick: () => hide([s.id]) },
+                            { label: "Liberar ao aluno", hidden: partner || s.status !== "graded" || Boolean(s.results_released_at), onClick: () => release([s.id]) },
+                            { label: "Ocultar do aluno", hidden: partner || !s.results_released_at, onClick: () => hide([s.id]) },
                             { label: "Excluir resposta", danger: true, onClick: () => removeSubmission(s) },
                           ]}
                         />
@@ -392,6 +406,7 @@ function QuestionStats({ questions, keys, answers, total }) {
 
 // ---------------------------------------------------------------------------
 function SubmissionDetail({ form, blocks, keys, submission, answers, busy, message, messageType, onBack, onNext, onReload, onRelease, onHide, notify }) {
+  const { partner } = useFormsArea();
   const [drafts, setDrafts] = useState({});
   const [general, setGeneral] = useState(submission.instructor_feedback || "");
   const [saving, setSaving] = useState("");
@@ -456,7 +471,7 @@ function SubmissionDetail({ form, blocks, keys, submission, answers, busy, messa
         </div>
         <div className="fa-top-actions">
           {submission.pending_manual && <button type="button" className="fa-btn is-ghost" onClick={onNext}>Próxima para corrigir</button>}
-          {submission.results_released_at ? (
+          {partner ? null : submission.results_released_at ? (
             <button type="button" className="fa-btn is-ghost" disabled={busy} onClick={onHide}>Ocultar do aluno</button>
           ) : (
             <button type="button" className="fa-btn" disabled={busy || submission.pending_manual} onClick={onRelease} title={submission.pending_manual ? "Corrija todas as questões antes de liberar" : undefined}>Liberar ao aluno</button>

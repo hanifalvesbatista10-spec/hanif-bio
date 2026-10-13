@@ -549,3 +549,24 @@
     transition: none !important;
   }
 }
+
+/* Aviso de uso dos dados (provas de parceiros) e campo invisível anti-robô */
+.fx-notice {
+  margin: 14px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #55687a;
+}
+
+.fx-notice a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.fx-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}

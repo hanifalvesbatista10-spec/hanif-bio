@@ -18,6 +18,7 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
     }
   });
   const [identity, setIdentity] = useState({ name: "", email: "" });
+  const [trap, setTrap] = useState(""); // campo invisível: só robô preenche
   const [localError, setLocalError] = useState("");
   const [invalidId, setInvalidId] = useState("");
   const [uploading, setUploading] = useState("");
@@ -111,6 +112,7 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
 
   const submit = async (event) => {
     event.preventDefault();
+    if (trap) return; // robô: não envia nem avisa
     setLocalError("");
     const settings = form.settings || {};
     if (!student) {
@@ -236,7 +238,16 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
             {form.settings?.require_email && (
               <label><span>E-mail *</span><input className="fx-input" type="email" value={identity.email} onChange={(e) => setIdentity((v) => ({ ...v, email: e.target.value }))} autoComplete="email" /></label>
             )}
+            <div className="fx-trap" aria-hidden="true">
+              <label>Não preencha este campo<input type="text" tabIndex={-1} autoComplete="off" value={trap} onChange={(e) => setTrap(e.target.value)} /></label>
+            </div>
           </div>
+          {form.settings?.data_controller && (
+            <p className="fx-notice">
+              Seus dados (nome, e-mail e respostas) serão usados por <strong>{form.settings.data_controller}</strong> para acompanhar o aprendizado.
+              Saiba mais na <a href="/privacidade" target="_blank" rel="noopener noreferrer">política de privacidade</a>.
+            </p>
+          )}
         </section>
       )}
 

@@ -10,7 +10,7 @@ const MAX_FAILURES = 5;
 const COOLDOWN_SECONDS = 30;
 
 export default function StudentLoginPage() {
-  const { user, profile, loading, isBlocked } = useAuth();
+  const { user, profile, loading, isBlocked, isPartner } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -39,6 +39,7 @@ export default function StudentLoginPage() {
   }, [cooldown]);
 
   if (!loading && user && profile && !isBlocked) {
+    if (isPartner) return <Navigate to="/parceiro" replace />;
     const from = location.state?.from;
     return <Navigate to={from && from.startsWith("/minha-area") ? from : "/minha-area"} replace />;
   }
@@ -51,7 +52,7 @@ export default function StudentLoginPage() {
     setNeedsConfirmation(false);
     setResent(false);
 
-    const { error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
+    const { data: signedIn, error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
 
     if (error) {
       setSubmitting(false);
@@ -67,6 +68,9 @@ export default function StudentLoginPage() {
     }
 
     setSubmitting(false);
+    // parceiro (SQL 52) vai direto para a área dele; os demais seguem para a área de membros
+    const { data: partnerRow } = await supabase.from("partners").select("active").eq("user_id", signedIn?.user?.id || "").maybeSingle();
+    if (partnerRow?.active) return navigate("/parceiro", { replace: true });
     const from = location.state?.from;
     navigate(from && from.startsWith("/minha-area") ? from : "/minha-area", { replace: true });
   };

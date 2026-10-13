@@ -40,6 +40,7 @@ export const adminNavGroups = [
       { to: "/admin/desempenho", label: "Desempenho da turma", icon: "chart" },
       { to: "/admin/eventos", label: "Eventos e inscrições", icon: "events" },
       { to: "/admin/encontros", label: "Encontros ao vivo", icon: "events" },
+      { to: "/admin/parceiros", label: "Parceiros", icon: "users" },
     ],
   },
 ];

@@ -14,6 +14,7 @@ import {
   uploadFormImage,
 } from "../../services/forms";
 import { emptyBlock, parseImport } from "../../services/formsImport";
+import { useFormsArea } from "../../services/formsArea";
 import "../../styles/forms-admin.css";
 
 const norm = (value) => String(value ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
@@ -97,6 +98,7 @@ export default function FormBuilderPage() {
   const { id } = useParams();
   const editing = Boolean(id);
   const navigate = useNavigate();
+  const { partner, base, userId } = useFormsArea();
   const [form, setForm] = useState(EMPTY_FORM);
   const [blocks, setBlocks] = useState([]);
   const [products, setProducts] = useState([]);
@@ -118,6 +120,7 @@ export default function FormBuilderPage() {
   };
 
   useEffect(() => {
+    if (partner) return; // o parceiro não vê produtos nem temas das provas do administrador
     supabase.from("products").select("id,title").order("title").then(({ data }) => setProducts(data || []));
     // temas e subtemas já usados em outras provas (sugestões ao digitar, para manter a mesma grafia)
     supabase.from("form_blocks").select("topic,subtopic").not("topic", "is", null).limit(3000).then(({ data }) => {
@@ -137,6 +140,11 @@ export default function FormBuilderPage() {
       if (formError || blocksError) {
         notify("error", formError?.message || blocksError?.message);
         setLoading(false);
+        return;
+      }
+      // Parceiro: só edita prova que é dele (uma prova pública de outra pessoa também é legível, mas não editável)
+      if (partner && row.created_by !== userId) {
+        navigate(base, { replace: true });
         return;
       }
       const ids = (rows || []).map((item) => item.id);
@@ -168,7 +176,7 @@ export default function FormBuilderPage() {
       return next;
     });
 
-  const students = form.audience === "students";
+  const students = !partner && form.audience === "students"; // parceiro: sempre "qualquer pessoa com o link"
   const updateBlock = (blockId, patch) => setBlocks((current) => current.map((block) => (block.id === blockId ? { ...block, ...patch } : block)));
   const addBlock = () => {
     const block = emptyBlock(newType);
@@ -202,7 +210,7 @@ export default function FormBuilderPage() {
   const uploadImage = async (blockId, file, field) => {
     if (!file) return;
     try {
-      updateBlock(blockId, { [field]: await uploadFormImage(file) });
+      updateBlock(blockId, { [field]: await uploadFormImage(file, partner ? `partners/${userId}` : "forms") });
     } catch (error) {
       notify("error", error.message);
     }
@@ -257,7 +265,7 @@ export default function FormBuilderPage() {
         description: form.description.trim() || null,
         type: form.type,
         status: publish ? "published" : form.status,
-        audience: form.audience,
+        audience: partner ? "public" : form.audience,
         product_id: students && form.product_id ? form.product_id : null,
         max_attempts: students ? numberOrNull(form.max_attempts) : null,
         time_limit_minutes: students ? numberOrNull(form.time_limit_minutes) : null,
@@ -324,7 +332,7 @@ export default function FormBuilderPage() {
         "success",
         `${publish ? "Publicado." : "Salvo."}${submissionCount > 0 ? " Se você mudou gabaritos ou pontos, use “Recalcular notas” em Resultados para atualizar as notas já enviadas." : ""}`
       );
-      if (!editing) navigate(`/admin/formularios/${formId}`, { replace: true });
+      if (!editing) navigate(`${base}/${formId}`, { replace: true });
     } catch (error) {
       const text = String(error.message || "");
       notify("error", /subtopic/i.test(text) ? "O banco ainda não tem o subtema das questões. Rode supabase/25_subtema_das_questoes.sql no Supabase e salve de novo." : /form_block_keys|correct|audience|does not exist/i.test(text) ? "O banco ainda não tem a atualização de provas (SQL 21). Rode o arquivo supabase/21_provas_e_atividades.sql no Supabase." : text || "Não foi possível salvar.");
@@ -344,7 +352,7 @@ export default function FormBuilderPage() {
           <p className="fa-sub">{questionCount} {questionCount === 1 ? "pergunta" : "perguntas"}{totalPoints > 0 ? ` · ${totalPoints} pontos` : ""} · {form.status === "published" ? "Publicado" : form.status === "draft" ? "Rascunho" : form.status === "closed" ? "Encerrado" : "Arquivado"}</p>
         </div>
         <div className="fa-top-actions">
-          <button className="fa-btn is-ghost" type="button" onClick={() => navigate("/admin/formularios")}>Voltar</button>
+          <button className="fa-btn is-ghost" type="button" onClick={() => navigate(base)}>Voltar</button>
           <button className="fa-btn is-ghost" type="button" disabled={saving} onClick={() => save(false)}>Salvar rascunho</button>
           <button className="fa-btn" type="button" disabled={saving} onClick={() => save(true)}>{saving ? "Salvando..." : form.status === "published" ? "Salvar e manter publicado" : "Publicar"}</button>
         </div>
@@ -380,10 +388,17 @@ export default function FormBuilderPage() {
 
       <div className="fa-card">
         <h3>Quem responde e como</h3>
+        {partner ? (
+          <p className="fa-help">
+            Seus alunos respondem pelo link, sem criar conta. Nome e e-mail são sempre pedidos (o e-mail identifica o aluno no pré e no pós-teste), cada
+            e-mail responde uma única vez e o aviso de uso dos dados aparece no topo da prova.
+          </p>
+        ) : (
         <div className="fa-seg is-wide" role="radiogroup" aria-label="Quem pode responder">
           <button type="button" role="radio" aria-checked={students} className={students ? "is-active" : ""} onClick={() => update("audience", "students")}>Só alunos logados</button>
           <button type="button" role="radio" aria-checked={!students} className={!students ? "is-active" : ""} onClick={() => update("audience", "public")}>Qualquer pessoa com o link</button>
         </div>
+        )}
 
         {students ? (
           <div className="fa-grid">
@@ -407,13 +422,13 @@ export default function FormBuilderPage() {
         ) : (
           <div className="fa-grid">
             <div className="fa-field fa-wide fa-checks">
-              <label className="fa-check"><input type="checkbox" checked={form.require_name} onChange={(e) => update("require_name", e.target.checked)} /> Pedir o nome</label>
-              <label className="fa-check"><input type="checkbox" checked={form.require_email} onChange={(e) => update("require_email", e.target.checked)} /> Pedir o e-mail</label>
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.require_name} onChange={(e) => update("require_name", e.target.checked)} /> Pedir o nome</label>}
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.require_email} onChange={(e) => update("require_email", e.target.checked)} /> Pedir o e-mail</label>}
               <label className="fa-check"><input type="checkbox" checked={form.show_score} onChange={(e) => update("show_score", e.target.checked)} /> Mostrar a nota ao terminar</label>
             </div>
             <label className="fa-field"><span>Abre em (opcional)</span><input className="fa-input" type="datetime-local" value={form.starts_at} onChange={(e) => update("starts_at", e.target.value)} /></label>
             <label className="fa-field"><span>Encerra em (opcional)</span><input className="fa-input" type="datetime-local" value={form.ends_at} onChange={(e) => update("ends_at", e.target.value)} /></label>
-            <p className="fa-note fa-wide">Tempo de prova, tentativas, nota mínima e liberação da nota só funcionam para alunos logados, porque precisamos saber quem é a pessoa.</p>
+            {!partner && <p className="fa-note fa-wide">Tempo de prova, tentativas, nota mínima e liberação da nota só funcionam para alunos logados, porque precisamos saber quem é a pessoa.</p>}
           </div>
         )}
       </div>

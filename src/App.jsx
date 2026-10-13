@@ -51,6 +51,9 @@ const EventDetailPage = lazy(() => import("./pages/admin/EventDetailPage"));
 const FormsPage = lazy(() => import("./pages/admin/FormsPage"));
 const FormBuilderPage = lazy(() => import("./pages/admin/FormBuilderPage"));
 const FormResultsPage = lazy(() => import("./pages/admin/FormResultsPage"));
+const PartnersPage = lazy(() => import("./pages/admin/PartnersPage"));
+const PartnerLayout = lazy(() => import("./components/partner/PartnerLayout"));
+const PartnerComparePage = lazy(() => import("./pages/partner/PartnerComparePage"));
 const FaqPage = lazy(() => import("./pages/admin/FaqPage"));
 const ContentPage = lazy(() => import("./pages/admin/ContentPage"));
 const ContentEditorPage = lazy(() => import("./pages/admin/ContentEditorPage"));
@@ -113,6 +116,26 @@ export default function App() {
           <Route path="/depoimento/:token" element={<FeedbackLinkPage />} />
           <Route path="/seja-afiliado" element={<AffiliateApplyPage />} />
           <Route path="/painel-afiliado" element={<AffiliatePortalPage />} />
+
+          {/* Área do parceiro: só provas (pré e pós-testes). O banco isola tudo; aqui só muda o layout e a porta de entrada. */}
+          <Route
+            path="/parceiro"
+            element={
+              <ProtectedRoute partnerOnly redirectTo="/login">
+                <Suspense fallback={<AdminFallback />}>
+                  <PartnerLayout />
+                </Suspense>
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="provas" replace />} />
+            <Route path="provas" element={<Suspense fallback={<AdminFallback />}><FormsPage /></Suspense>} />
+            <Route path="provas/novo" element={<Suspense fallback={<AdminFallback />}><FormBuilderPage /></Suspense>} />
+            <Route path="provas/:id" element={<Suspense fallback={<AdminFallback />}><FormBuilderPage /></Suspense>} />
+            <Route path="provas/:id/resultados" element={<Suspense fallback={<AdminFallback />}><FormResultsPage /></Suspense>} />
+            <Route path="comparar" element={<Suspense fallback={<AdminFallback />}><PartnerComparePage /></Suspense>} />
+            <Route path="*" element={<Navigate to="provas" replace />} />
+          </Route>
 
           <Route path="/admin/login" element={<LoginPage />} />
           <Route
@@ -235,6 +258,14 @@ export default function App() {
               element={
                 <Suspense fallback={<AdminFallback />}>
                   <EventDetailPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="parceiros"
+              element={
+                <Suspense fallback={<AdminFallback />}>
+                  <PartnersPage />
                 </Suspense>
               }
             />

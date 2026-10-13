@@ -106,12 +106,13 @@ export function submissionState(submission, form) {
   return { key: "graded", label: "Corrigido, não liberado", tone: "draft" };
 }
 
-export async function uploadFormImage(file) {
+// "folder": o parceiro só pode enviar para partners/<id dele> (regra do banco); o administrador usa a pasta padrão.
+export async function uploadFormImage(file, folder = "forms") {
   if (!file) return "";
   if (!file.type.startsWith("image/")) throw new Error("Escolha uma imagem (JPG, PNG ou WebP).");
   if (file.size > 5 * 1024 * 1024) throw new Error("A imagem deve ter no máximo 5 MB.");
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const path = `forms/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const path = `${folder}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from("forms-media").upload(path, file, { contentType: file.type, upsert: false });
   if (error) throw error;
   return supabase.storage.from("forms-media").getPublicUrl(path).data.publicUrl;

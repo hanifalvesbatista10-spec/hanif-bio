@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [partner, setPartner] = useState(null);
   const [profileError, setProfileError] = useState("");
   const [sessionLoading, setSessionLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -14,6 +15,7 @@ export function AuthProvider({ children }) {
   const loadProfile = async (userId) => {
     if (!userId) {
       setProfile(null);
+      setPartner(null);
       setProfileError("");
       lastProfileUser.current = null;
       return null;
@@ -22,12 +24,18 @@ export function AuthProvider({ children }) {
     // recarga em segundo plano (mesmo usuário, perfil já carregado) não pode derrubar a tela com "Validando acesso..."
     const silent = lastProfileUser.current === userId;
     if (!silent) setProfileLoading(true);
-    const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+    // O papel de parceiro (SQL 52) vem junto com o perfil: quem tem uma linha ativa em "partners". Se a tabela ainda não
+    // existir, dá erro e a pessoa simplesmente não é parceiro.
+    const [{ data, error }, partnerResult] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("partners").select("*").eq("user_id", userId).maybeSingle(),
+    ]);
     if (!silent) setProfileLoading(false);
 
     if (error || !data) {
       console.error("Erro ao carregar perfil:", error?.message || "perfil não encontrado");
       setProfile(null);
+      setPartner(null);
       // conta existe no login, mas o perfil não veio: a tela mostra opção de tentar de novo ou sair
       setProfileError(error ? "Não foi possível carregar os dados da sua conta agora." : "Não encontramos o perfil desta conta.");
       lastProfileUser.current = null;
@@ -37,6 +45,7 @@ export function AuthProvider({ children }) {
     setProfileError("");
     setProfile(data);
     lastProfileUser.current = userId;
+    setPartner(!partnerResult.error && partnerResult.data?.active ? partnerResult.data : null);
     return data;
   };
 
@@ -60,6 +69,7 @@ export function AuthProvider({ children }) {
       setSession(nextSession ?? null);
       if (!nextSession?.user) {
         setProfile(null);
+        setPartner(null);
         setProfileError("");
         lastProfileUser.current = null;
         setSessionLoading(false);
@@ -88,13 +98,15 @@ export function AuthProvider({ children }) {
       profileError,
       loading: sessionLoading || profileLoading,
       isAdmin: profile?.role === "admin",
+      partner,
+      isPartner: Boolean(partner),
       isBlocked: profile?.account_status === "blocked",
       refreshProfile: () => loadProfile(session?.user?.id),
       signOut: () => supabase.auth.signOut(),
       // encerra a sessão em todos os aparelhos (útil se a senha vazou ou o celular foi perdido)
       signOutEverywhere: () => supabase.auth.signOut({ scope: "global" }),
     }),
-    [session, profile, profileError, sessionLoading, profileLoading]
+    [session, profile, partner, profileError, sessionLoading, profileLoading]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

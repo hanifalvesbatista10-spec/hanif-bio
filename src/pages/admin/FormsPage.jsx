@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import RowActions from "../../components/admin/RowActions";
 import { supabase } from "../../services/supabase";
 import { friendlyFormError, typeLabel } from "../../services/forms";
+import { useFormsArea } from "../../services/formsArea";
 import "../../styles/forms-admin.css";
 
 const STATUS = {
@@ -28,6 +29,7 @@ export default function FormsPage() {
   const [filter, setFilter] = useState("all");
   const [query, setQuery] = useState("");
   const navigate = useNavigate();
+  const { partner, base, userId } = useFormsArea();
 
   const notify = (type, text) => {
     setMessageType(type);
@@ -36,8 +38,11 @@ export default function FormsPage() {
 
   const load = async () => {
     setLoading(true);
+    // Parceiro: só as provas dele. (Provas públicas publicadas são legíveis por qualquer pessoa, então o filtro é necessário.)
+    let formsQuery = supabase.from("forms").select("id,title,slug,type,status,audience,created_at").order("created_at", { ascending: false });
+    if (partner) formsQuery = formsQuery.eq("created_by", userId);
     const [{ data, error }, { data: subs }] = await Promise.all([
-      supabase.from("forms").select("id,title,slug,type,status,audience,created_at").order("created_at", { ascending: false }),
+      formsQuery,
       supabase.from("form_submissions").select("form_id,pending_manual,status").neq("status", "in_progress"),
     ]);
     if (error) notify("error", friendlyFormError(error));
@@ -53,8 +58,9 @@ export default function FormsPage() {
   };
 
   useEffect(() => {
+    if (partner && !userId) return;
     load();
-  }, []);
+  }, [partner, userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const remove = async (row) => {
     if (!window.confirm(`Excluir "${row.title}" e todas as respostas? Não dá para desfazer.`)) return;
@@ -70,7 +76,7 @@ export default function FormsPage() {
     const { data, error } = await supabase.rpc("form_duplicate", { p_form_id: row.id });
     if (error) return notify("error", friendlyFormError(error));
     notify("success", "Cópia criada como rascunho.");
-    navigate(`/admin/formularios/${data}`);
+    navigate(`${base}/${data}`);
   };
 
   const copyLink = async (row) => {
@@ -94,14 +100,14 @@ export default function FormsPage() {
     <section className="admin-section fa">
       <div className="fa-top">
         <div>
-          <h2>Provas e atividades</h2>
+          <h2>{partner ? "Minhas provas" : "Provas e atividades"}</h2>
           <p className="fa-sub">
-            Provas, simulados, tarefas e pesquisas.
+            {partner ? "Pré-testes, pós-testes e questionários. Cada prova tem um link para enviar aos seus alunos." : "Provas, simulados, tarefas e pesquisas."}
             {pendingTotal > 0 && ` Você tem ${pendingTotal} ${pendingTotal === 1 ? "resposta" : "respostas"} para corrigir.`}
           </p>
         </div>
         <div className="fa-top-actions">
-          <button className="fa-btn" type="button" onClick={() => navigate("/admin/formularios/novo")}>+ Criar novo</button>
+          <button className="fa-btn" type="button" onClick={() => navigate(`${base}/novo`)}>+ Criar novo</button>
         </div>
       </div>
 
@@ -150,9 +156,9 @@ export default function FormsPage() {
                     <td className="is-end">
                       <RowActions
                         label={`Ações de ${row.title}`}
-                        primary={{ label: "Resultados", to: `/admin/formularios/${row.id}/resultados` }}
+                        primary={{ label: "Resultados", to: `${base}/${row.id}/resultados` }}
                         items={[
-                          { label: "Editar", to: `/admin/formularios/${row.id}` },
+                          { label: "Editar", to: `${base}/${row.id}` },
                           { label: "Duplicar", onClick: () => duplicate(row) },
                           { label: "Copiar link", onClick: () => copyLink(row) },
                           { label: "Abrir como aluno", hidden: row.status !== "published", href: `/f/${row.slug}` },
