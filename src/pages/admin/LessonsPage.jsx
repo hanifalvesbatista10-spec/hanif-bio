@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { icons } from "../../components/admin/AdminIcons";
 import RowActions from "../../components/admin/RowActions";
+import EbookDialog from "../../components/admin/EbookDialog";
 import { supabase } from "../../services/supabase";
 import { createMuxUpload, deleteMuxAsset, formatDuration, getMuxUploadState, uploadFileToMux } from "../../services/mux";
 import { uploadFileToR2 } from "../../services/r2";
@@ -370,6 +371,7 @@ export default function LessonsPage() {
   const [messageType, setMessageType] = useState("success");
   const [editing, setEditing] = useState(null);
   const [reusing, setReusing] = useState(false);
+  const [ebookOpen, setEbookOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [phase, setPhase] = useState("");
   const [progress, setProgress] = useState(null);
@@ -384,7 +386,7 @@ export default function LessonsPage() {
 
   const load = useCallback(async () => {
     const [productsResult, lessonData] = await Promise.all([
-      supabase.from("products").select("id,title").order("title", { ascending: true }),
+      supabase.from("products").select("id,title,ebook_file_path,ebook_file_name").order("title", { ascending: true }),
       fetchLessonsAndLinks(),
     ]);
 
@@ -489,6 +491,16 @@ export default function LessonsPage() {
   }, [pendingIds, syncMuxLesson]);
 
   const nextPositionIn = (id) => links.filter((link) => link.product_id === id).reduce((max, link) => Math.max(max, Number(link.position) || 0), 0) + 1;
+
+  // Tira o e-book do produto (o aluno deixa de ver o download). O arquivo antigo continua guardado no R2, sem link.
+  const removeEbook = async () => {
+    if (!product?.ebook_file_path) return;
+    if (!window.confirm(`Remover o e-book "${product.ebook_file_name || "arquivo"}" de "${product.title}"? O aluno deixa de ver o download.`)) return;
+    const { error } = await supabase.from("products").update({ ebook_file_path: null, ebook_file_name: null }).eq("id", product.id);
+    if (error) return notify("error", `Não foi possível remover o e-book: ${error.message}`);
+    notify("success", "E-book removido.");
+    load();
+  };
 
   const openNew = () => {
     setDialogError("");
@@ -782,6 +794,7 @@ export default function LessonsPage() {
           {sharing && (
             <button type="button" className="admin-button adm-ghost" onClick={() => setReusing(true)} disabled={!productId}>Adicionar aula de outro curso</button>
           )}
+          <button type="button" className="admin-button" onClick={() => setEbookOpen(true)} disabled={!productId}>+ E-book (PDF)</button>
           <button type="button" className="admin-button primary" onClick={openNew} disabled={!productId}>+ Nova aula</button>
         </div>
       </div>
@@ -812,13 +825,30 @@ export default function LessonsPage() {
 
       {message && <div className={`admin-alert ${messageType === "error" ? "error" : ""}`} role="status">{message}</div>}
 
+      {product?.ebook_file_path && (
+        <div className="adm-ebook-card" role="group" aria-label="E-book do produto">
+          <div>
+            <strong>E-book do produto</strong>
+            <span>{product.ebook_file_name || "arquivo.pdf"}</span>
+            <small>O aluno que comprou baixa na página do curso.</small>
+          </div>
+          <div className="adm-ebook-actions">
+            <button type="button" className="admin-button" onClick={() => setEbookOpen(true)}>Substituir</button>
+            <button type="button" className="admin-button adm-ghost" onClick={removeEbook}>Remover</button>
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="admin-empty">Carregando...</div>
+      ) : lessons.length === 0 && product?.ebook_file_path ? (
+        <p className="adm-hint">Este produto entrega só o e-book acima. Se quiser, também pode cadastrar aulas com “+ Nova aula”.</p>
       ) : lessons.length === 0 ? (
         <div className="admin-empty">
           Nenhuma aula cadastrada para {product ? `“${product.title}”` : "este produto"} ainda.
           <br />
           <button type="button" className="admin-button primary" style={{ marginTop: 14 }} onClick={openNew}>Cadastrar a primeira aula</button>
+          <button type="button" className="admin-button" style={{ marginTop: 14, marginLeft: 8 }} onClick={() => setEbookOpen(true)}>Enviar um e-book (PDF)</button>
         </div>
       ) : (
         <ol className="adm-lesson-list" aria-label={`Aulas de ${product?.title || "produto"}`}>
@@ -913,6 +943,17 @@ export default function LessonsPage() {
         />
       )}
 
+      {ebookOpen && product && (
+        <EbookDialog
+          product={product}
+          onClose={() => setEbookOpen(false)}
+          onSaved={(text) => {
+            setEbookOpen(false);
+            notify("success", text);
+            load();
+          }}
+        />
+      )}
       {reusing && <ReuseDialog product={product} candidates={candidates} saving={saving} onAdd={addExisting} onClose={() => setReusing(false)} />}
     </section>
   );

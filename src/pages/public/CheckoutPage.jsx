@@ -437,7 +437,9 @@ export default function CheckoutPage() {
             </div>
           </div>
           <dl>
-            {original > 0 && <div><dt>Valor</dt><dd><del>{formatMoneyCents(original)}</del></dd></div>}
+            {/* A conta do resumo precisa fechar: valor cheio, menos a promoção, menos o cupom, mais os extras = total */}
+            <div><dt>Valor</dt><dd>{formatMoneyCents(original > 0 ? original : price)}</dd></div>
+            {original > price && price > 0 && <div><dt>Desconto promocional</dt><dd className="ck-discount">− {formatMoneyCents(original - price)}</dd></div>}
             {coupon && coupon.discountCents > 0 && <div><dt>Cupom {coupon.code}</dt><dd className="ck-discount">− {formatMoneyCents(coupon.discountCents)}</dd></div>}
             {bumps.filter((row) => selectedBumps.includes(row.id)).map((row) => (
               <div key={row.id}><dt>{row.bump.title}</dt><dd>+ {formatMoneyCents(row.price_cents)}</dd></div>

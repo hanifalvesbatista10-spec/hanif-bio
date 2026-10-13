@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import useInstallApp from "../../components/member/useInstallApp";
 import { supabase } from "../../services/supabase";
-import { useMyLiveLessons } from "../../services/productStats";
+import { useLessonCounts, useMyLiveLessons } from "../../services/productStats";
 
 function LiveBanner({ lives }) {
   if (lives.length === 0) return null;
@@ -28,7 +28,9 @@ function LiveBanner({ lives }) {
   );
 }
 
-function CourseCard({ product }) {
+function CourseCard({ product, lessonCount }) {
+  // produto com e-book e sem aulas publicadas (ex.: os e-books à venda): o aluno vem para baixar o arquivo
+  const ebookOnly = Boolean(product.ebook_file_path) && !(lessonCount > 0);
   return (
     <article className="mb-course">
       <div className="mb-course-cover">
@@ -40,7 +42,7 @@ function CourseCard({ product }) {
         </h3>
         {product.short_description && <p>{product.short_description}</p>}
         <span className="mb-course-cta">
-          Acessar aulas {icons.arrowRight}
+          {ebookOnly ? "Baixar e-book" : "Acessar aulas"} {icons.arrowRight}
         </span>
       </div>
     </article>
@@ -63,6 +65,7 @@ function Skeleton() {
 export default function StudentCoursesPage() {
   const { user, profile } = useAuth();
   const lives = useMyLiveLessons();
+  const lessonCounts = useLessonCounts();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -89,7 +92,7 @@ export default function StudentCoursesPage() {
     if (!user) return;
     supabase
       .from("user_products")
-      .select("access_status,product:products(id,title,slug,cover_url,short_description)")
+      .select("access_status,product:products(id,title,slug,cover_url,short_description,ebook_file_path)")
       .eq("user_id", user.id)
       .eq("access_status", "active")
       .then(({ data, error }) => {
@@ -147,7 +150,7 @@ export default function StudentCoursesPage() {
         </div>
       ) : (
         <div className="mb-grid">
-          {products.map((product) => <CourseCard key={product.id} product={product} />)}
+          {products.map((product) => <CourseCard key={product.id} product={product} lessonCount={lessonCounts[product.id]} />)}
         </div>
       )}
     </div>
