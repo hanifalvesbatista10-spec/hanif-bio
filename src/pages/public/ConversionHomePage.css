@@ -1021,3 +1021,55 @@ body:has(.site-page.is-home) {
 .site-page:not(.is-home) .site-credentials {
   color: #a9bacb;
 }
+
+/* Botão de acesso (área do aluno) sempre visível no cabeçalho: contorno, ao lado do botão vermelho. */
+.site-nav a.site-nav-login {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.site-nav a.site-nav-login::after {
+  display: none;
+}
+
+.site-nav a.site-nav-login:hover,
+.site-nav a.site-nav-login:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #fff;
+}
+
+@media (max-width: 1000px) {
+  .site-nav {
+    gap: 18px;
+  }
+}
+
+@media (max-width: 650px) {
+  .site-nav a.site-nav-login {
+    justify-content: center;
+    margin-top: 14px;
+    padding: 15px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.45);
+    font-size: 1rem;
+  }
+
+  .site-nav a.site-nav-login + .site-nav-cta {
+    margin-top: 10px;
+  }
+}
+
+/* Menu do celular aberto: o desfoque do cabeçalho prende o menu (position: fixed) dentro da altura do cabeçalho e corta
+   os itens de cima. Sem o desfoque enquanto o menu está aberto, ele volta a cobrir a tela inteira. */
+.site-header.is-menu-open {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}

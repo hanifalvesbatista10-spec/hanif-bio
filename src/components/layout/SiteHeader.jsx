@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 function useScrolled(threshold = 24) {
   const [scrolled, setScrolled] = useState(false);
@@ -14,7 +15,17 @@ function useScrolled(threshold = 24) {
   return scrolled;
 }
 
+function UserIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+    </svg>
+  );
+}
+
 export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
+  const { user, isAdmin, isPartner } = useAuth();
   const scrolled = useScrolled();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
@@ -36,11 +47,20 @@ export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [menuOpen]);
 
+  // Acesso sempre à vista: quem não entrou vê "Área do aluno" (login); quem já entrou vai direto para a própria área.
+  const access = !user
+    ? { to: "/login", label: "Área do aluno" }
+    : isAdmin
+    ? { to: "/admin", label: "Painel" }
+    : isPartner
+    ? { to: "/parceiro", label: "Área do parceiro" }
+    : { to: "/minha-area", label: "Minha área" };
+
   const closeMenu = () => setMenuOpen(false);
   const anchor = (id) => (isHome ? `#${id}` : `/#${id}`);
 
   return (
-    <header className={`site-header ${scrolled || !isHome ? "is-scrolled" : ""}`}>
+    <header className={`site-header ${scrolled || !isHome ? "is-scrolled" : ""} ${menuOpen ? "is-menu-open" : ""}`}>
       <div className="site-container site-header-inner">
         <Link className="site-brand" to="/" onClick={closeMenu}>
           <img src="/assets/logo-ha.png" alt="Hanif Alves" />
@@ -62,6 +82,10 @@ export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
           <Link to="/conteudos" onClick={closeMenu}>Conteúdos</Link>
           <Link to="/radar" onClick={closeMenu}>Radar</Link>
           <a href={anchor("depoimentos")} onClick={closeMenu}>Depoimentos</a>
+          <Link className="site-nav-login" to={access.to} onClick={closeMenu}>
+            <UserIcon />
+            {access.label}
+          </Link>
           <a className="site-nav-cta" href={anchor("produtos")} onClick={closeMenu}>
             {primaryLabel}
           </a>
