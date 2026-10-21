@@ -5,6 +5,7 @@ import { supabase } from "../../services/supabase";
 import { checkCoupon, createCheckout, formatMoneyCents, formatPhone } from "../../services/checkoutApi";
 import { formatCpf, isValidCpf } from "../../services/studentData";
 import Installments from "../../components/ui/Installments";
+import { CheckoutTimer, GuaranteeBadge, TrustSeals } from "../../components/checkout/CheckoutTrust";
 import { getMetaTrackingData, onMetaPixelReady, trackInitiateCheckout } from "../../services/metaPixel";
 import "../../styles/checkout.css";
 
@@ -331,6 +332,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="ck-page">
+      {!payment && <CheckoutTimer slug={slug} />}
       <header className="ck-top">
         <div className="ck-top-inner">
           <Link to="/" className="ck-brand">HANIF ALVES<span>APH • URGÊNCIA • EMERGÊNCIA</span></Link>
@@ -414,7 +416,7 @@ export default function CheckoutPage() {
                 {submitting ? "Preparando o pagamento..." : isFree ? "Liberar meu acesso grátis" : `${chosen.cta} · ${formatMoneyCents(total)}`}
               </button>
               {price === 0 && <p className="ck-error">O preço deste produto ainda não foi configurado.</p>}
-              <p className="ck-secure">Pagamento processado com segurança. Nós não guardamos dados de cartão.</p>
+              <TrustSeals />
             </form>
           ) : (
             <div ref={panelRef}>
@@ -451,6 +453,7 @@ export default function CheckoutPage() {
             <li>Pix, cartão de crédito (parcelado) ou boleto</li>
             <li>Acesso liberado automaticamente após a confirmação</li>
           </ul>
+          <GuaranteeBadge />
 
           {bumps.length > 0 && (
             <div className="ck-kit">
