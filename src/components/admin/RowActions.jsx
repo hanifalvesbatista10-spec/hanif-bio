@@ -4,6 +4,9 @@ import { Link } from "react-router-dom";
 import "../../styles/row-actions.css";
 
 const MENU_WIDTH = 232;
+// Em tela pequena o menu vira uma folha fixa na base da tela (não depende da posição do botão, que pode estar escondido
+// na rolagem lateral da tabela). Mantenha igual ao @media do row-actions.css.
+const SHEET_QUERY = "(max-width: 640px)";
 
 // Ações de uma linha de tabela: no máximo uma ação principal à vista e o resto no menu "⋯".
 // primary: { label, to | href | onClick, disabled }
@@ -11,43 +14,69 @@ const MENU_WIDTH = 232;
 export default function RowActions({ primary, items = [], label = "Mais ações" }) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ top: 0, left: 0, up: false });
+  const [sheet, setSheet] = useState(false);
+  const sheetRef = useRef(false);
   const buttonRef = useRef(null);
   const menuRef = useRef(null);
   const menuId = useId();
   const visible = items.filter((item) => item && !item.hidden);
+  const visibleCount = visible.length;
 
   const close = useCallback((refocus = false) => {
     setOpen(false);
     if (refocus) buttonRef.current?.focus();
   }, []);
 
-  // Posição fixa (o menu sai da tabela, que tem rolagem própria e cortaria o menu).
-  useLayoutEffect(() => {
-    if (!open || !buttonRef.current) return;
+  // Posição fixa (o menu sai da tabela, que tem rolagem própria e cortaria o menu). Se o botão sair de vista, fecha.
+  const place = useCallback(() => {
+    if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const height = menuRef.current?.offsetHeight || visible.length * 44 + 12;
+    if (rect.bottom < 0 || rect.top > window.innerHeight || rect.right < 0 || rect.left > window.innerWidth) {
+      setOpen(false);
+      return;
+    }
+    const height = menuRef.current?.offsetHeight || visibleCount * 44 + 12;
     const up = rect.bottom + height + 12 > window.innerHeight && rect.top > height + 12;
     const left = Math.min(Math.max(8, rect.right - MENU_WIDTH), window.innerWidth - MENU_WIDTH - 8);
     setPos({ top: up ? rect.top - height - 6 : rect.bottom + 6, left, up });
-  }, [open, visible.length]);
+  }, [visibleCount]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const asSheet = window.matchMedia(SHEET_QUERY).matches;
+    sheetRef.current = asSheet;
+    setSheet(asSheet);
+    if (!asSheet) place();
+  }, [open, place]);
 
   useEffect(() => {
     if (!open) return undefined;
-    menuRef.current?.querySelector('[role="menuitem"]:not([disabled])')?.focus();
+    // preventScroll: focar o primeiro item não pode rolar a página (isso fechava o menu no celular)
+    menuRef.current?.querySelector('[role="menuitem"]:not([disabled])')?.focus({ preventScroll: true });
     const onPointer = (event) => {
       if (menuRef.current?.contains(event.target) || buttonRef.current?.contains(event.target)) return;
+      // o fundo escurecido da folha fecha no "click" (no JSX), não aqui: fechar no toque deixava o clique cair no botão de baixo
+      if (event.target.closest?.(".ra-backdrop")) return;
       close();
     };
-    const onDismiss = () => close();
-    document.addEventListener("pointerdown", onPointer);
-    window.addEventListener("resize", onDismiss);
-    window.addEventListener("scroll", onDismiss, true);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      window.removeEventListener("resize", onDismiss);
-      window.removeEventListener("scroll", onDismiss, true);
+    // No computador o menu acompanha o botão quando a página ou a tabela rolam. Na folha do celular, rolagem e mudança de
+    // tamanho (a barra de endereço do navegador some e volta) não devem fechar nada.
+    let frame = 0;
+    const follow = (event) => {
+      if (sheetRef.current || menuRef.current?.contains(event?.target)) return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(place);
     };
-  }, [open, close]);
+    document.addEventListener("pointerdown", onPointer);
+    window.addEventListener("resize", follow);
+    window.addEventListener("scroll", follow, true);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener("pointerdown", onPointer);
+      window.removeEventListener("resize", follow);
+      window.removeEventListener("scroll", follow, true);
+    };
+  }, [open, close, place]);
 
   const onMenuKey = (event) => {
     const entries = [...menuRef.current.querySelectorAll('[role="menuitem"]:not([disabled])')];
@@ -123,17 +152,21 @@ export default function RowActions({ primary, items = [], label = "Mais ações"
           </button>
           {open &&
             createPortal(
-              <div
-                ref={menuRef}
-                id={menuId}
-                role="menu"
-                aria-label={label}
-                className={`ra-menu${pos.up ? " is-up" : ""}`}
-                style={{ top: pos.top, left: pos.left, width: MENU_WIDTH }}
-                onKeyDown={onMenuKey}
-              >
-                {visible.map(renderItem)}
-              </div>,
+              <>
+                {sheet && <div className="ra-backdrop" aria-hidden="true" onClick={() => close(true)} />}
+                <div
+                  ref={menuRef}
+                  id={menuId}
+                  role="menu"
+                  aria-label={label}
+                  className={`ra-menu${pos.up ? " is-up" : ""}`}
+                  style={{ top: pos.top, left: pos.left, width: MENU_WIDTH }}
+                  onKeyDown={onMenuKey}
+                >
+                  <div className="ra-sheet-title" aria-hidden="true">{label}</div>
+                  {visible.map(renderItem)}
+                </div>
+              </>,
               document.body
             )}
         </>

@@ -78,6 +78,12 @@
   transform-origin: bottom right;
 }
 
+/* Fundo escurecido e título só existem na folha do celular */
+.ra-backdrop,
+.ra-sheet-title {
+  display: none;
+}
+
 @keyframes ra-in {
   from {
     opacity: 0;
@@ -124,6 +130,69 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ra-menu {
+    animation: none;
+  }
+}
+
+/* Celular: o menu vira uma folha fixa na base da tela, com itens grandes para o dedo. Não depende da posição do botão. */
+@media (max-width: 640px) {
+  .ra-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(7, 20, 38, 0.45);
+    animation: ra-fade 0.16s ease-out;
+  }
+
+  .ra-menu {
+    left: 8px !important;
+    right: 8px !important;
+    top: auto !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    width: auto !important;
+    max-height: 72vh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 8px;
+    border-radius: 18px;
+    transform-origin: bottom center;
+    animation: ra-sheet 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .ra-sheet-title {
+    display: block;
+    padding: 6px 12px 10px;
+    color: #66798c;
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    overflow-wrap: anywhere;
+  }
+
+  .ra-item {
+    min-height: 52px;
+    padding: 0 14px;
+    font-size: 1rem;
+  }
+}
+
+@keyframes ra-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes ra-sheet {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ra-backdrop {
     animation: none;
   }
 }
