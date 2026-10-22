@@ -27,6 +27,7 @@ export const adminNavGroups = [
       { to: "/admin/area-de-membros", label: "Ver como aluno", icon: "preview" },
       { to: "/admin/aulas", label: "Aulas", icon: "lessons" },
       { to: "/admin/certificados", label: "Certificados", icon: "certificate" },
+      { to: "/admin/presenca", label: "Presença", icon: "access" },
       { to: "/admin/auditoria", label: "Auditoria das aulas", icon: "audit" },
       { to: "/admin/comentarios", label: "Comentários", icon: "comments", badgeKey: "comentarios" },
       { to: "/admin/acessos", label: "Acessos dos alunos", icon: "access" },

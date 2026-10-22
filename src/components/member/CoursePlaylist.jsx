@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { isLiveFresh } from "../../services/lessons";
 import { memberIcons as icons } from "./MemberIcons";
-
-// O selo "ao vivo" vale por 6 horas (SQL 32), o mesmo prazo que o painel usa.
-function isLiveFresh(lesson) {
-  return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
-}
 
 function CheckIcon() {
   return (

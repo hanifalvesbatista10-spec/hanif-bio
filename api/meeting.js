@@ -67,7 +67,7 @@ export default handler(["POST"], async (req, res) => {
   const meetingId = String(readBody(req).meetingId || "");
   if (!UUID.test(meetingId)) throw new HttpError(400, "invalid_meeting", "Encontro inválido.");
 
-  const meetings = await sbAsUser(`live_meetings?id=eq.${meetingId}&select=id,title,starts_at,duration_minutes`, token);
+  const meetings = await sbAsUser(`live_meetings?id=eq.${meetingId}&select=id,title,starts_at,duration_minutes,ended_at`, token);
   const meeting = meetings?.[0];
   if (!meeting) throw new HttpError(403, "forbidden", "Você não tem acesso a este encontro.");
 
@@ -81,6 +81,7 @@ export default handler(["POST"], async (req, res) => {
   if (!isAdmin) {
     if (now < start - EARLY_JOIN_MS) throw new HttpError(425, "too_early", "A sala abre 30 minutos antes do horário do encontro.");
     if (now > end + LATE_JOIN_MS) throw new HttpError(410, "ended", "Este encontro já terminou.");
+    if (meeting.ended_at && now >= new Date(meeting.ended_at).getTime()) throw new HttpError(410, "ended", "Este encontro já foi encerrado.");
   }
 
   const roomName = `ha-${meeting.id}`;

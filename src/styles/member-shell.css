@@ -2089,3 +2089,33 @@ a.mb-tabs-btn {
     flex: 1;
   }
 }
+
+/* ---------- Presença em encontros ao vivo ---------- */
+.mb-meeting-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 8px;
+}
+
+.mb-presence-ok {
+  color: #1f7a46;
+  font-weight: 700;
+}
+
+.mb-presence-summary {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--mb-line);
+  color: var(--mb-muted);
+  font-size: 0.92rem;
+}
+
+.mb-presence-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}

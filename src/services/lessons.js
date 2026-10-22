@@ -106,3 +106,8 @@ export function groupByModule(lessons, modules, { keepEmpty = false } = {}) {
 
 // A mesma ordem, em uma lista só (é a ordem do "Próxima aula" do aluno e a que o painel renumera).
 export const flattenGroups = (groups) => groups.flatMap((group) => group.lessons);
+
+// O selo "ao vivo" de uma aula vale por 6 horas (SQL 32); a presença "ao vivo" (SQL 56) usa a mesma janela.
+export function isLiveFresh(lesson) {
+  return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
+}

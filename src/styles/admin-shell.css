@@ -2123,3 +2123,379 @@ html.adm-scroll-lock body {
 .adm-module-empty {
   margin: 0 4px;
 }
+
+/* Presença e certificados */
+.adm-att-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.adm-att-controls label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.adm-att-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 12px 0;
+}
+
+.adm-att-table td small {
+  display: block;
+  color: var(--adm-muted);
+}
+
+.adm-att-col {
+  min-width: 54px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.adm-att-cell {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--adm-line);
+  border-radius: 8px;
+  background: #fff;
+  color: #8a98a8;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.adm-att-cell.is-on {
+  border-color: #1f7a46;
+  background: #1f7a46;
+  color: #fff;
+}
+
+.adm-att-legend {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--adm-muted);
+  font-size: 0.84rem;
+}
+
+.adm-att-legend strong {
+  display: inline-block;
+  min-width: 72px;
+  color: var(--adm-text, #0b1b2d);
+}
+
+@media (max-width: 767px) {
+  .adm-att-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cert-att-filter {
+  align-items: center;
+}
+
+.cert-att-filter input {
+  width: 72px;
+}
+
+/* Organização em lote das aulas: caixinhas, barra de ações e arrastar e soltar */
+.adm-bulk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  margin: 4px 0 14px;
+}
+
+.adm-bulk-toolbar .adm-hint {
+  flex: 1 1 260px;
+  margin: 0;
+}
+
+.adm-lesson-check,
+.adm-module-check input {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--brand-red, #d6152d);
+  cursor: pointer;
+}
+
+.adm-module-check {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+}
+
+.adm-module-head {
+  justify-content: flex-start;
+}
+
+.adm-module-head > div:not(.adm-module-actions) {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-module-actions {
+  margin-left: auto;
+}
+
+.adm-lesson.is-selected {
+  border-color: var(--brand-red, #d6152d);
+  background: #fff8f9;
+}
+
+.adm-lesson[draggable="true"] {
+  cursor: grab;
+}
+
+.adm-lesson.is-dragging {
+  opacity: 0.45;
+}
+
+.adm-lesson.is-drop-before {
+  box-shadow: 0 -3px 0 0 var(--brand-red, #d6152d);
+}
+
+.adm-lesson.is-drop-after {
+  box-shadow: 0 3px 0 0 var(--brand-red, #d6152d);
+}
+
+.adm-module-group.is-drop > .adm-module-head {
+  outline: 2px dashed var(--brand-red, #d6152d);
+  outline-offset: 2px;
+}
+
+.adm-inline-module {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.adm-inline-module select {
+  min-width: 0;
+  max-width: 100%;
+  padding: 6px 8px;
+  font-size: 0.85rem;
+}
+
+.adm-bulkbar {
+  position: sticky;
+  bottom: 12px;
+  z-index: 30;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 18px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: var(--brand-navy, #071426);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(7, 20, 38, 0.35);
+}
+
+.adm-bulkbar strong {
+  margin-right: auto;
+}
+
+.adm-bulkbar select {
+  min-height: 40px;
+  max-width: 100%;
+}
+
+.adm-bulkbar .admin-button.adm-ghost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Acessos dos alunos: lista de alunos + cursos do aluno escolhido */
+.adm-acc {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.adm-acc-list {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.adm-acc-list ul {
+  display: grid;
+  gap: 4px;
+  max-height: 68vh;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.adm-acc-list li button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.adm-acc-list li button:hover {
+  background: #f4f7fa;
+}
+
+.adm-acc-list li button.is-active {
+  border-color: var(--brand-red, #d6152d);
+  background: #fff5f6;
+}
+
+.adm-acc-list li strong,
+.adm-acc-list li small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.adm-acc-list li small {
+  color: var(--adm-muted);
+  font-size: 0.8rem;
+}
+
+.adm-acc-list li em {
+  flex: none;
+  color: var(--adm-muted);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.adm-acc-list li em.is-on {
+  color: #1f7a46;
+}
+
+.adm-acc-detail {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--adm-line);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.adm-acc-head h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+
+.adm-acc-head small {
+  color: var(--adm-muted);
+}
+
+.adm-acc-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin: 18px 0 6px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f4f7fa;
+}
+
+.adm-acc-add label {
+  display: grid;
+  flex: 1 1 260px;
+  gap: 6px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.adm-acc-title {
+  margin: 22px 0 10px;
+  font-size: 1rem;
+}
+
+.adm-acc-courses {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-acc-courses li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+}
+
+.adm-acc-course-info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  justify-items: start;
+}
+
+.adm-acc-course-info small {
+  color: var(--adm-muted);
+}
+
+.adm-acc-course-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adm-acc-back {
+  display: none;
+  margin-bottom: 12px;
+}
+
+/* Celular: lista e detalhe alternam, nunca lado a lado */
+@media (max-width: 900px) {
+  .adm-acc {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-acc.has-detail .adm-acc-list {
+    display: none;
+  }
+
+  .adm-acc:not(.has-detail) .adm-acc-detail {
+    display: none;
+  }
+
+  .adm-acc-back {
+    display: inline-flex;
+  }
+}

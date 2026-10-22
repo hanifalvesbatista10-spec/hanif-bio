@@ -332,6 +332,55 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, modulesAvailab
   );
 }
 
+// Janela para colocar as aulas selecionadas em outros cursos de uma vez (a aula é uma só; cada curso tem a sua ordem e o seu módulo).
+function BulkCourseDialog({ courses, count, saving, onConfirm, onClose }) {
+  const [picked, setPicked] = useState([]);
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add("adm-scroll-lock");
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      html.classList.remove("adm-scroll-lock");
+    };
+  }, [onClose, saving]);
+  const toggle = (id) => setPicked((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
+
+  return (
+    <div className="adm-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <div className="adm-dialog" role="dialog" aria-modal="true" aria-labelledby="bulk-course-title">
+        <header className="adm-dialog-head">
+          <h3 id="bulk-course-title">Adicionar {count} {count === 1 ? "aula" : "aulas"} a outros cursos</h3>
+          <button type="button" className="adm-icon-button" aria-label="Fechar" onClick={onClose} disabled={saving}>{icons.close}</button>
+        </header>
+        <div className="adm-dialog-body">
+          <p className="adm-hint">
+            As aulas continuam neste curso e passam a aparecer também nos cursos marcados, no fim da lista e sem módulo (você organiza depois).
+            É a mesma aula: mudar o vídeo ou o texto vale para todos.
+          </p>
+          <div className="adm-share-list">
+            {courses.map((item) => (
+              <label key={item.id} className={picked.includes(item.id) ? "is-checked" : ""}>
+                <input type="checkbox" checked={picked.includes(item.id)} onChange={() => toggle(item.id)} disabled={saving} />
+                <span>{item.title}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <footer className="adm-dialog-foot">
+          <button type="button" className="admin-button adm-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
+          <button type="button" className="admin-button primary" disabled={saving || picked.length === 0} onClick={() => onConfirm(picked)}>
+            {saving ? "Adicionando..." : picked.length ? `Adicionar a ${picked.length} ${picked.length === 1 ? "curso" : "cursos"}` : "Adicionar"}
+          </button>
+        </footer>
+      </div>
+    </div>
+  );
+}
+
 // Janela para criar ou renomear um módulo.
 function ModuleDialog({ module, saving, onSave, onClose }) {
   const [title, setTitle] = useState(module?.title || "");
@@ -457,7 +506,11 @@ export default function LessonsPage() {
   const [holdAvailable, setHoldAvailable] = useState(false);
   const [modules, setModules] = useState([]);
   const [modulesAvailable, setModulesAvailable] = useState(false);
-  const [moduleEditing, setModuleEditing] = useState(null); // null fechado, {} novo, módulo para renomear
+  const [moduleEditing, setModuleEditing] = useState(null); // null fechado, {} novo, módulo para renomear ({ moveIds } = novo com as aulas selecionadas)
+  const [selected, setSelected] = useState(() => new Set()); // aulas marcadas para ações em lote
+  const [courseDialog, setCourseDialog] = useState(false);
+  const [dragIds, setDragIds] = useState([]);
+  const [dropMark, setDropMark] = useState(null); // { lessonId, after } ou { moduleId }
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
@@ -509,6 +562,10 @@ export default function LessonsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    setSelected(new Set());
+  }, [productId]);
 
   const lessons = useMemo(() => lessonsForProduct(allLessons, links, productId), [allLessons, links, productId]);
   const productModules = useMemo(() => modules.filter((item) => item.product_id === productId).sort(byOrder), [modules, productId]);
@@ -892,6 +949,198 @@ export default function LessonsPage() {
     setBusyId(null);
   };
 
+  // ---------------- organização em lote (caixinhas, seletor da linha e arrastar e soltar)
+  // Monta a ordem desejada: tira as aulas `ids` de onde estão e coloca no módulo `toModuleId` (null = sem módulo), antes da aula `beforeId`
+  // (ou no fim). A primeira posição é sempre o grupo "sem módulo", como o aluno vê.
+  const arrangeMove = (ids, toModuleId, beforeId = null) => {
+    const base = groups.map((group) => ({ moduleId: group.module?.id || null, ids: group.lessons.map((item) => item.id).filter((id) => !ids.includes(id)) }));
+    if (!base.some((group) => group.moduleId === null)) base.unshift({ moduleId: null, ids: [] });
+    let target = base.find((group) => group.moduleId === (toModuleId || null));
+    if (!target) {
+      target = { moduleId: toModuleId, ids: [] };
+      base.push(target);
+    }
+    const order = groups.flatMap((group) => group.lessons.map((item) => item.id));
+    const moving = order.filter((id) => ids.includes(id));
+    const at = beforeId ? target.ids.indexOf(beforeId) : -1;
+    if (at >= 0) target.ids.splice(at, 0, ...moving);
+    else target.ids.push(...moving);
+    return base;
+  };
+
+  // Grava a nova organização do curso: renumera 1..n na ordem em que o aluno vê e atualiza o módulo de cada aula que mudou.
+  const commitLayout = async (arrangement, okText) => {
+    const byId = new Map(lessons.map((item) => [item.id, item]));
+    const updates = [];
+    let position = 0;
+    arrangement.forEach((group) => {
+      group.ids.forEach((id) => {
+        position += 1;
+        const item = byId.get(id);
+        if (!item) return;
+        const moduleId = group.moduleId || null;
+        if (item.position !== position || (item.module_id || null) !== moduleId) updates.push({ id, position, moduleId });
+      });
+    });
+    if (updates.length === 0) return true;
+    setBusyId("bulk");
+    const results = await Promise.all(
+      updates.map((update) =>
+        sharing
+          ? supabase
+              .from("product_lesson_links")
+              .update(modulesAvailable ? { position: update.position, module_id: update.moduleId } : { position: update.position })
+              .eq("lesson_id", update.id)
+              .eq("product_id", productId)
+          : supabase.from("product_lessons").update({ position: update.position }).eq("id", update.id)
+      )
+    );
+    const failed = results.find((result) => result.error);
+    setBusyId(null);
+    if (failed) {
+      notify("error", `Não foi possível reorganizar: ${failed.error.message}`);
+      return false;
+    }
+    setLinks((current) =>
+      current.map((link) => {
+        const hit = link.product_id === productId ? updates.find((update) => update.id === link.lesson_id) : null;
+        return hit ? { ...link, position: hit.position, ...(modulesAvailable ? { module_id: hit.moduleId } : {}) } : link;
+      })
+    );
+    if (okText) notify("success", okText);
+    return true;
+  };
+
+  const moduleName = (moduleId) => (moduleId ? productModules.find((item) => item.id === moduleId)?.title || "o módulo" : "sem módulo");
+
+  const moveIds = async (ids, moduleId, beforeId = null, label = null) => {
+    if (ids.length === 0) return;
+    const done = await commitLayout(arrangeMove(ids, moduleId, beforeId), `${ids.length} ${ids.length === 1 ? "aula movida" : "aulas movidas"} para ${moduleId ? `“${label || moduleName(moduleId)}”` : "fora de módulo"}.`);
+    if (done) setSelected(new Set());
+  };
+
+  const toggleSelected = (id) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const toggleGroup = (group) =>
+    setSelected((current) => {
+      const next = new Set(current);
+      const all = group.lessons.length > 0 && group.lessons.every((item) => next.has(item.id));
+      group.lessons.forEach((item) => (all ? next.delete(item.id) : next.add(item.id)));
+      return next;
+    });
+
+  const allSelected = lessons.length > 0 && lessons.every((item) => selected.has(item.id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(lessons.map((item) => item.id)));
+
+  // Ordena as aulas de cada módulo pelo número do título ("AULA 2" antes de "AULA 10").
+  const sortByTitleNumber = async (onlyModuleId) => {
+    const key = (item) => {
+      const match = String(item.title).match(/(\d+)/);
+      return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+    };
+    const arrangement = groups.map((group) => {
+      const touch = onlyModuleId === undefined || (group.module?.id || null) === onlyModuleId;
+      const ordered = touch
+        ? group.lessons.slice().sort((a, b) => key(a) - key(b) || String(a.title).localeCompare(String(b.title), "pt-BR", { numeric: true }))
+        : group.lessons;
+      return { moduleId: group.module?.id || null, ids: ordered.map((item) => item.id) };
+    });
+    if (!arrangement.some((group) => group.moduleId === null)) arrangement.unshift({ moduleId: null, ids: [] });
+    const done = await commitLayout(arrangement, "Aulas ordenadas pelo número do título.");
+    if (!done) return;
+  };
+
+  const bulkStatus = async (status) => {
+    const ids = [...selected];
+    const shared = ids.filter((id) => coursesOf(id).length > 1).length;
+    const verb = status === "published" ? "Publicar" : "Tirar do ar";
+    const extra = shared ? `\n\n${shared} dela(s) também está(ão) em outros cursos e muda(m) em todos.` : "";
+    if (!window.confirm(`${verb} ${ids.length} ${ids.length === 1 ? "aula" : "aulas"}?${extra}`)) return;
+    setBusyId("bulk");
+    const { error } = await supabase.from("product_lessons").update({ status }).in("id", ids);
+    setBusyId(null);
+    if (error) return notify("error", `Não foi possível alterar: ${error.message}`);
+    setAllLessons((current) => current.map((item) => (ids.includes(item.id) ? { ...item, status } : item)));
+    notify("success", status === "published" ? `${ids.length} publicada(s). O aluno já pode ver.` : `${ids.length} voltaram para rascunho e saíram da área do aluno.`);
+    setSelected(new Set());
+  };
+
+  const bulkAddToCourses = async (courseIds) => {
+    const ids = [...selected];
+    setSaving(true);
+    const rows = [];
+    courseIds.forEach((courseId) => {
+      let position = nextPositionIn(courseId);
+      ids.forEach((lessonId) => {
+        if (links.some((link) => link.lesson_id === lessonId && link.product_id === courseId)) return;
+        rows.push({ lesson_id: lessonId, product_id: courseId, position: position++, ...(modulesAvailable ? { module_id: null } : {}) });
+      });
+    });
+    if (rows.length === 0) {
+      setSaving(false);
+      setCourseDialog(false);
+      return notify("success", "As aulas selecionadas já estavam nesses cursos.");
+    }
+    const { error } = await supabase.from("product_lesson_links").upsert(rows, { onConflict: "lesson_id,product_id" });
+    setSaving(false);
+    if (error) return notify("error", `Não foi possível adicionar: ${error.message}`);
+    setLinks((current) => [...current, ...rows.map((row) => ({ available_in_hold: false, module_id: null, ...row }))]);
+    setCourseDialog(false);
+    setSelected(new Set());
+    notify("success", `${rows.length} ligação(ões) criada(s): as aulas já aparecem nos outros cursos, no fim da lista e sem módulo.`);
+  };
+
+  // Arrastar e soltar (computador). Arrastar uma aula marcada leva todas as marcadas.
+  const startDrag = (event, lesson) => {
+    const ids = selected.has(lesson.id) ? [...selected] : [lesson.id];
+    setDragIds(ids);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", ids.join(","));
+  };
+  const endDrag = () => {
+    setDragIds([]);
+    setDropMark(null);
+  };
+  const overLesson = (event, lesson) => {
+    if (dragIds.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const box = event.currentTarget.getBoundingClientRect();
+    const after = event.clientY > box.top + box.height / 2;
+    setDropMark((current) => (current?.lessonId === lesson.id && current.after === after ? current : { lessonId: lesson.id, after }));
+  };
+  const dropOnLesson = async (event, lesson, group) => {
+    if (dragIds.length === 0) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const ids = dragIds;
+    const after = dropMark?.after;
+    endDrag();
+    if (ids.includes(lesson.id)) return;
+    const siblings = group.lessons.map((item) => item.id).filter((id) => !ids.includes(id));
+    const at = siblings.indexOf(lesson.id);
+    const beforeId = after ? siblings[at + 1] ?? null : lesson.id;
+    await moveIds(ids, group.module?.id || null, beforeId);
+  };
+  const overGroup = (event, group) => {
+    if (dragIds.length === 0) return;
+    event.preventDefault();
+    setDropMark({ moduleId: group.module?.id || null });
+  };
+  const dropOnGroup = async (event, group) => {
+    if (dragIds.length === 0) return;
+    event.preventDefault();
+    const ids = dragIds;
+    endDrag();
+    await moveIds(ids, group.module?.id || null, null);
+  };
+
   // ---------------- módulos
   const saveModule = async (title) => {
     setSaving(true);
@@ -906,8 +1155,13 @@ export default function LessonsPage() {
     setSaving(false);
     if (result.error) return notify("error", `Não foi possível salvar o módulo: ${result.error.message}`);
     setModules((current) => (editingModule ? current.map((item) => (item.id === result.data.id ? result.data : item)) : [...current, result.data]));
+    const toMove = moduleEditing?.moveIds || null;
     setModuleEditing(null);
-    notify("success", editingModule ? "Módulo renomeado." : `Módulo “${title}” criado. Escolha-o ao editar uma aula para colocá-la dentro dele.`);
+    if (toMove && !editingModule) {
+      await moveIds(toMove, result.data.id, null, title);
+      return;
+    }
+    notify("success", editingModule ? "Módulo renomeado." : `Módulo “${title}” criado. Marque as aulas e use “Mover para o módulo…”, ou arraste as aulas para dentro dele.`);
   };
 
   const moveModule = async (item, direction) => {
@@ -1021,11 +1275,28 @@ export default function LessonsPage() {
           <button type="button" className="admin-button" style={{ marginTop: 14, marginLeft: 8 }} onClick={() => setEbookOpen(true)}>Enviar um e-book (PDF)</button>
         </div>
       ) : (
+        <>
+        <div className="adm-bulk-toolbar">
+          <label className="adm-check-row">
+            <input type="checkbox" checked={allSelected} onChange={toggleAll} />
+            Selecionar todas
+          </label>
+          <button type="button" className="adm-action" onClick={() => sortByTitleNumber()} disabled={busyId === "bulk"}>Ordenar pelo número do título</button>
+          <small className="adm-hint">Marque aulas para mover de módulo ou de curso em lote. No computador, também dá para arrastar.</small>
+        </div>
         <div className="adm-modules">
         {groups.map((group) => (
-        <div className="adm-module-group" key={group.module?.id || "sem-modulo"}>
+        <div
+          className={`adm-module-group${dropMark && "moduleId" in dropMark && dropMark.moduleId === (group.module?.id || null) ? " is-drop" : ""}`}
+          key={group.module?.id || "sem-modulo"}
+          onDragOver={(event) => overGroup(event, group)}
+          onDrop={(event) => dropOnGroup(event, group)}
+        >
           {group.module ? (
             <div className="adm-module-head">
+              <label className="adm-module-check" title="Selecionar as aulas deste módulo">
+                <input type="checkbox" checked={group.lessons.length > 0 && group.lessons.every((item) => selected.has(item.id))} onChange={() => toggleGroup(group)} disabled={group.lessons.length === 0} aria-label={`Selecionar as aulas do módulo ${group.module.title}`} />
+              </label>
               <div>
                 <strong>{group.module.title}</strong>
                 <small>{group.lessons.length} aula{group.lessons.length === 1 ? "" : "s"}</small>
@@ -1038,13 +1309,19 @@ export default function LessonsPage() {
                 <RowActions
                   label={`Ações do módulo ${group.module.title}`}
                   primary={{ label: "Renomear", onClick: () => setModuleEditing(group.module) }}
-                  items={[{ label: "Excluir módulo", danger: true, disabled: busyId === group.module.id, onClick: () => removeModule(group.module) }]}
+                  items={[
+                    { label: "Ordenar aulas pelo número do título", onClick: () => sortByTitleNumber(group.module.id) },
+                    { label: "Excluir módulo", danger: true, disabled: busyId === group.module.id, onClick: () => removeModule(group.module) },
+                  ]}
                 />
               </div>
             </div>
           ) : (
             modulesAvailable && productModules.length > 0 && (
               <div className="adm-module-head is-loose">
+                <label className="adm-module-check" title="Selecionar as aulas sem módulo">
+                  <input type="checkbox" checked={group.lessons.length > 0 && group.lessons.every((item) => selected.has(item.id))} onChange={() => toggleGroup(group)} disabled={group.lessons.length === 0} aria-label="Selecionar as aulas sem módulo" />
+                </label>
                 <div>
                   <strong>Aulas sem módulo</strong>
                   <small>Aparecem no topo do menu do aluno. Escolha um módulo ao editar a aula.</small>
@@ -1063,8 +1340,23 @@ export default function LessonsPage() {
             const courses = coursesOf(lesson.id);
             const others = courses.filter((courseId) => courseId !== productId);
             return (
-              <li key={lesson.id} className={`adm-lesson ${published ? "" : "is-draft"}`}>
+              <li
+                key={lesson.id}
+                className={`adm-lesson ${published ? "" : "is-draft"}${selected.has(lesson.id) ? " is-selected" : ""}${dragIds.includes(lesson.id) ? " is-dragging" : ""}${dropMark?.lessonId === lesson.id ? (dropMark.after ? " is-drop-after" : " is-drop-before") : ""}`}
+                draggable={busyId !== "bulk"}
+                onDragStart={(event) => startDrag(event, lesson)}
+                onDragEnd={endDrag}
+                onDragOver={(event) => overLesson(event, lesson)}
+                onDrop={(event) => dropOnLesson(event, lesson, group)}
+              >
                 <div className="adm-lesson-order">
+                  <input
+                    type="checkbox"
+                    className="adm-lesson-check"
+                    checked={selected.has(lesson.id)}
+                    onChange={() => toggleSelected(lesson.id)}
+                    aria-label={`Selecionar a aula ${lesson.title}`}
+                  />
                   <span aria-label={`Ordem ${lesson.position}`}>{lesson.position}</span>
                   <div className="adm-lesson-move">
                     <button type="button" aria-label="Subir aula" disabled={index === 0 || busyId === lesson.id} onClick={() => move(lesson, -1)}>↑</button>
@@ -1087,6 +1379,15 @@ export default function LessonsPage() {
                 <div className="adm-lesson-info">
                   <strong>{lesson.title}</strong>
                   {lesson.description && <p>{lesson.description}</p>}
+                  {modulesAvailable && productModules.length > 0 && (
+                    <label className="adm-inline-module">
+                      Módulo
+                      <select value={lesson.module_id || ""} onChange={(event) => moveIds([lesson.id], event.target.value || null)} disabled={busyId === "bulk"}>
+                        <option value="">Sem módulo</option>
+                        {productModules.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+                      </select>
+                    </label>
+                  )}
                   <small>
                     {lesson.duration || "Sem duração"} ·{" "}
                     {isPdf ? (lesson.attachment_file_name ? `PDF: ${lesson.attachment_file_name}` : "PDF sem arquivo") : mux ? (
@@ -1132,6 +1433,35 @@ export default function LessonsPage() {
         </div>
         ))}
         </div>
+        </>
+      )}
+
+      {selected.size > 0 && (
+        <div className="adm-bulkbar" role="region" aria-label="Ações em lote">
+          <strong>{selected.size} {selected.size === 1 ? "aula selecionada" : "aulas selecionadas"}</strong>
+          {modulesAvailable && (
+            <select
+              value=""
+              aria-label="Mover as aulas selecionadas para um módulo"
+              disabled={busyId === "bulk"}
+              onChange={(event) => {
+                const value = event.target.value;
+                if (!value) return;
+                if (value === "__new") setModuleEditing({ moveIds: [...selected] });
+                else moveIds([...selected], value === "__none" ? null : value);
+              }}
+            >
+              <option value="">Mover para o módulo…</option>
+              <option value="__none">Sem módulo</option>
+              {productModules.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+              <option value="__new">+ Novo módulo com estas aulas…</option>
+            </select>
+          )}
+          {sharing && <button type="button" className="admin-button" onClick={() => setCourseDialog(true)} disabled={busyId === "bulk"}>Adicionar a outros cursos…</button>}
+          <button type="button" className="admin-button" onClick={() => bulkStatus("published")} disabled={busyId === "bulk"}>Publicar</button>
+          <button type="button" className="admin-button" onClick={() => bulkStatus("draft")} disabled={busyId === "bulk"}>Tirar do ar</button>
+          <button type="button" className="admin-button adm-ghost" onClick={() => setSelected(new Set())}>Limpar seleção</button>
+        </div>
       )}
 
       {editing && (
@@ -1162,6 +1492,15 @@ export default function LessonsPage() {
             notify("success", text);
             load();
           }}
+        />
+      )}
+      {courseDialog && (
+        <BulkCourseDialog
+          courses={products.filter((item) => item.id !== productId)}
+          count={selected.size}
+          saving={saving}
+          onConfirm={bulkAddToCourses}
+          onClose={() => setCourseDialog(false)}
         />
       )}
       {moduleEditing && <ModuleDialog key={moduleEditing.id || "novo"} module={moduleEditing.id ? moduleEditing : null} saving={saving} onSave={saveModule} onClose={() => setModuleEditing(null)} />}

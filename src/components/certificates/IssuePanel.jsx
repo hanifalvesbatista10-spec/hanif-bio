@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
+import { fetchCourseAttendance, meetsMinimum, studentTotals } from "../../services/attendance";
 import { uploadCertificateImage } from "../../services/certificateStorage";
 import {
   BATCH_LIMIT,
@@ -80,6 +81,9 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
   const [rosterState, setRosterState] = useState("idle"); // idle | loading | error
   const [rosterError, setRosterError] = useState("");
   const [rosterNonce, setRosterNonce] = useState(0);
+  const [attendance, setAttendance] = useState(null); // presença do curso escolhido (só leitura; SQL 55/56)
+  const [minPercent, setMinPercent] = useState(75);
+  const [minMeetings, setMinMeetings] = useState(0);
   const [useAvatar, setUseAvatar] = useState(true);
   const [saveToProfile, setSaveToProfile] = useState(true);
   const [source, setSource] = useState("pick"); // product = alunos com acesso a um curso da plataforma | pick = escolher alunos cadastrados
@@ -211,6 +215,21 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
       active = false;
     };
   }, [mode, source, courseId, templateId, rosterNonce]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Aulas concluídas e presença nos encontros de cada aluno do curso: ajuda a decidir quem recebe o certificado.
+  useEffect(() => {
+    if (mode !== "students" || source !== "product" || !courseId) {
+      setAttendance(null);
+      return undefined;
+    }
+    let active = true;
+    fetchCourseAttendance(courseId).then((result) => {
+      if (active) setAttendance(result.error ? null : result);
+    });
+    return () => {
+      active = false;
+    };
+  }, [mode, source, courseId, rosterNonce]);
 
   // Busca de qualquer aluno cadastrado (nome ou e-mail), para cursos que não têm aula na plataforma.
   useEffect(() => {
@@ -644,11 +663,37 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
                   <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: !hasCert(item) })))} disabled={busy}>Só quem ainda não tem</button>
                   <button type="button" className="adm-action" onClick={() => setRoster((current) => current.map((item) => ({ ...item, selected: false })))} disabled={busy}>Desmarcar</button>
                 </div>
+                {attendance && (
+                  <div className="cert-row-actions cert-att-filter">
+                    <span>Selecionar quem cumpre: pelo menos</span>
+                    <input type="number" min="0" max="100" value={minPercent} onChange={(e) => setMinPercent(e.target.value)} aria-label="Percentual mínimo de aulas concluídas" disabled={busy} />
+                    <span>% das aulas e</span>
+                    <input type="number" min="0" value={minMeetings} onChange={(e) => setMinMeetings(e.target.value)} aria-label="Mínimo de encontros com presença" disabled={busy} />
+                    <span>encontro(s)</span>
+                    <button
+                      type="button"
+                      className="adm-action"
+                      disabled={busy}
+                      onClick={() =>
+                        setRoster((current) =>
+                          current.map((item) => ({
+                            ...item,
+                            selected: !hasCert(item) && meetsMinimum(studentTotals(attendance, item.uid), { minPercent: Number(minPercent) || 0, minMeetings: Number(minMeetings) || 0 }),
+                          }))
+                        )
+                      }
+                    >
+                      Marcar só quem cumpre
+                    </button>
+                    <Link to={`/admin/presenca?produto=${courseId}`}>Ver presença completa →</Link>
+                  </div>
+                )}
                 <div className="admin-table-wrap">
                   <table className="admin-table">
                     <thead>
                       <tr>
                         <th aria-label="Emitir"></th><th>Aluno</th>
+                        {attendance && <><th>Aulas</th><th>Encontros</th></>}
                         {personalKeys.map((key) => <th key={key}>{humanize(key)}</th>)}
                         {hasPhoto && <th>Foto</th>}
                         <th>Situação</th>
@@ -661,6 +706,10 @@ export default function IssuePanel({ templates, initialTemplateId, onIssued }) {
                           <tr key={item.uid}>
                             <td><input type="checkbox" checked={item.selected} onChange={(e) => patchRoster(item.uid, { selected: e.target.checked })} disabled={busy} aria-label={`Emitir para ${item.nome}`} /></td>
                             <td><strong>{item.nome}</strong><small>{item.email}</small></td>
+                            {attendance && (() => {
+                              const totals = studentTotals(attendance, item.uid);
+                              return <><td>{totals.lessonsDone}/{totals.lessonsTotal} <small>{totals.lessonsPercent}%</small></td><td>{totals.meetingsDone}/{totals.meetingsTotal}</td></>;
+                            })()}
                             {personalKeys.map((key) => (
                               <td key={key}>
                                 <input className="cert-cell-input" value={item.personal[key] || ""} onChange={(e) => patchPersonal(item.uid, key, e.target.value)} disabled={busy} aria-label={`${humanize(key)} de ${item.nome}`} />

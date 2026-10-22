@@ -4,14 +4,34 @@ import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import useInstallApp from "../../components/member/useInstallApp";
 import { supabase } from "../../services/supabase";
-import { useLessonCounts, useMyLiveLessons } from "../../services/productStats";
+import { useLessonCounts, useMyLiveLessons, useMyLiveMeetings } from "../../services/productStats";
 
-function LiveBanner({ lives }) {
-  if (lives.length === 0) return null;
+function LiveBanner({ lives, meetings }) {
+  if (lives.length === 0 && meetings.length === 0) return null;
   return (
     <div className="mb-lives" role="status">
       <h2><i /> Ao vivo agora</h2>
       <ul>
+        {meetings.map((meeting) => {
+          const inner = (
+            <>
+              <span className="mb-lives-info">
+                <strong>{meeting.title}</strong>
+                <small>{meeting.product?.title}</small>
+              </span>
+              <span className="mb-lives-watch">{meeting.meet_url ? "Entrar no Meet" : "Entrar no encontro"} {icons.arrowRight}</span>
+            </>
+          );
+          return (
+            <li key={meeting.id}>
+              {meeting.meet_url ? (
+                <a href={meeting.meet_url} target="_blank" rel="noopener noreferrer">{inner}</a>
+              ) : (
+                <Link to={`/minha-area/encontro/${meeting.id}`}>{inner}</Link>
+              )}
+            </li>
+          );
+        })}
         {lives.map((live) => (
           <li key={live.lesson_id}>
             <Link to={`/minha-area/curso/${live.product_id}?aula=${live.lesson_id}`}>
@@ -65,6 +85,7 @@ function Skeleton() {
 export default function StudentCoursesPage() {
   const { user, profile } = useAuth();
   const lives = useMyLiveLessons();
+  const liveMeetings = useMyLiveMeetings();
   const lessonCounts = useLessonCounts();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -113,7 +134,7 @@ export default function StudentCoursesPage() {
         <p>Seus cursos e mentorias liberados.</p>
       </div>
 
-      <LiveBanner lives={lives} />
+      <LiveBanner lives={lives} meetings={liveMeetings} />
 
       {missing.length > 0 && (
         <div className="mb-notice" role="status">

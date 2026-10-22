@@ -7,10 +7,11 @@ import { memberIcons as icons } from "../../components/member/MemberIcons";
 import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
-import { fetchProductLessons, fetchProductModules, flattenGroups, groupByModule } from "../../services/lessons";
+import { fetchProductLessons, fetchProductModules, flattenGroups, groupByModule, isLiveFresh } from "../../services/lessons";
+import { fetchMyMeetingPresence, markMeetingAttendance, presenceWindow } from "../../services/attendance";
 import { fetchCompletedLessons, setLessonCompleted } from "../../services/progress";
 import { getR2DownloadUrl } from "../../services/r2";
-import { meetingWindow } from "../../services/meeting";
+import { meetingLive, meetingWindow } from "../../services/meeting";
 import "../../styles/member-area.css";
 
 // Botão de download que só pede o link (Cloudflare R2, expira em poucos minutos) na hora do clique —
@@ -44,44 +45,84 @@ function FileDownload({ kind, id, title, subtitle }) {
   );
 }
 
-// Próximos encontros ao vivo do curso (a sala abre 30 min antes e fica disponível até 1 h depois do fim).
+// Próximos encontros ao vivo do curso (a sala abre 30 min antes e fica disponível até 1 h depois do fim). Durante o encontro o
+// aluno marca a presença (vale para o certificado); o resumo "2 de 3" soma os encontros que já começaram.
 function LiveMeetings({ productId }) {
   const [meetings, setMeetings] = useState([]);
+  const [presence, setPresence] = useState({ meetings: [], marked: new Set(), available: false });
+  const [busyId, setBusyId] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     supabase
       .from("live_meetings")
-      .select("id,title,description,starts_at,duration_minutes")
+      .select("id,title,description,starts_at,duration_minutes,ended_at,meet_url")
       .eq("product_id", productId)
       .gte("starts_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString())
       .order("starts_at", { ascending: true })
-      .then(({ data, error }) => {
+      .then(({ data, error: loadError }) => {
         // sem a tabela (SQL 44 ainda não rodou) ou sem encontros: o bloco simplesmente não aparece
-        if (!error) setMeetings((data || []).filter((meeting) => meetingWindow(meeting) !== "ended"));
+        if (!loadError) setMeetings((data || []).filter((meeting) => meetingWindow(meeting) !== "ended"));
       });
+    fetchMyMeetingPresence(productId).then(setPresence);
   }, [productId]);
 
-  if (meetings.length === 0) return null;
+  const mark = async (meeting) => {
+    setBusyId(meeting.id);
+    setError("");
+    const result = await markMeetingAttendance(meeting.id);
+    if (result.error) setError(result.error);
+    else
+      setPresence((current) => ({
+        ...current,
+        marked: new Set(current.marked).add(meeting.id),
+        meetings: current.meetings.some((item) => item.id === meeting.id) ? current.meetings : [...current.meetings, meeting],
+      }));
+    setBusyId("");
+  };
+
+  const heldCount = presence.meetings.length;
+  if (meetings.length === 0 && !(presence.available && heldCount > 0)) return null;
 
   return (
     <div className="mb-alert" role="status">
       <strong>Encontros ao vivo</strong>
       {meetings.map((meeting) => {
         const open = meetingWindow(meeting) === "open";
+        const canMark = presenceWindow(meeting) === "open";
+        const marked = presence.marked.has(meeting.id);
         return (
           <div key={meeting.id} style={{ margin: "10px 0 0" }}>
             <div>
+              {meetingLive(meeting) && <span className="mb-lesson-live"><i /> AO VIVO AGORA</span>}{" "}
               {meeting.title} — {new Date(meeting.starts_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
             </div>
             {meeting.description && <p style={{ margin: "4px 0" }}>{meeting.description}</p>}
-            {open ? (
-              <Link className="mb-btn" to={`/minha-area/encontro/${meeting.id}`}>Entrar no encontro</Link>
-            ) : (
-              <small>A sala abre 30 minutos antes do horário.</small>
-            )}
+            <div className="mb-meeting-actions">
+              {open && meeting.meet_url ? (
+                <a className="mb-btn" href={meeting.meet_url} target="_blank" rel="noopener noreferrer">Entrar no Meet</a>
+              ) : open ? (
+                <Link className="mb-btn" to={`/minha-area/encontro/${meeting.id}`}>Entrar no encontro</Link>
+              ) : (
+                <small>{meeting.meet_url ? "O link do Meet libera 30 minutos antes do horário." : "A sala abre 30 minutos antes do horário."}</small>
+              )}
+              {marked ? (
+                <span className="mb-presence-ok">✓ Presença registrada</span>
+              ) : (
+                canMark && (
+                  <button type="button" className="mb-btn is-ghost" onClick={() => mark(meeting)} disabled={busyId === meeting.id}>
+                    {busyId === meeting.id ? "Marcando..." : "Marcar minha presença"}
+                  </button>
+                )
+              )}
+            </div>
           </div>
         );
       })}
+      {error && <p className="mb-pdf-error" role="alert">{error}</p>}
+      {presence.available && heldCount > 0 && (
+        <p className="mb-presence-summary">Sua presença nos encontros: <strong>{presence.marked.size} de {heldCount}</strong></p>
+      )}
     </div>
   );
 }
@@ -173,7 +214,8 @@ export default function CourseLessonsPage() {
     [user?.id]
   );
 
-  const toggleDone = (lesson) => setDone(lesson, !completedRef.current.has(lesson.id));
+  // Em aula ao vivo, marcar vale como presença (origem "live"); fora disso é conclusão normal.
+  const toggleDone = (lesson) => setDone(lesson, !completedRef.current.has(lesson.id), isLiveFresh(lesson) ? "live" : "manual");
 
   // fim do vídeo: marca sozinho (nunca desmarca, e não repete se já estava concluída)
   const activeLessonRef = useRef(null);
@@ -251,7 +293,7 @@ export default function CourseLessonsPage() {
                         aria-pressed={activeDone}
                         onClick={() => toggleDone(activeLesson)}
                       >
-                        {activeDone ? "Concluída ✓" : "Marcar como concluída"}
+                        {activeDone ? (isLiveFresh(activeLesson) ? "Presença marcada ✓" : "Concluída ✓") : isLiveFresh(activeLesson) ? "Marcar presença" : "Marcar como concluída"}
                       </button>
                     )}
                     <button type="button" className="mb-btn is-ghost is-small" onClick={() => pick(previous)} disabled={!previous}>

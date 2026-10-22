@@ -46,10 +46,21 @@ export async function getMeetingUrl(meetingId) {
 }
 
 // A sala abre 30 minutos antes e o aluno ainda consegue entrar até 1 hora depois do fim (mesma regra do servidor).
+// Se o administrador encerrou antes (ended_at), o encontro acaba ali.
 export function meetingWindow(meeting, now = Date.now()) {
   const start = new Date(meeting.starts_at).getTime();
   const end = start + meeting.duration_minutes * 60 * 1000;
+  if (meeting.ended_at && now >= new Date(meeting.ended_at).getTime()) return "ended";
   if (now < start - 30 * 60 * 1000) return "soon";
   if (now > end + 60 * 60 * 1000) return "ended";
   return "open";
+}
+
+// "Ao vivo agora": do início da janela de entrada (30 min antes) até o fim da duração marcada, sem encerramento antecipado.
+// Passou da duração, o aviso some sozinho; o painel pode prolongar (+30 min) ou encerrar antes.
+export function meetingLive(meeting, now = Date.now()) {
+  const start = new Date(meeting.starts_at).getTime();
+  const end = start + meeting.duration_minutes * 60 * 1000;
+  if (meeting.ended_at && now >= new Date(meeting.ended_at).getTime()) return false;
+  return now >= start - 30 * 60 * 1000 && now <= end;
 }
