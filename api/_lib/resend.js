@@ -17,6 +17,8 @@ export async function sendEmail({ to, subject, html }) {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({ from, to, subject, html }),
+    // não deixa o aviso de pagamento esperando uma resposta que não vem
+    signal: AbortSignal.timeout(8000),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {

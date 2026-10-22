@@ -15,6 +15,7 @@ import { HttpError, requireAdmin } from "./_lib/mux.js";
 import { RadarBusy, processQueue, reanalyze, startRun } from "./_lib/radar/pipeline.js";
 import { checkoutHandler, sb, siteUrl } from "./_lib/checkout.js";
 import { sendEmail } from "./_lib/resend.js";
+import { runAccessReminders } from "./_lib/buyerEmails.js";
 
 const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
@@ -117,12 +118,17 @@ export default checkoutHandler(["GET", "POST"], async (req, res) => {
   await processQueue({ deadline: Date.now() + 45 * 1000, maxItems: 1 }).catch(() => null);
 
   const base = siteUrl();
+
+  // Lembrete a quem pagou e ainda não criou a conta. Independe da recuperação de vendas estar ligada.
+  const lembreteCadastro = base ? await runAccessReminders({ base }).catch((error) => ({ error: String(error?.message || error).slice(0, 200) })) : { skipped: true };
+
   const settingsRows = await sb("recovery_settings?id=eq.1&select=*&limit=1").catch(() => null);
   const settings = settingsRows?.[0];
 
   if (!settings?.enabled || !base) {
     res.status(200).setHeader("Cache-Control", "no-store").json({
       skipped: true,
+      lembreteCadastro,
       reason: !base ? "SITE_URL não configurado" : !settingsRows ? "supabase/29_recuperacao_de_vendas.sql ainda não foi executado" : "recuperação desligada em Recuperação de vendas",
     });
     return;
@@ -152,6 +158,7 @@ export default checkoutHandler(["GET", "POST"], async (req, res) => {
 
   res.status(200).setHeader("Cache-Control", "no-store").json({
     at: new Date().toISOString(),
+    lembreteCadastro,
     abandonado: abandoned,
     recusado: failed,
     ultimoLembrete: lastChance,

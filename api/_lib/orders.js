@@ -2,6 +2,7 @@
 import { sb } from "./checkout.js";
 import { notifyOwnerOfSale } from "./notify.js";
 import { sendPurchaseForOrder } from "./meta.js";
+import { sendPurchaseConfirmation } from "./buyerEmails.js";
 
 const now = () => new Date().toISOString();
 
@@ -108,6 +109,8 @@ export async function markOrderPaid(order, method) {
   await grantAccess({ ...order, status: "paid" });
   await recordAffiliateCommission(order).catch((error) => console.error("recordAffiliateCommission:", error.message));
   await notifyOwnerOfSale(order).catch((error) => console.error("notifyOwnerOfSale:", error.message));
+  // E-mail de "compra confirmada" ao aluno (uma vez por pedido). Falha aqui nunca derruba o pagamento.
+  await sendPurchaseConfirmation(order.id).catch((error) => console.error("sendPurchaseConfirmation:", error.message));
   // API de Conversões da Meta: uma vez por pedido, só com consentimento e valor > 0. Falha aqui nunca derruba o pagamento.
   await sendPurchaseForOrder(order.id).catch((error) => console.error("sendPurchaseForOrder:", error.message));
   return true;

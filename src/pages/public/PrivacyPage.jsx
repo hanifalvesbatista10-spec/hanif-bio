@@ -22,7 +22,7 @@ const PROCESSORS = [
   ["Supabase", "banco de dados e login (servidor no Canadá)"],
   ["Vercel", "hospedagem do site (servidores nos Estados Unidos)"],
   ["InfinitePay e Asaas", "processamento dos pagamentos"],
-  ["Resend", "envio de e-mails, como os lembretes de compra não finalizada"],
+  ["Resend", "envio de e-mails, como a confirmação de compra, os lembretes de cadastro e os lembretes de compra não finalizada"],
   ["Mux", "exibição protegida das videoaulas"],
   ["Cloudflare", "armazenamento dos arquivos para download"],
   ["Daily.co", "encontros ao vivo na área de membros"],
@@ -93,6 +93,7 @@ export default function PrivacyPage() {
             <li>liberar a leitura das análises do Radar e enviar o convite para a comunidade APH Hardcore e outros conteúdos de APH (com a sua autorização);</li>
             <li>criar sua conta, entregar os cursos, emitir certificados e dar suporte;</li>
             <li>processar pagamentos, liberar o acesso após a confirmação e cumprir obrigações fiscais e legais;</li>
+            <li>enviar o e-mail de confirmação da compra e lembretes para você criar a conta com o e-mail usado no pedido, quando ainda não a criou;</li>
             <li>enviar lembretes de compra não finalizada, quando você iniciou um pedido;</li>
             <li>manter a segurança do site e prevenir fraudes;</li>
             <li>medir os resultados dos nossos anúncios.</li>
