@@ -62,4 +62,6 @@ export async function uploadFileToR2({ kind, file }) {
 
 // Aluno (ou admin): pede um link de download temporário (expira em poucos minutos) pro arquivo de
 // um produto ("product") ou de uma aula ("lesson").
-export const getR2DownloadUrl = (kind, id) => api("/api/r2-sign", { method: "POST", body: { action: "download", kind, id } });
+// inline: true devolve um link que abre o PDF dentro da página (leitor da aula), em vez de baixar.
+export const getR2DownloadUrl = (kind, id, { inline = false } = {}) =>
+  api("/api/r2-sign", { method: "POST", body: { action: "download", kind, id, ...(inline ? { inline: true } : {}) } });

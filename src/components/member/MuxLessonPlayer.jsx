@@ -30,7 +30,7 @@ function Watermark({ label }) {
   );
 }
 
-export default function MuxLessonPlayer({ lesson }) {
+export default function MuxLessonPlayer({ lesson, onEnded }) {
   const { user, profile } = useAuth();
   const [state, setState] = useState({ status: "loading" });
   const requested = useRef(null);
@@ -64,6 +64,7 @@ export default function MuxLessonPlayer({ lesson }) {
             tokens={state.data.tokens}
             metadata={{ video_title: lesson.title }}
             accentColor="#d6152d"
+            onEnded={onEnded}
             style={{ display: "block", width: "100%", aspectRatio: "16 / 9" }}
           />
           <Watermark label={viewer} />

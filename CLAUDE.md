@@ -32,7 +32,7 @@ src/services/                           acesso a dados e clientes das APIs (supa
 src/styles/                             tokens.css e CSS por área
 src/App.jsx                             todas as rotas (admin em /admin/*, aluno em /minha-area/*)
 api/                                    funções serverless; api/_lib/ = código compartilhado
-supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 54)
+supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 55)
 docs/                                   guias de operação (checkout, mux, afiliados, provas...)
 ```
 
@@ -42,6 +42,7 @@ docs/                                   guias de operação (checkout, mux, afil
 - **RLS e autorização:** administrador é checado por `public.is_admin()`. Automação com chave de serviço não aprova nem publica conteúdo (regra no banco). Segredos só no servidor; só `VITE_*` chegam ao navegador.
 - **Limite de 12 funções na Vercel Hobby (hoje 12):** nova rota deve entrar como ação de uma função existente (padrão em `api/r2-sign.js`, `api/mux-asset.js` e `api/cron-recover-sales.js?job=...`) ou juntar funções. Há no máximo 2 crons (diário de recuperação de vendas e semanal do Radar). Só a função do cron (`api/cron-recover-sales.js`) tem `maxDuration` de 60 s configurado em `vercel.json`; as demais usam o padrão da Vercel.
 - **E-mails ao comprador (SQL 54):** `api/_lib/buyerEmails.js`. A confirmação de compra sai de `markOrderPaid` (uma vez por pedido, trava em `orders.buyer_email_sent_at`; falha grava `buyer_email_error` e avisa o dono no Telegram, sem derrubar o pagamento). O lembrete de cadastro (pedido pago sem conta: 2 dias e depois +4 dias, `access_reminder_stage`) roda no cron diário, antes da checagem de `recovery_settings.enabled`. A conta precisa ter o MESMO e-mail da compra.
+- **Módulos, conclusão e aula em PDF (SQL 55):** `product_modules` (módulo é do curso; a aula fica em `product_lesson_links.module_id`), `lesson_progress` (aluno marca a própria aula: manual ou automática no fim do vídeo; base da presença do certificado) e `product_lessons.content_type` (`video` ou `pdf`; o PDF da aula reaproveita `attachment_file_*` no R2 e abre inline via `r2-sign` com `inline: true`). Telas: `CoursePlaylist.jsx` e `LessonPlayers.jsx` (aluno), `LessonsPage.jsx` (painel). Sem a migration, as telas caem no modo antigo.
 - **Variáveis de ambiente:** mudança só vale após novo deploy (Redeploy). Nunca imprimir nem commitar valores.
 - **Parceiros (SQL 52):** uma pessoa de confiança com acesso SÓ a provas (pré e pós-testes), em `/parceiro`. Quem é parceiro é quem tem linha ativa em `public.partners` (não mexe em `profiles.role`). O isolamento é do banco: policies `partner ...` nas tabelas de provas, `can_manage_form()` nas funções `form_*` e gatilhos que forçam prova pública, sem produto, com limites, ritmo máximo e um envio por e-mail (SQL 53 reforça). Em `form_submissions` a API só grava `instructor_feedback`. As telas de provas do admin são reaproveitadas pelo gancho `useFormsArea()`. Ao mexer em `forms*`, `form_*` ou RLS, conferir que o parceiro continua sem ver nada além das provas dele.
 - **Admin:** novas telas entram em `src/App.jsx` (rota) e `src/components/admin/adminNav.js` (menu). As telas de edição voltam para a lista depois de salvar.

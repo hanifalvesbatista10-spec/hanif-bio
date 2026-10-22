@@ -50,12 +50,18 @@ export async function presignUpload(key, contentType) {
 }
 
 // Link temporário de download: expira em poucos minutos, então não adianta copiar e repassar.
-export async function presignDownload(key, filename) {
+// inline = true abre o PDF dentro da página (leitor da aula); sem isso o navegador baixa o arquivo.
+export async function presignDownload(key, filename, { inline = false } = {}) {
   const { bucket } = requireR2Config();
+  const safeName = filename ? String(filename).replace(/["\r\n]/g, "") : "";
   const command = new GetObjectCommand({
     Bucket: bucket,
     Key: key,
-    ...(filename ? { ResponseContentDisposition: `attachment; filename="${String(filename).replace(/"/g, "")}"` } : {}),
+    ...(inline
+      ? { ResponseContentDisposition: "inline", ResponseContentType: "application/pdf" }
+      : safeName
+      ? { ResponseContentDisposition: `attachment; filename="${safeName}"` }
+      : {}),
   });
   return getSignedUrl(r2Client(), command, { expiresIn: LINK_TTL_SECONDS });
 }

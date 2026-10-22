@@ -70,7 +70,7 @@ async function handleDownload(req, res) {
 
   if (!path) throw new HttpError(404, "not_found", "Este item não tem arquivo para baixar.");
 
-  const url = await presignDownload(path, filename);
+  const url = await presignDownload(path, filename, { inline: body.inline === true });
   res.status(200).setHeader("Cache-Control", "no-store").json({ url, filename: filename || "arquivo.pdf" });
 }
 

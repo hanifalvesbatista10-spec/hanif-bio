@@ -7,7 +7,7 @@ import { supabase } from "../../services/supabase";
 import { createMuxUpload, deleteMuxAsset, formatDuration, getMuxUploadState, uploadFileToMux } from "../../services/mux";
 import { uploadFileToR2 } from "../../services/r2";
 import { youtubeId } from "../../services/video";
-import { fetchLessonsAndLinks, lessonsForProduct, productIdsOfLesson } from "../../services/lessons";
+import { byOrder, fetchLessonsAndLinks, fetchModules, groupByModule, lessonsForProduct, productIdsOfLesson } from "../../services/lessons";
 
 const statusLabels = { draft: "Rascunho", published: "Publicada" };
 const muxStatusLabels = {
@@ -22,7 +22,7 @@ const MAX_FILE_GB = 5;
 function emptyLesson(productId, position) {
   return {
     id: null, product_id: productId, product_ids: [productId], topics_text: "", title: "", description: "", video_url: "", duration: "",
-    status: "draft", position, video_provider: "youtube", available_in_hold: false,
+    status: "draft", position, video_provider: "youtube", available_in_hold: false, content_type: "video", module_id: null,
   };
 }
 
@@ -43,7 +43,7 @@ function formatSize(bytes) {
 }
 
 // Janela de edição: só abre ao clicar em "Editar" ou "Nova aula" e fecha ao salvar.
-function LessonDialog({ lesson, products, sharing, holdAvailable, currentProductId, saving, phase, progress, error, onSave, onClose }) {
+function LessonDialog({ lesson, products, sharing, holdAvailable, modulesAvailable, productModules, currentProductId, saving, phase, progress, error, onSave, onClose }) {
   const [draft, setDraft] = useState(lesson);
   const [file, setFile] = useState(null);
   const [attachFile, setAttachFile] = useState(null);
@@ -101,7 +101,8 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
   }, []);
 
   const set = (key, value) => setDraft((current) => ({ ...current, [key]: value }));
-  const mux = isMux(draft);
+  const pdf = draft.content_type === "pdf";
+  const mux = !pdf && isMux(draft);
   const hasMuxVideo = Boolean(lesson.mux_upload_id);
 
   const pickFile = (event) => {
@@ -153,6 +154,26 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
             <label>Título<input ref={firstFieldRef} value={draft.title} onChange={(e) => set("title", e.target.value)} required disabled={saving} /></label>
 
             <fieldset className="adm-provider" disabled={saving}>
+              <legend>Tipo de conteúdo</legend>
+              <label className={`adm-provider-option ${!pdf ? "is-active" : ""}`}>
+                <input type="radio" name="content_type" checked={!pdf} onChange={() => set("content_type", "video")} />
+                <span>
+                  <strong>Vídeo</strong>
+                  <small>Aula gravada (YouTube ou Mux).</small>
+                </span>
+              </label>
+              <label className={`adm-provider-option ${pdf ? "is-active" : ""}`}>
+                <input type="radio" name="content_type" checked={pdf} onChange={() => set("content_type", "pdf")} />
+                <span>
+                  <strong>PDF</strong>
+                  <small>O aluno lê o PDF dentro da aula e pode baixar.</small>
+                </span>
+              </label>
+            </fieldset>
+
+            {!pdf && (
+            <>
+            <fieldset className="adm-provider" disabled={saving}>
               <legend>Onde o vídeo fica hospedado</legend>
               <label className={`adm-provider-option ${!mux ? "is-active" : ""}`}>
                 <input type="radio" name="provider" checked={!mux} onChange={() => set("video_provider", "youtube")} />
@@ -194,25 +215,44 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
             ) : (
               <label>Link do vídeo (YouTube)<input value={draft.video_url || ""} onChange={(e) => set("video_url", e.target.value)} placeholder="https://www.youtube.com/watch?v=..." required={!mux} disabled={saving} /></label>
             )}
+            </>
+            )}
 
             <label>Descrição<textarea rows={3} value={draft.description || ""} onChange={(e) => set("description", e.target.value)} disabled={saving} /></label>
+
+            {modulesAvailable && (
+              <label>
+                Módulo neste curso
+                <select value={draft.module_id || ""} onChange={(e) => set("module_id", e.target.value || null)} disabled={saving}>
+                  <option value="">Sem módulo</option>
+                  {productModules.map((item) => (
+                    <option key={item.id} value={item.id}>{item.title}</option>
+                  ))}
+                </select>
+                {productModules.length === 0 && <small className="adm-hint">Ainda não há módulos neste curso. Crie em “+ Novo módulo”, na página de aulas.</small>}
+              </label>
+            )}
 
             <div className="adm-mux-box">
               {lesson.attachment_file_name && !attachFile && !removeAttachment && (
                 <p className="adm-mux-current">Material atual: <strong>{lesson.attachment_file_name}</strong></p>
               )}
               <label>
-                {lesson.attachment_file_name ? "Substituir o material (opcional)" : "Material da aula (PDF, opcional)"}
+                {pdf
+                  ? (lesson.attachment_file_name ? "Substituir o PDF da aula" : "Arquivo PDF da aula")
+                  : (lesson.attachment_file_name ? "Substituir o material (opcional)" : "Material da aula (PDF, opcional)")}
                 <input type="file" accept="application/pdf" onChange={pickAttachment} disabled={saving} />
               </label>
               {attachFile && <p className="adm-hint">{attachFile.name} · {formatSize(attachFile.size)}</p>}
-              {!attachFile && lesson.attachment_file_path && !removeAttachment && (
+              {!pdf && !attachFile && lesson.attachment_file_path && !removeAttachment && (
                 <button type="button" className="admin-button adm-ghost" disabled={saving} onClick={() => setRemoveAttachment(true)}>
                   Remover material atual
                 </button>
               )}
               {removeAttachment && <p className="adm-hint">O material será removido ao salvar.</p>}
-              <p className="adm-hint">Fica num armazenamento privado — só quem tem acesso a esta aula consegue baixar.</p>
+              <p className="adm-hint">
+                {pdf ? "Este PDF é o conteúdo da aula. " : ""}Fica num armazenamento privado — só quem tem acesso a esta aula consegue ler e baixar.
+              </p>
             </div>
             <label>
               Temas que esta aula ensina (um por linha, opcional)
@@ -226,7 +266,7 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
               <small className="adm-hint">Quando o aluno for mal num tema, o site indica esta aula para ele rever. Use os mesmos nomes de Tema e Subtema das perguntas. Um tema inteiro ("Trauma") ou uma parte ("Trauma &gt; B - Respiração").</small>
             </label>
             <div className="form-grid three">
-              <label>Duração<input value={draft.duration || ""} onChange={(e) => set("duration", e.target.value)} placeholder={mux ? "Automática ao ficar pronto" : "Ex: 12min"} disabled={saving} /></label>
+              <label>Duração<input value={draft.duration || ""} onChange={(e) => set("duration", e.target.value)} placeholder={mux ? "Automática ao ficar pronto" : pdf ? "Ex: 20 páginas" : "Ex: 12min"} disabled={saving} /></label>
               <label>
                 Status
                 <select value={draft.status} onChange={(e) => set("status", e.target.value)} disabled={saving}>
@@ -285,6 +325,55 @@ function LessonDialog({ lesson, products, sharing, holdAvailable, currentProduct
           <footer className="adm-dialog-foot">
             <button type="button" className="admin-button adm-ghost" onClick={requestClose} disabled={saving}>Cancelar</button>
             <button type="submit" className="admin-button primary" disabled={saving}>{saving ? "Salvando..." : "Salvar aula"}</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// Janela para criar ou renomear um módulo.
+function ModuleDialog({ module, saving, onSave, onClose }) {
+  const [title, setTitle] = useState(module?.title || "");
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add("adm-scroll-lock");
+    inputRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === "Escape" && !saving) onClose();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      html.classList.remove("adm-scroll-lock");
+    };
+  }, [onClose, saving]);
+
+  const submit = (event) => {
+    event.preventDefault();
+    if (title.trim()) onSave(title.trim());
+  };
+
+  return (
+    <div className="adm-dialog-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <div className="adm-dialog" role="dialog" aria-modal="true" aria-labelledby="module-title">
+        <form onSubmit={submit}>
+          <header className="adm-dialog-head">
+            <h3 id="module-title">{module ? "Renomear módulo" : "Novo módulo"}</h3>
+            <button type="button" className="adm-icon-button" aria-label="Fechar" onClick={onClose} disabled={saving}>{icons.close}</button>
+          </header>
+          <div className="adm-dialog-body">
+            <label>
+              Nome do módulo
+              <input ref={inputRef} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Emergências Clínicas" maxLength={120} required disabled={saving} />
+            </label>
+            <p className="adm-hint">O módulo agrupa aulas no menu do aluno, com contador de aulas concluídas.</p>
+          </div>
+          <footer className="adm-dialog-foot">
+            <button type="button" className="admin-button adm-ghost" onClick={onClose} disabled={saving}>Cancelar</button>
+            <button type="submit" className="admin-button primary" disabled={saving || !title.trim()}>{saving ? "Salvando..." : module ? "Salvar" : "Criar módulo"}</button>
           </footer>
         </form>
       </div>
@@ -366,6 +455,9 @@ export default function LessonsPage() {
   const [links, setLinks] = useState([]);
   const [sharing, setSharing] = useState(true);
   const [holdAvailable, setHoldAvailable] = useState(false);
+  const [modules, setModules] = useState([]);
+  const [modulesAvailable, setModulesAvailable] = useState(false);
+  const [moduleEditing, setModuleEditing] = useState(null); // null fechado, {} novo, módulo para renomear
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
@@ -385,10 +477,13 @@ export default function LessonsPage() {
   };
 
   const load = useCallback(async () => {
-    const [productsResult, lessonData] = await Promise.all([
+    const [productsResult, lessonData, moduleData] = await Promise.all([
       supabase.from("products").select("id,title,ebook_file_path,ebook_file_name").order("title", { ascending: true }),
       fetchLessonsAndLinks(),
+      fetchModules(),
     ]);
+    setModules(moduleData.modules);
+    setModulesAvailable(moduleData.available && Boolean(lessonData.modulesAvailable));
 
     if (productsResult.data) {
       setProducts(productsResult.data);
@@ -416,6 +511,8 @@ export default function LessonsPage() {
   }, [load]);
 
   const lessons = useMemo(() => lessonsForProduct(allLessons, links, productId), [allLessons, links, productId]);
+  const productModules = useMemo(() => modules.filter((item) => item.product_id === productId).sort(byOrder), [modules, productId]);
+  const groups = useMemo(() => groupByModule(lessons, modulesAvailable ? productModules : [], { keepEmpty: true }), [lessons, productModules, modulesAvailable]);
   const publishedCount = lessons.filter((lesson) => lesson.status === "published").length;
   const product = products.find((item) => item.id === productId);
   const titleOf = useCallback((id) => products.find((item) => item.id === id)?.title || "Curso removido", [products]);
@@ -514,7 +611,8 @@ export default function LessonsPage() {
 
   const saveLesson = async (row, file, attachFile, removeAttachment) => {
     const title = row.title.trim();
-    const mux = isMux(row);
+    const pdf = row.content_type === "pdf";
+    const mux = !pdf && isMux(row);
     const videoUrl = (row.video_url || "").trim();
     const original = row.id ? allLessons.find((item) => item.id === row.id) : null;
     const selected = sharing ? row.product_ids : [productId];
@@ -523,7 +621,11 @@ export default function LessonsPage() {
       setDialogError("Preencha o título da aula.");
       return;
     }
-    if (!mux && !videoUrl) {
+    if (pdf && !attachFile && (!original?.attachment_file_path || removeAttachment)) {
+      setDialogError("Escolha o arquivo PDF da aula.");
+      return;
+    }
+    if (!pdf && !mux && !videoUrl) {
       setDialogError("Cole o link do vídeo do YouTube.");
       return;
     }
@@ -547,6 +649,7 @@ export default function LessonsPage() {
       status: row.status,
       position: Number(row.position) || 0,
       video_provider: mux ? "mux" : "youtube",
+      content_type: pdf ? "pdf" : "video",
     };
     if (!row.id) payload.product_id = selected.includes(productId) ? productId : selected[0];
     const topics = (row.topics_text || "").split("\n").map((line) => line.trim()).filter(Boolean);
@@ -555,7 +658,14 @@ export default function LessonsPage() {
     let replacedAssetId = null;
 
     try {
-      if (mux) {
+      if (pdf) {
+        payload.video_url = null;
+        if (original && isMux(original) && original.content_type !== "pdf") {
+          // Trocou de vídeo Mux para PDF: limpa os campos do Mux e apaga o vídeo para não gerar cobrança.
+          replacedAssetId = original.mux_asset_id || null;
+          Object.assign(payload, { mux_upload_id: null, mux_asset_id: null, mux_playback_id: null, mux_status: null, duration_seconds: null });
+        }
+      } else if (mux) {
         payload.video_url = null;
         if (file) {
           setPhase("Preparando envio...");
@@ -601,7 +711,9 @@ export default function LessonsPage() {
             ? "O banco ainda não tem os temas das aulas. Execute supabase/26_desempenho_turma_e_aluno.sql no Supabase e salve de novo."
             : text.includes("mux_") || text.includes("video_source") || text.includes("provider_check") || text.includes("null value")
             ? "O banco ainda não está pronto para o Mux. Execute supabase/14_mux_video.sql no SQL Editor do Supabase e tente de novo."
-            : text.includes("attachment_file_path")
+            : text.includes("content_type") || text.includes("video_source_check")
+            ? "O banco ainda não tem aulas em PDF. Execute supabase/55_modulos_conclusao_e_aula_pdf.sql no SQL Editor do Supabase e tente de novo."
+          : text.includes("attachment_file_path")
             ? "O banco ainda não tem o material da aula. Execute supabase/41_material_da_aula.sql no SQL Editor do Supabase e tente de novo."
             : `Erro ao salvar: ${text}`
         );
@@ -622,6 +734,7 @@ export default function LessonsPage() {
             // precisa ir em TODAS as linhas do lote (ou em nenhuma): um upsert com algumas linhas tendo o
             // campo e outras não faz o PostgREST mandar null nas que não têm, e a coluna é not null.
             ...(holdAvailable ? { available_in_hold: id === productId ? Boolean(row.available_in_hold) : false } : {}),
+            ...(modulesAvailable ? { module_id: id === productId ? row.module_id || null : null } : {}),
           }));
         if (rows.length) {
           const { error } = await supabase.from("product_lesson_links").upsert(rows, { onConflict: "lesson_id,product_id" });
@@ -635,7 +748,9 @@ export default function LessonsPage() {
 
       await load();
       setEditing(null);
-      const tail = mux && file
+      const tail = pdf
+        ? saved.status === "published" ? "O aluno já pode ler o PDF." : "Ela continua como rascunho."
+        : mux && file
         ? "O vídeo está sendo processado no Mux."
         : saved.status === "published" ? "O aluno já pode vê-la." : "Ela continua como rascunho.";
       const where = sharing && selected.length > 1 ? ` Aparece em ${selected.length} cursos.` : "";
@@ -741,22 +856,26 @@ export default function LessonsPage() {
     notify("success", `${ids.length} ${ids.length === 1 ? "aula adicionada" : "aulas adicionadas"} em “${product?.title}”, no fim da lista.`);
   };
 
-  // Troca a ordem com a aula vizinha (renumera 1..n para evitar posições repetidas).
-  const move = async (index, direction) => {
+  // Troca a ordem com a aula vizinha do mesmo módulo e renumera 1..n o curso todo (na ordem em que o aluno vê).
+  const move = async (lesson, direction) => {
+    const group = groups.find((item) => item.lessons.some((entry) => entry.id === lesson.id));
+    if (!group) return;
+    const index = group.lessons.findIndex((entry) => entry.id === lesson.id);
     const target = index + direction;
-    if (target < 0 || target >= lessons.length) return;
-    const reordered = lessons.slice();
-    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
-    const updates = reordered
-      .map((lesson, i) => ({ lesson, position: i + 1 }))
-      .filter(({ lesson, position }) => lesson.position !== position);
+    if (target < 0 || target >= group.lessons.length) return;
+    const swapped = group.lessons.slice();
+    [swapped[index], swapped[target]] = [swapped[target], swapped[index]];
+    const flat = groups.flatMap((item) => (item === group ? swapped : item.lessons));
+    const updates = flat
+      .map((entry, i) => ({ lesson: entry, position: i + 1 }))
+      .filter(({ lesson: entry, position }) => entry.position !== position);
 
-    setBusyId(lessons[index].id);
+    setBusyId(lesson.id);
     const results = await Promise.all(
-      updates.map(({ lesson, position }) =>
+      updates.map(({ lesson: entry, position }) =>
         sharing
-          ? supabase.from("product_lesson_links").update({ position }).eq("lesson_id", lesson.id).eq("product_id", productId)
-          : supabase.from("product_lessons").update({ position }).eq("id", lesson.id)
+          ? supabase.from("product_lesson_links").update({ position }).eq("lesson_id", entry.id).eq("product_id", productId)
+          : supabase.from("product_lessons").update({ position }).eq("id", entry.id)
       )
     );
     const failed = results.find((result) => result.error);
@@ -764,11 +883,59 @@ export default function LessonsPage() {
     else {
       setLinks((current) =>
         current.map((link) => {
-          const hit = updates.find(({ lesson }) => lesson.id === link.lesson_id && link.product_id === productId);
+          const hit = updates.find(({ lesson: entry }) => entry.id === link.lesson_id && link.product_id === productId);
           return hit ? { ...link, position: hit.position } : link;
         })
       );
       notify("success", "Ordem atualizada.");
+    }
+    setBusyId(null);
+  };
+
+  // ---------------- módulos
+  const saveModule = async (title) => {
+    setSaving(true);
+    const editingModule = moduleEditing?.id ? moduleEditing : null;
+    const result = editingModule
+      ? await supabase.from("product_modules").update({ title }).eq("id", editingModule.id).select("*").single()
+      : await supabase
+          .from("product_modules")
+          .insert({ product_id: productId, title, position: productModules.reduce((max, item) => Math.max(max, Number(item.position) || 0), 0) + 1 })
+          .select("*")
+          .single();
+    setSaving(false);
+    if (result.error) return notify("error", `Não foi possível salvar o módulo: ${result.error.message}`);
+    setModules((current) => (editingModule ? current.map((item) => (item.id === result.data.id ? result.data : item)) : [...current, result.data]));
+    setModuleEditing(null);
+    notify("success", editingModule ? "Módulo renomeado." : `Módulo “${title}” criado. Escolha-o ao editar uma aula para colocá-la dentro dele.`);
+  };
+
+  const moveModule = async (item, direction) => {
+    const index = productModules.findIndex((entry) => entry.id === item.id);
+    const target = index + direction;
+    if (target < 0 || target >= productModules.length) return;
+    const reordered = productModules.slice();
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    const updates = reordered.map((entry, i) => ({ id: entry.id, position: i + 1 })).filter(({ id, position }) => productModules.find((entry) => entry.id === id).position !== position);
+    setBusyId(item.id);
+    const results = await Promise.all(updates.map(({ id, position }) => supabase.from("product_modules").update({ position }).eq("id", id)));
+    const failed = results.find((result) => result.error);
+    if (failed) notify("error", `Erro ao reordenar o módulo: ${failed.error.message}`);
+    else setModules((current) => current.map((entry) => updates.find(({ id }) => id === entry.id) ? { ...entry, position: updates.find(({ id }) => id === entry.id).position } : entry));
+    setBusyId(null);
+  };
+
+  const removeModule = async (item) => {
+    const inside = lessons.filter((lesson) => lesson.module_id === item.id).length;
+    const extra = inside ? `\n\nAs ${inside} aula(s) dele NÃO são apagadas: ficam sem módulo.` : "";
+    if (!window.confirm(`Excluir o módulo “${item.title}”?${extra}`)) return;
+    setBusyId(item.id);
+    const { error } = await supabase.from("product_modules").delete().eq("id", item.id);
+    if (error) notify("error", `Erro ao excluir o módulo: ${error.message}`);
+    else {
+      setModules((current) => current.filter((entry) => entry.id !== item.id));
+      setLinks((current) => current.map((link) => (link.module_id === item.id ? { ...link, module_id: null } : link)));
+      notify("success", `Módulo “${item.title}” excluído.`);
     }
     setBusyId(null);
   };
@@ -793,6 +960,9 @@ export default function LessonsPage() {
         <div className="adm-head-actions">
           {sharing && (
             <button type="button" className="admin-button adm-ghost" onClick={() => setReusing(true)} disabled={!productId}>Adicionar aula de outro curso</button>
+          )}
+          {modulesAvailable && (
+            <button type="button" className="admin-button" onClick={() => setModuleEditing({})} disabled={!productId}>+ Novo módulo</button>
           )}
           <button type="button" className="admin-button" onClick={() => setEbookOpen(true)} disabled={!productId}>+ E-book (PDF)</button>
           <button type="button" className="admin-button primary" onClick={openNew} disabled={!productId}>+ Nova aula</button>
@@ -841,9 +1011,9 @@ export default function LessonsPage() {
 
       {loading ? (
         <div className="admin-empty">Carregando...</div>
-      ) : lessons.length === 0 && product?.ebook_file_path ? (
+      ) : lessons.length === 0 && productModules.length === 0 && product?.ebook_file_path ? (
         <p className="adm-hint">Este produto entrega só o e-book acima. Se quiser, também pode cadastrar aulas com “+ Nova aula”.</p>
-      ) : lessons.length === 0 ? (
+      ) : lessons.length === 0 && productModules.length === 0 ? (
         <div className="admin-empty">
           Nenhuma aula cadastrada para {product ? `“${product.title}”` : "este produto"} ainda.
           <br />
@@ -851,10 +1021,43 @@ export default function LessonsPage() {
           <button type="button" className="admin-button" style={{ marginTop: 14, marginLeft: 8 }} onClick={() => setEbookOpen(true)}>Enviar um e-book (PDF)</button>
         </div>
       ) : (
-        <ol className="adm-lesson-list" aria-label={`Aulas de ${product?.title || "produto"}`}>
-          {lessons.map((lesson, index) => {
+        <div className="adm-modules">
+        {groups.map((group) => (
+        <div className="adm-module-group" key={group.module?.id || "sem-modulo"}>
+          {group.module ? (
+            <div className="adm-module-head">
+              <div>
+                <strong>{group.module.title}</strong>
+                <small>{group.lessons.length} aula{group.lessons.length === 1 ? "" : "s"}</small>
+              </div>
+              <div className="adm-module-actions">
+                <div className="adm-lesson-move">
+                  <button type="button" aria-label="Subir módulo" disabled={productModules[0]?.id === group.module.id || busyId === group.module.id} onClick={() => moveModule(group.module, -1)}>↑</button>
+                  <button type="button" aria-label="Descer módulo" disabled={productModules[productModules.length - 1]?.id === group.module.id || busyId === group.module.id} onClick={() => moveModule(group.module, 1)}>↓</button>
+                </div>
+                <RowActions
+                  label={`Ações do módulo ${group.module.title}`}
+                  primary={{ label: "Renomear", onClick: () => setModuleEditing(group.module) }}
+                  items={[{ label: "Excluir módulo", danger: true, disabled: busyId === group.module.id, onClick: () => removeModule(group.module) }]}
+                />
+              </div>
+            </div>
+          ) : (
+            modulesAvailable && productModules.length > 0 && (
+              <div className="adm-module-head is-loose">
+                <div>
+                  <strong>Aulas sem módulo</strong>
+                  <small>Aparecem no topo do menu do aluno. Escolha um módulo ao editar a aula.</small>
+                </div>
+              </div>
+            )
+          )}
+          {group.lessons.length === 0 && <p className="adm-hint adm-module-empty">Nenhuma aula neste módulo. Edite uma aula e escolha este módulo.</p>}
+          <ol className="adm-lesson-list" aria-label={group.module ? `Aulas do módulo ${group.module.title}` : `Aulas de ${product?.title || "produto"}`}>
+          {group.lessons.map((lesson, index) => {
             const id = youtubeId(lesson.video_url);
-            const mux = isMux(lesson);
+            const isPdf = lesson.content_type === "pdf";
+            const mux = !isPdf && isMux(lesson);
             const published = lesson.status === "published";
             const waiting = mux && ["uploading", "processing"].includes(lesson.mux_status);
             const courses = coursesOf(lesson.id);
@@ -864,13 +1067,15 @@ export default function LessonsPage() {
                 <div className="adm-lesson-order">
                   <span aria-label={`Ordem ${lesson.position}`}>{lesson.position}</span>
                   <div className="adm-lesson-move">
-                    <button type="button" aria-label="Subir aula" disabled={index === 0 || busyId === lesson.id} onClick={() => move(index, -1)}>↑</button>
-                    <button type="button" aria-label="Descer aula" disabled={index === lessons.length - 1 || busyId === lesson.id} onClick={() => move(index, 1)}>↓</button>
+                    <button type="button" aria-label="Subir aula" disabled={index === 0 || busyId === lesson.id} onClick={() => move(lesson, -1)}>↑</button>
+                    <button type="button" aria-label="Descer aula" disabled={index === group.lessons.length - 1 || busyId === lesson.id} onClick={() => move(lesson, 1)}>↓</button>
                   </div>
                 </div>
 
                 <div className={`adm-lesson-thumb ${mux ? "is-mux" : ""}`}>
-                  {mux ? (
+                  {isPdf ? (
+                    <span>PDF</span>
+                  ) : mux ? (
                     <span>{waiting ? "Processando…" : lesson.mux_status === "errored" ? "Erro" : "Mux"}</span>
                   ) : id ? (
                     <img src={`https://i.ytimg.com/vi/${id}/mqdefault.jpg`} alt="" loading="lazy" />
@@ -884,7 +1089,7 @@ export default function LessonsPage() {
                   {lesson.description && <p>{lesson.description}</p>}
                   <small>
                     {lesson.duration || "Sem duração"} ·{" "}
-                    {mux ? (
+                    {isPdf ? (lesson.attachment_file_name ? `PDF: ${lesson.attachment_file_name}` : "PDF sem arquivo") : mux ? (
                       <span className={`adm-provider-tag is-${lesson.mux_status || "none"}`}>{muxStatusLabels[lesson.mux_status] || "Mux"}</span>
                     ) : id ? "Vídeo do YouTube" : "Link fora do padrão do YouTube"}
                   </small>
@@ -923,7 +1128,10 @@ export default function LessonsPage() {
               </li>
             );
           })}
-        </ol>
+          </ol>
+        </div>
+        ))}
+        </div>
       )}
 
       {editing && (
@@ -931,6 +1139,8 @@ export default function LessonsPage() {
           key={editing.id || "new"}
           lesson={editing}
           holdAvailable={holdAvailable}
+          modulesAvailable={modulesAvailable}
+          productModules={productModules}
           products={products}
           sharing={sharing}
           currentProductId={productId}
@@ -954,6 +1164,7 @@ export default function LessonsPage() {
           }}
         />
       )}
+      {moduleEditing && <ModuleDialog key={moduleEditing.id || "novo"} module={moduleEditing.id ? moduleEditing : null} saving={saving} onSave={saveModule} onClose={() => setModuleEditing(null)} />}
       {reusing && <ReuseDialog product={product} candidates={candidates} saving={saving} onAdd={addExisting} onClose={() => setReusing(false)} />}
     </section>
   );

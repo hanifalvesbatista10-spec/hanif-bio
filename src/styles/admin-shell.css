@@ -2073,3 +2073,53 @@ html.adm-scroll-lock body {
   display: flex;
   gap: 8px;
 }
+
+/* Módulos do curso (agrupam as aulas no menu do aluno) */
+.adm-modules {
+  display: grid;
+  gap: 22px;
+}
+
+.adm-module-group {
+  display: grid;
+  gap: 10px;
+}
+
+.adm-module-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--adm-line);
+  border-left: 4px solid var(--brand-red, #d6152d);
+  border-radius: 12px;
+  background: #f3f6f9;
+}
+
+.adm-module-head.is-loose {
+  border-left-color: var(--adm-line);
+  background: #fafbfc;
+}
+
+.adm-module-head strong {
+  display: block;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.adm-module-head small {
+  color: var(--adm-muted);
+  font-size: 0.82rem;
+}
+
+.adm-module-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 12px;
+}
+
+.adm-module-empty {
+  margin: 0 4px;
+}

@@ -25,7 +25,9 @@ function staticIssues(lesson, siblings) {
   if (lesson.status !== "published") issues.push({ tone: "warn", text: "Rascunho — o aluno não vê" });
   if (!lesson.description?.trim()) issues.push({ tone: "warn", text: "Sem descrição" });
   if (!lesson.duration?.trim()) issues.push({ tone: "warn", text: "Sem duração" });
-  if (lesson.video_provider === "mux") {
+  if (lesson.content_type === "pdf") {
+    if (!lesson.attachment_file_path) issues.push({ tone: "bad", text: "Aula em PDF sem o arquivo enviado" });
+  } else if (lesson.video_provider === "mux") {
     if (lesson.mux_status === "errored") issues.push({ tone: "bad", text: "Mux não conseguiu processar o vídeo" });
     else if (lesson.mux_status !== "ready") issues.push({ tone: "warn", text: "Vídeo ainda processando no Mux" });
   } else if (!youtubeId(lesson.video_url) && lesson.video_provider === "youtube") {
@@ -92,7 +94,7 @@ export default function LessonAuditPage() {
 
   const checkVideos = useCallback(async () => {
     setChecking(true);
-    const queue = visibleLessons.filter((lesson) => lesson.video_provider !== "mux" && (lesson.video_provider === "youtube" || youtubeId(lesson.video_url)));
+    const queue = visibleLessons.filter((lesson) => lesson.content_type !== "pdf" && lesson.video_provider !== "mux" && (lesson.video_provider === "youtube" || youtubeId(lesson.video_url)));
     const results = {};
     let cursor = 0;
     const worker = async () => {
@@ -209,7 +211,9 @@ export default function LessonAuditPage() {
                           </td>
                           <td><span className={`status-badge ${lesson.status}`}>{lesson.status === "published" ? "Publicada" : "Rascunho"}</span></td>
                           <td>
-                            {label ? (
+                            {lesson.content_type === "pdf" ? (
+                              <small>{lesson.attachment_file_name ? `PDF: ${lesson.attachment_file_name}` : "PDF sem arquivo"}</small>
+                            ) : label ? (
                               <div className={`adm-check is-${label.tone}`}>
                                 <strong>{label.text}</strong>
                                 {isMux ? <small>{lesson.duration_seconds ? `${Math.round(lesson.duration_seconds / 60)} min · link assinado` : "link assinado"}</small> : video?.title && <small>{video.title}</small>}

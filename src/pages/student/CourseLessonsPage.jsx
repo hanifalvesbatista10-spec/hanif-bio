@@ -1,19 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
+import CoursePlaylist from "../../components/member/CoursePlaylist";
+import { PdfLesson, YouTubePlayer } from "../../components/member/LessonPlayers";
 import LessonComments from "../../components/member/LessonComments";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import MuxLessonPlayer from "../../components/member/MuxLessonPlayer";
+import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
-import { fetchProductLessons } from "../../services/lessons";
+import { fetchProductLessons, fetchProductModules, flattenGroups, groupByModule } from "../../services/lessons";
+import { fetchCompletedLessons, setLessonCompleted } from "../../services/progress";
 import { getR2DownloadUrl } from "../../services/r2";
 import { meetingWindow } from "../../services/meeting";
-import { toEmbedUrl } from "../../services/video";
 import "../../styles/member-area.css";
-
-// O selo "ao vivo" vale por 6 horas (SQL 32), o mesmo prazo que o painel usa.
-function isLiveFresh(lesson) {
-  return Boolean(lesson.is_live && lesson.live_started_at && Date.now() - new Date(lesson.live_started_at).getTime() < 6 * 60 * 60 * 1000);
-}
 
 // Botão de download que só pede o link (Cloudflare R2, expira em poucos minutos) na hora do clique —
 // nunca um link fixo que pudesse vazar. Usado tanto pro arquivo do produto (e-book) quanto pelo
@@ -89,6 +87,7 @@ function LiveMeetings({ productId }) {
 }
 
 export default function CourseLessonsPage() {
+  const { user } = useAuth();
   const { productId } = useParams();
   const [searchParams] = useSearchParams();
   const requestedLesson = searchParams.get("aula");
@@ -98,38 +97,91 @@ export default function CourseLessonsPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [hold, setHold] = useState(null); // { in_hold, release_at, total_lessons, visible_lessons } (SQL 30)
+  const [modules, setModules] = useState([]); // SQL 55
+  const [completed, setCompleted] = useState(() => new Set());
+  const [progressAvailable, setProgressAvailable] = useState(false);
+  const [progressError, setProgressError] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const completedRef = useRef(completed);
+  completedRef.current = completed;
 
   useEffect(() => {
     Promise.all([
       supabase.from("products").select("id,title,ebook_file_path,ebook_file_name").eq("id", productId).maybeSingle(),
       fetchProductLessons(productId),
       supabase.rpc("my_access_hold", { p_product_id: productId }),
-    ]).then(([productResult, lessonsResult, holdResult]) => {
+      fetchProductModules(productId),
+    ]).then(async ([productResult, lessonsResult, holdResult, moduleList]) => {
       if (productResult.data) setProduct(productResult.data);
       if (!holdResult.error && holdResult.data?.[0]?.in_hold) setHold(holdResult.data[0]);
+      setModules(moduleList);
       if (lessonsResult.error) {
         setMessage("Não foi possível carregar as aulas. Se você acabou de ganhar acesso, espere alguns minutos e recarregue a página.");
       } else {
         const data = (lessonsResult.data || []).filter((lesson) => lesson.status === "published");
         setLessons(data);
+        const progress = await fetchCompletedLessons(data.map((lesson) => lesson.id));
+        setCompleted(progress.ids);
+        setProgressAvailable(progress.available);
         if (data.length > 0) {
-          const wanted = data.find((lesson) => lesson.id === requestedLesson);
-          setActiveLessonId((wanted || data[0]).id);
+          // abre a aula pedida; senão, a primeira que o aluno ainda não concluiu (onde ele parou)
+          const inOrder = flattenGroups(groupByModule(data, moduleList));
+          const wanted = inOrder.find((lesson) => lesson.id === requestedLesson);
+          setActiveLessonId((wanted || inOrder.find((lesson) => !progress.ids.has(lesson.id)) || inOrder[0]).id);
         }
       }
       setLoading(false);
     });
   }, [productId, requestedLesson]);
 
-  const activeIndex = lessons.findIndex((lesson) => lesson.id === activeLessonId);
-  const activeLesson = lessons[activeIndex];
-  const previous = lessons[activeIndex - 1];
-  const following = lessons[activeIndex + 1];
+  const groups = useMemo(() => groupByModule(lessons, modules), [lessons, modules]);
+  const ordered = useMemo(() => flattenGroups(groups), [groups]);
+  const activeIndex = ordered.findIndex((lesson) => lesson.id === activeLessonId);
+  const activeLesson = ordered[activeIndex];
+  const previous = ordered[activeIndex - 1];
+  const following = ordered[activeIndex + 1];
+  const activeDone = activeLesson ? completed.has(activeLesson.id) : false;
 
   const pick = (lesson) => {
     setActiveLessonId(lesson.id);
+    setDrawerOpen(false);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Marca/desmarca já na tela e confirma no banco; se falhar, volta atrás e avisa.
+  const setDone = useCallback(
+    async (lesson, done, source = "manual") => {
+      if (!user?.id || !lesson) return;
+      setProgressError("");
+      setCompleted((current) => {
+        const next = new Set(current);
+        if (done) next.add(lesson.id);
+        else next.delete(lesson.id);
+        return next;
+      });
+      const error = await setLessonCompleted({ userId: user.id, lessonId: lesson.id, completed: done, source });
+      if (error) {
+        setCompleted((current) => {
+          const next = new Set(current);
+          if (done) next.delete(lesson.id);
+          else next.add(lesson.id);
+          return next;
+        });
+        setProgressError("Não foi possível salvar a conclusão desta aula. Tente de novo.");
+      }
+    },
+    [user?.id]
+  );
+
+  const toggleDone = (lesson) => setDone(lesson, !completedRef.current.has(lesson.id));
+
+  // fim do vídeo: marca sozinho (nunca desmarca, e não repete se já estava concluída)
+  const activeLessonRef = useRef(null);
+  activeLessonRef.current = activeLesson;
+  const handleEnded = useCallback(() => {
+    const lesson = activeLessonRef.current;
+    if (lesson && !completedRef.current.has(lesson.id)) setDone(lesson, true, "auto");
+  }, [setDone]);
 
   return (
     <div className="mb-page is-wide">
@@ -178,25 +230,30 @@ export default function CourseLessonsPage() {
           <div className="mb-player-col">
             {activeLesson && (
               <>
-                {activeLesson.video_provider === "mux" ? (
-                  <MuxLessonPlayer lesson={activeLesson} />
+                {activeLesson.content_type === "pdf" ? (
+                  <PdfLesson lesson={activeLesson} />
+                ) : activeLesson.video_provider === "mux" ? (
+                  <MuxLessonPlayer lesson={activeLesson} onEnded={handleEnded} />
                 ) : (
-                  <div className="member-video">
-                    <iframe
-                      src={toEmbedUrl(activeLesson.video_url)}
-                      title={activeLesson.title}
-                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                      allowFullScreen
-                    />
-                  </div>
+                  <YouTubePlayer lesson={activeLesson} onEnded={handleEnded} />
                 )}
 
                 <div className="mb-lesson-head">
                   <div>
-                    <small>Aula {activeIndex + 1} de {lessons.length}</small>
+                    <small>Aula {activeIndex + 1} de {ordered.length}</small>
                     <h2>{activeLesson.title}</h2>
                   </div>
                   <div className="mb-lesson-nav">
+                    {progressAvailable && (
+                      <button
+                        type="button"
+                        className={`mb-btn is-small mb-done-btn${activeDone ? " is-done" : " is-ghost"}`}
+                        aria-pressed={activeDone}
+                        onClick={() => toggleDone(activeLesson)}
+                      >
+                        {activeDone ? "Concluída ✓" : "Marcar como concluída"}
+                      </button>
+                    )}
                     <button type="button" className="mb-btn is-ghost is-small" onClick={() => pick(previous)} disabled={!previous}>
                       {icons.arrowLeft} Anterior
                     </button>
@@ -205,9 +262,14 @@ export default function CourseLessonsPage() {
                     </button>
                   </div>
                 </div>
+                {progressError && <div className="mb-alert is-error" role="alert">{progressError}</div>}
+
+                <button type="button" className="mb-btn is-ghost mb-playlist-open" onClick={() => setDrawerOpen(true)}>
+                  Aulas do curso{progressAvailable ? ` · ${completed.size} de ${ordered.length} concluídas` : ""}
+                </button>
 
                 {activeLesson.description && <p className="member-description">{activeLesson.description}</p>}
-                {activeLesson.attachment_file_path && (
+                {activeLesson.content_type !== "pdf" && activeLesson.attachment_file_path && (
                   <FileDownload
                     kind="lesson"
                     id={activeLesson.id}
@@ -220,39 +282,17 @@ export default function CourseLessonsPage() {
             )}
           </div>
 
-          <aside className="mb-playlist" aria-label="Aulas do curso">
-            <h3>Aulas <span>{lessons.length}</span></h3>
-            <ol>
-              {lessons.map((lesson, index) => (
-                <li key={lesson.id}>
-                  <button
-                    type="button"
-                    className={`mb-lesson${lesson.id === activeLessonId ? " is-active" : ""}`}
-                    aria-current={lesson.id === activeLessonId ? "true" : undefined}
-                    onClick={() => pick(lesson)}
-                  >
-                    <span className="mb-lesson-num">{lesson.id === activeLessonId ? icons.play : index + 1}</span>
-                    <span className="mb-lesson-text">
-                      <strong>{lesson.title}</strong>
-                      <span className="mb-lesson-meta">
-                        {isLiveFresh(lesson) && <span className="mb-lesson-live"><i /> AO VIVO</span>}
-                        {lesson.duration && <small>{lesson.duration}</small>}
-                      </span>
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-            {hold && hold.total_lessons > hold.visible_lessons && (
-              <div className="mb-lesson-locked">
-                <span className="mb-lesson-locked-icon">{icons.lock}</span>
-                <span>
-                  <strong>+{hold.total_lessons - hold.visible_lessons} aula(s) trancada(s)</strong>
-                  <small>Liberam em {new Date(hold.release_at).toLocaleDateString("pt-BR")}</small>
-                </span>
-              </div>
-            )}
-          </aside>
+          <CoursePlaylist
+            groups={groups}
+            activeId={activeLessonId}
+            completed={completed}
+            progressAvailable={progressAvailable}
+            hold={hold}
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            onPick={pick}
+            onToggle={toggleDone}
+          />
         </div>
       )}
     </div>
