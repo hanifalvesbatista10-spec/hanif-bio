@@ -1,14 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
-import { fetchAllRows } from "../../services/paging";
 
 // hold_released_at/access_hold_enabled (SQL 30, garantia de 7 dias) são opcionais: sem eles, a busca cai para as colunas básicas.
 const HOLD_COLUMNS = "id,access_status,granted_at,hold_released_at,user_id,product_id,product:products(title,access_hold_enabled)";
 const BASIC_COLUMNS = "id,access_status,granted_at,user_id,product_id,product:products(title)";
-const LIST_LIMIT = 100;
+const PAGE = 25;
 
-const norm = (value) => String(value ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 const dayLabel = (iso) => new Date(iso).toLocaleDateString("pt-BR");
 
 // A garantia de 7 dias (SQL 30) ainda vale para este acesso?
@@ -19,16 +17,21 @@ function holdActive(grant) {
 
 const holdEndsAt = (grant) => dayLabel(new Date(new Date(grant.granted_at).getTime() + 7 * 24 * 60 * 60 * 1000));
 
-// Lista de alunos com busca; ao clicar em um, aparecem os cursos dele, onde você adiciona, revoga ou encerra a garantia.
+// Lista de alunos com busca no banco (SQL 58): só chegam 25 por vez, então funciona com qualquer número de cadastros.
+// Ao clicar em um aluno, aparecem os cursos dele, onde você adiciona, revoga ou encerra a garantia.
 export default function AccessPage() {
   const [params, setParams] = useSearchParams();
   const selectedId = params.get("aluno") || "";
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState([]); // resultados da busca (course_count = cursos ativos)
+  const [total, setTotal] = useState(0);
+  const [selectedProfile, setSelectedProfile] = useState(null); // aluno aberto por link direto que não está nos resultados
   const [products, setProducts] = useState([]);
-  const [counts, setCounts] = useState(() => new Map()); // aluno -> número de cursos com acesso ativo
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all"); // all | with | without
+  const searchRef = useRef(0);
   const [grants, setGrants] = useState([]);
   const [grantsLoading, setGrantsLoading] = useState(false);
   const [holdAvailable, setHoldAvailable] = useState(false);
@@ -42,30 +45,67 @@ export default function AccessPage() {
     setMessage(text);
   };
 
-  const loadList = useCallback(async () => {
-    const [profilesResult, productsResult, grantsResult] = await Promise.all([
-      fetchAllRows(() => supabase.from("profiles").select("id,full_name,email,role").order("id")),
-      supabase.from("products").select("id,title").order("title", { ascending: true }),
-      fetchAllRows(() => supabase.from("user_products").select("user_id,access_status").eq("access_status", "active").order("user_id")),
-    ]);
-    if (profilesResult.error) notify("error", `Não foi possível carregar os alunos: ${profilesResult.error.message}`);
-    else {
-      setStudents(
-        (profilesResult.data || []).sort((a, b) => String(a.full_name || a.email).localeCompare(String(b.full_name || b.email), "pt-BR"))
-      );
-    }
-    if (productsResult.data) setProducts(productsResult.data);
-    if (!grantsResult.error) {
-      const next = new Map();
-      (grantsResult.data || []).forEach((row) => next.set(row.user_id, (next.get(row.user_id) || 0) + 1));
-      setCounts(next);
-    }
-    setLoading(false);
+  const loadProducts = useCallback(async () => {
+    const { data } = await supabase.from("products").select("id,title").order("title", { ascending: true });
+    if (data) setProducts(data);
   }, []);
 
   useEffect(() => {
-    loadList();
-  }, [loadList]);
+    loadProducts();
+  }, [loadProducts]);
+
+  // Digitou: espera um instante antes de pedir ao banco.
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const fetchStudents = useCallback(
+    async (offset) => {
+      const { data, error } = await supabase.rpc("admin_list_users", {
+        p_search: query,
+        p_has_course: filter === "all" ? "any" : filter,
+        p_sort: "name",
+        p_limit: PAGE,
+        p_offset: offset,
+      });
+      if (error) {
+        notify("error", /admin_list_users|function/.test(error.message || "") ? "O banco ainda não tem a busca de usuários. Execute supabase/58_busca_de_usuarios.sql no SQL Editor." : error.message);
+        return null;
+      }
+      return data || [];
+    },
+    [query, filter]
+  );
+
+  // A busca ou o filtro mudou: recomeça do primeiro resultado (ignora respostas de buscas antigas).
+  useEffect(() => {
+    const ticket = ++searchRef.current;
+    setLoading(true);
+    fetchStudents(0).then((list) => {
+      if (ticket !== searchRef.current || list === null) return;
+      setStudents(list);
+      setTotal(list.length ? Number(list[0].total_count) : 0);
+      setLoading(false);
+    });
+  }, [fetchStudents]);
+
+  const loadMore = async () => {
+    const ticket = searchRef.current;
+    setLoadingMore(true);
+    const list = await fetchStudents(students.length);
+    if (ticket === searchRef.current && list) setStudents((current) => [...current, ...list]);
+    setLoadingMore(false);
+  };
+
+  // Aluno aberto por link direto (ex.: da tela de Usuários) que não está entre os resultados da busca.
+  useEffect(() => {
+    if (!selectedId || students.some((student) => student.id === selectedId)) {
+      setSelectedProfile(null);
+      return;
+    }
+    supabase.from("profiles").select("id,full_name,email,role").eq("id", selectedId).maybeSingle().then(({ data }) => setSelectedProfile(data || null));
+  }, [selectedId, students]);
 
   const loadGrants = useCallback(async (studentId) => {
     if (!studentId) {
@@ -89,16 +129,7 @@ export default function AccessPage() {
     loadGrants(selectedId);
   }, [selectedId, loadGrants]);
 
-  const selected = students.find((student) => student.id === selectedId) || null;
-  const shown = useMemo(() => {
-    const term = norm(search).trim();
-    return students.filter((student) => {
-      const has = (counts.get(student.id) || 0) > 0;
-      if (filter === "with" && !has) return false;
-      if (filter === "without" && has) return false;
-      return !term || norm(student.full_name).includes(term) || norm(student.email).includes(term);
-    });
-  }, [students, counts, search, filter]);
+  const selected = students.find((student) => student.id === selectedId) || selectedProfile;
 
   const pick = (id) => {
     setMessage("");
@@ -108,12 +139,9 @@ export default function AccessPage() {
     setParams(next, { replace: true });
   };
 
+  // Depois de liberar/revogar, atualiza o "N cursos" da lista sem refazer a busca.
   const bump = (studentId, delta) =>
-    setCounts((current) => {
-      const next = new Map(current);
-      next.set(studentId, Math.max(0, (next.get(studentId) || 0) + delta));
-      return next;
-    });
+    setStudents((current) => current.map((student) => (student.id === studentId ? { ...student, course_count: Math.max(0, Number(student.course_count || 0) + delta) } : student)));
 
   const activeGrants = grants.filter((grant) => grant.access_status === "active");
   const availableProducts = products.filter((product) => !activeGrants.some((grant) => grant.product_id === product.id));
@@ -177,7 +205,7 @@ export default function AccessPage() {
 
       <div className={`adm-acc${selected ? " has-detail" : ""}`}>
         <div className="adm-acc-list">
-          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou e-mail…" aria-label="Buscar aluno" />
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome, e-mail ou telefone…" aria-label="Buscar aluno" />
           <select value={filter} onChange={(event) => setFilter(event.target.value)} aria-label="Filtrar alunos">
             <option value="all">Todos os cadastros</option>
             <option value="with">Com algum curso</option>
@@ -186,13 +214,13 @@ export default function AccessPage() {
 
           {loading ? (
             <div className="admin-empty">Carregando...</div>
-          ) : shown.length === 0 ? (
+          ) : students.length === 0 ? (
             <div className="admin-empty">Nenhum aluno encontrado.</div>
           ) : (
             <>
               <ul aria-label="Alunos">
-                {shown.slice(0, LIST_LIMIT).map((student) => {
-                  const total = counts.get(student.id) || 0;
+                {students.map((student) => {
+                  const courseTotal = Number(student.course_count || 0);
                   return (
                     <li key={student.id}>
                       <button type="button" className={student.id === selectedId ? "is-active" : ""} aria-current={student.id === selectedId ? "true" : undefined} onClick={() => pick(student.id)}>
@@ -200,13 +228,16 @@ export default function AccessPage() {
                           <strong>{student.full_name || "Sem nome"}</strong>
                           <small>{student.email}</small>
                         </span>
-                        <em className={total ? "is-on" : ""}>{total ? `${total} ${total === 1 ? "curso" : "cursos"}` : "sem curso"}</em>
+                        <em className={courseTotal ? "is-on" : ""}>{courseTotal ? `${courseTotal} ${courseTotal === 1 ? "curso" : "cursos"}` : "sem curso"}</em>
                       </button>
                     </li>
                   );
                 })}
               </ul>
-              {shown.length > LIST_LIMIT && <p className="adm-hint">Mostrando {LIST_LIMIT} de {shown.length}. Use a busca para achar o aluno.</p>}
+              <p className="adm-hint">Mostrando {students.length} de {total.toLocaleString("pt-BR")}.</p>
+              {students.length < total && (
+                <button type="button" className="admin-button" onClick={loadMore} disabled={loadingMore}>{loadingMore ? "Carregando..." : "Mostrar mais"}</button>
+              )}
             </>
           )}
         </div>
