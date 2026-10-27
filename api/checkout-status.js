@@ -15,6 +15,24 @@ async function loadOrder(id) {
   return rows?.[0] || null;
 }
 
+// [{ title, url }] na ordem do pedido (curso principal e depois os extras), só dos cursos que têm grupo.
+async function loadGroupLinks(order) {
+  const ids = [order.product_id, ...(order.bump_product_ids || [])].filter((value) => UUID.test(String(value || "")));
+  if (!ids.length) return [];
+  try {
+    const [links, products] = await Promise.all([
+      sb(`product_group_links?product_id=in.(${ids.join(",")})&select=product_id,whatsapp_group_url`),
+      sb(`products?id=in.(${ids.join(",")})&select=id,title`),
+    ]);
+    const urlById = Object.fromEntries((links || []).map((row) => [row.product_id, row.whatsapp_group_url]));
+    const titleById = Object.fromEntries((products || []).map((row) => [row.id, row.title]));
+    return ids.filter((id) => urlById[id]).map((id) => ({ title: titleById[id] || "", url: urlById[id] }));
+  } catch (error) {
+    console.error("group links (status) error:", error.status || "", error.message);
+    return [];
+  }
+}
+
 // POST { order }: marca a conversão do Google Ads como enviada. Só responde send=true uma vez por pedido
 // e só para pedido pago; o navegador dispara o evento apenas nesse caso (não duplica em recarregar/abas).
 async function claimConversion(req, res) {
@@ -52,8 +70,12 @@ export default checkoutHandler(["GET", "POST"], async (req, res) => {
     }
   }
 
+  // Links dos grupos de WhatsApp dos cursos do pedido. Só saem com o pedido pago (SQL 60); sem a tabela, segue sem eles.
+  const groupLinks = order.status === "paid" ? await loadGroupLinks(order) : [];
+
   res.status(200).setHeader("Cache-Control", "no-store").json({
     status: order.status,
+    groupLinks,
     paymentMethod: order.payment_method,
     amount: order.amount_cents,
     // ids dos produtos do pedido (principal + extras), usados no evento de compra do Pixel da Meta

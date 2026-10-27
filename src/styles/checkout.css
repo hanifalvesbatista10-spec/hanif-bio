@@ -474,6 +474,60 @@ body:has(.ck-page) {
   line-height: 1.6;
 }
 
+/* Grupo do WhatsApp na confirmação da compra */
+.ck-group {
+  margin: 22px 0 6px;
+  padding: 18px 18px 16px;
+  border: 1px solid #bfe3cd;
+  border-radius: var(--radius-md);
+  background: #f1faf4;
+  text-align: center;
+}
+
+.ck-group h2 {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: var(--brand-navy);
+}
+
+.ck-thanks .ck-group p {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+}
+
+.ck-group-list {
+  display: grid;
+  gap: 10px;
+}
+
+.ck-group-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  background: #0f7a3d;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.02rem;
+  text-decoration: none;
+}
+
+.ck-group-btn:hover {
+  background: #0c6733;
+}
+
+.ck-group small {
+  display: block;
+  margin-top: 12px;
+  color: var(--brand-text-soft);
+  font-size: 0.82rem;
+}
+
 .ck-badge {
   width: 64px;
   height: 64px;

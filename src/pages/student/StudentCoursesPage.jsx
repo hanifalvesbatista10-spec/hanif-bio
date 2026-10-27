@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import useInstallApp from "../../components/member/useInstallApp";
+import { WhatsappGlyph } from "../../components/member/GroupInvite";
+import { fetchMyGroupLinks } from "../../services/groupLinks";
 import { supabase } from "../../services/supabase";
 import { useLessonCounts, useMyLiveLessons, useMyLiveMeetings } from "../../services/productStats";
 
@@ -48,7 +50,7 @@ function LiveBanner({ lives, meetings }) {
   );
 }
 
-function CourseCard({ product, lessonCount }) {
+function CourseCard({ product, lessonCount, groupUrl }) {
   // produto com e-book e sem aulas publicadas (ex.: os e-books à venda): o aluno vem para baixar o arquivo
   const ebookOnly = Boolean(product.ebook_file_path) && !(lessonCount > 0);
   return (
@@ -64,6 +66,11 @@ function CourseCard({ product, lessonCount }) {
         <span className="mb-course-cta">
           {ebookOnly ? "Baixar e-book" : "Acessar aulas"} {icons.arrowRight}
         </span>
+        {groupUrl && (
+          <a className="mb-course-group" href={groupUrl} target="_blank" rel="noopener noreferrer">
+            <WhatsappGlyph size={16} /> Grupo do WhatsApp
+          </a>
+        )}
       </div>
     </article>
   );
@@ -91,6 +98,7 @@ export default function StudentCoursesPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
+  const [groupLinks, setGroupLinks] = useState({}); // productId -> link do grupo de WhatsApp (SQL 60)
   const app = useInstallApp();
   const [hideInstall, setHideInstall] = useState(() => {
     try {
@@ -121,6 +129,7 @@ export default function StudentCoursesPage() {
         else setProducts((data || []).map((row) => row.product).filter(Boolean));
         setLoading(false);
       });
+    fetchMyGroupLinks().then(setGroupLinks);
     supabase.from("site_settings").select("whatsapp_url").eq("id", 1).maybeSingle().then(({ data }) => setWhatsapp(data?.whatsapp_url || ""));
   }, [user]);
 
@@ -171,7 +180,7 @@ export default function StudentCoursesPage() {
         </div>
       ) : (
         <div className="mb-grid">
-          {products.map((product) => <CourseCard key={product.id} product={product} lessonCount={lessonCounts[product.id]} />)}
+          {products.map((product) => <CourseCard key={product.id} product={product} lessonCount={lessonCounts[product.id]} groupUrl={groupLinks[product.id]} />)}
         </div>
       )}
     </div>

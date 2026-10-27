@@ -42,8 +42,14 @@ const helpLine = (whatsappUrl) => {
 };
 
 // E-mail de "compra confirmada". hasAccount = já existe conta com o e-mail da compra (o acesso já está ligado).
-export function purchaseConfirmationEmail({ name, email, titles, amountCents, hasAccount, hold, base, whatsappUrl, orderId }) {
+export function purchaseConfirmationEmail({ name, email, titles, amountCents, hasAccount, hold, base, whatsappUrl, orderId, groups = [] }) {
   const hi = firstName(name);
+  // grupos de WhatsApp dos cursos comprados (SQL 60): [{ title, url }]
+  const groupBlock = groups.length
+    ? `<p style="margin:22px 0 6px"><strong>Grupo do WhatsApp</strong></p>
+       <p style="margin:0 0 4px">Entre no grupo para receber os avisos e combinar com a turma.</p>
+       ${groups.map((group) => button(group.url, groups.length > 1 && group.title ? `Entrar no grupo: ${group.title}` : "Entrar no grupo do WhatsApp")).join("")}`
+    : "";
   const list = titles.map((title) => `<li style="margin:2px 0">${escapeHtml(title)}</li>`).join("");
   const free = !(Number(amountCents) > 0);
 
@@ -70,6 +76,7 @@ export function purchaseConfirmationEmail({ name, email, titles, amountCents, ha
     <ul style="padding-left:20px;margin:4px 0 16px">${list}</ul>
     <p style="margin:18px 0 6px"><strong>Como acessar</strong></p>
     ${access}
+    ${groupBlock}
     ${guarantee}
     ${helpLine(whatsappUrl)}
     <p style="color:#7b8c9c;font-size:12px;margin-bottom:0">Pedido #${escapeHtml(shortId(orderId))}</p>
@@ -97,13 +104,17 @@ export function accessReminderEmail({ name, email, title, stage, base, whatsappU
 
 async function loadContext(order) {
   const ids = [order.product_id, ...(order.bump_product_ids || [])].filter(Boolean);
-  const [products, settings] = await Promise.all([
+  const [products, settings, links] = await Promise.all([
     ids.length ? sb(`products?id=in.(${ids.join(",")})&select=id,title,access_hold_enabled`).catch(() => []) : [],
     sb("site_settings?id=eq.1&select=whatsapp_url&limit=1").catch(() => []),
+    // sem a tabela (SQL 60 não executado) o e-mail sai igual, só sem o grupo
+    ids.length ? sb(`product_group_links?product_id=in.(${ids.join(",")})&select=product_id,whatsapp_group_url`).catch(() => []) : [],
   ]);
   const byId = Object.fromEntries((products || []).map((product) => [product.id, product]));
   const ordered = ids.map((id) => byId[id]).filter(Boolean);
-  return { products: ordered, whatsappUrl: settings?.[0]?.whatsapp_url || "" };
+  const urlById = Object.fromEntries((links || []).map((row) => [row.product_id, row.whatsapp_group_url]));
+  const groups = ordered.filter((product) => urlById[product.id]).map((product) => ({ title: product.title, url: urlById[product.id] }));
+  return { products: ordered, whatsappUrl: settings?.[0]?.whatsapp_url || "", groups };
 }
 
 // Confirmação de compra. Chamada quando o pedido vira "pago". Nunca lança.
@@ -125,7 +136,7 @@ export async function sendPurchaseConfirmation(orderId) {
   if (!claimed?.length) return { skipped: "already_sent" };
 
   try {
-    const { products, whatsappUrl } = await loadContext(order);
+    const { products, whatsappUrl, groups } = await loadContext(order);
     const { subject, html } = purchaseConfirmationEmail({
       name: order.buyer_name,
       email: order.buyer_email.trim(),
@@ -136,6 +147,7 @@ export async function sendPurchaseConfirmation(orderId) {
       base,
       whatsappUrl,
       orderId: order.id,
+      groups,
     });
     await sendEmail({ to: order.buyer_email.trim(), subject, html });
     return { sent: true };

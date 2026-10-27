@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { uploadFileToR2 } from "../../services/r2";
 import ProductLinks from "../../components/admin/ProductLinks";
+import { fetchGroupLink, isWhatsappGroupUrl, saveGroupLink } from "../../services/groupLinks";
 
 const emptyForm = {
   title: "",
@@ -28,6 +29,8 @@ const emptyForm = {
   bumps: [],
   ebook_file_path: "",
   ebook_file_name: "",
+  group_url: "", // link do grupo de WhatsApp dos alunos (tabela product_group_links, SQL 60)
+  has_group_links: true, // false = o SQL 60 ainda não foi executado
 };
 
 const asText = (value) => (value === null || value === undefined ? "" : String(value));
@@ -148,6 +151,9 @@ export default function ProductEditorPageV4() {
         setForm(normalized);
         setSaved(normalized);
         setPreview(normalized.cover_url);
+
+        const group = await fetchGroupLink(id);
+        setForm((current) => ({ ...current, group_url: group.url, has_group_links: group.available }));
 
         // a coluna "preço de" vem do SQL 45: sem ela, o editor segue funcionando e avisa se alguém tentar usá-la
         const probe = await supabase.from("product_bumps").select("list_price_cents").limit(1);
@@ -275,6 +281,10 @@ export default function ProductEditorPageV4() {
       }
       if (!internal && !whatsapp && !checkoutUrl) throw new Error("Informe o link de venda (Hotmart, Kiwify ou outro) ou escolha outro modo de venda.");
 
+      const groupUrl = asText(form.group_url).trim();
+      if (groupUrl && !isWhatsappGroupUrl(groupUrl)) throw new Error("O link do grupo precisa ser um convite do WhatsApp, no formato https://chat.whatsapp.com/...");
+      if (groupUrl && !form.has_group_links) throw new Error("O banco ainda não tem o link do grupo. Execute supabase/60_grupo_whatsapp_do_curso.sql no SQL Editor e tente novamente.");
+
       const slug = slugify(asText(form.slug) || title);
       if (!slug) throw new Error("Informe um identificador válido para o endereço.");
 
@@ -316,6 +326,12 @@ export default function ProductEditorPageV4() {
 
       const normalized = normalizeProduct(result.data);
       setSaved(normalized);
+
+      // o produto já está gravado; se o link do grupo falhar, avisa sem desfazer o resto
+      if (form.has_group_links && (groupUrl || editing)) {
+        const groupError = await saveGroupLink(result.data.id, groupUrl);
+        if (groupError) throw new Error(`O curso foi salvo, mas o link do grupo não: ${groupError.message}`);
+      }
 
       if (editing) {
         const validBumps = (form.bumps || [])
@@ -416,6 +432,15 @@ export default function ProductEditorPageV4() {
                 Remover arquivo atual
               </button>
             )}
+          </div>
+          <div className="pe4-field full">
+            <label>Link do grupo de WhatsApp dos alunos (opcional)</label>
+            <input type="url" value={asText(form.group_url)} onChange={(e) => update("group_url", e.target.value)} placeholder="https://chat.whatsapp.com/..." disabled={!form.has_group_links} />
+            <span className="pe4-help">
+              {form.has_group_links
+                ? "Aparece para quem comprou: na página de pagamento confirmado, no e-mail da compra e dentro do curso na área do aluno. Fica guardado em separado, então quem não comprou não consegue ver. Para tirar, deixe em branco."
+                : "O banco ainda não tem o link do grupo. Execute supabase/60_grupo_whatsapp_do_curso.sql no SQL Editor e recarregue esta página."}
+            </span>
           </div>
           <div className="pe4-field full">
             <label>Como este produto é vendido</label>

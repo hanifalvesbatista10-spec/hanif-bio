@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import CoursePlaylist from "../../components/member/CoursePlaylist";
+import GroupInvite from "../../components/member/GroupInvite";
 import { PdfLesson, YouTubePlayer } from "../../components/member/LessonPlayers";
 import LessonComments from "../../components/member/LessonComments";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
@@ -9,6 +10,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
 import { fetchProductLessons, fetchProductModules, flattenGroups, groupByModule, isLiveFresh } from "../../services/lessons";
 import { fetchMyMeetingPresence, markMeetingAttendance, presenceWindow } from "../../services/attendance";
+import { fetchMyGroupLinks } from "../../services/groupLinks";
 import { fetchCompletedLessons, setLessonCompleted } from "../../services/progress";
 import { getR2DownloadUrl } from "../../services/r2";
 import { meetingLive, meetingWindow } from "../../services/meeting";
@@ -143,8 +145,14 @@ export default function CourseLessonsPage() {
   const [progressAvailable, setProgressAvailable] = useState(false);
   const [progressError, setProgressError] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [groupUrl, setGroupUrl] = useState(""); // link do grupo de WhatsApp do curso (SQL 60)
   const completedRef = useRef(completed);
   completedRef.current = completed;
+
+  useEffect(() => {
+    setGroupUrl("");
+    fetchMyGroupLinks([productId]).then((links) => setGroupUrl(links[productId] || ""));
+  }, [productId]);
 
   useEffect(() => {
     Promise.all([
@@ -242,6 +250,8 @@ export default function CourseLessonsPage() {
           subtitle="O arquivo deste produto está liberado para download."
         />
       )}
+
+      <GroupInvite url={groupUrl} />
 
       <LiveMeetings productId={productId} />
 
