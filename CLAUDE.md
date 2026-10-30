@@ -32,7 +32,7 @@ src/services/                           acesso a dados e clientes das APIs (supa
 src/styles/                             tokens.css e CSS por área
 src/App.jsx                             todas as rotas (admin em /admin/*, aluno em /minha-area/*)
 api/                                    funções serverless; api/_lib/ = código compartilhado
-supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 60)
+supabase/NN_*.sql                       migrations numeradas, rodadas manualmente (última: 61)
 docs/                                   guias de operação (checkout, mux, afiliados, provas...)
 ```
 
@@ -49,7 +49,7 @@ docs/                                   guias de operação (checkout, mux, afil
 - **Aluno lê o próprio produto (SQL 59):** a policy pública de `products` só mostra produtos `active`; a `students read own products` deixa o aluno com acesso ativo ler o produto em qualquer status (ex.: `unlisted`). Sem ela, o curso some de "Meus cursos" e as aulas ficam invisíveis (a policy das aulas lê `products` por causa da garantia). Ao criar policies que dependem de `products`, lembrar que o aluno só enxerga o que essa regra permite.
 - **Grupo de WhatsApp do curso (SQL 60):** o link fica em `product_group_links` (um por curso), NUNCA em `products`, que é pública. Admin grava no editor do curso (`ProductEditorPageV4.jsx`, `services/groupLinks.js`); aluno só lê o dos cursos com acesso ativo (RLS). Sai em `api/checkout-status.js` (`groupLinks`, só com pedido pago), no e-mail de confirmação (`buyerEmails.js`) e na área do aluno (`GroupInvite.jsx`, card do curso). Sem a migration, tudo segue sem o grupo.
 - **Variáveis de ambiente:** mudança só vale após novo deploy (Redeploy). Nunca imprimir nem commitar valores.
-- **Parceiros (SQL 52):** uma pessoa de confiança com acesso SÓ a provas (pré e pós-testes), em `/parceiro`. Quem é parceiro é quem tem linha ativa em `public.partners` (não mexe em `profiles.role`). O isolamento é do banco: policies `partner ...` nas tabelas de provas, `can_manage_form()` nas funções `form_*` e gatilhos que forçam prova pública, sem produto, com limites, ritmo máximo e um envio por e-mail (SQL 53 reforça). Em `form_submissions` a API só grava `instructor_feedback`. As telas de provas do admin são reaproveitadas pelo gancho `useFormsArea()`. Ao mexer em `forms*`, `form_*` ou RLS, conferir que o parceiro continua sem ver nada além das provas dele.
+- **Parceiros (SQL 52):** uma pessoa de confiança com acesso SÓ a provas (pré e pós-testes), em `/parceiro`. Quem é parceiro é quem tem linha ativa em `public.partners` (não mexe em `profiles.role`). O isolamento é do banco: policies `partner ...` nas tabelas de provas, `can_manage_form()` nas funções `form_*` e gatilhos que forçam prova pública, sem produto, com limites, ritmo máximo e teto de respostas (SQL 53 reforça; o SQL 61 tirou a regra de um envio por e-mail: o mesmo e-mail pode responder a prova de novo, ex.: pré e pós pelo mesmo link). Em `form_submissions` a API só grava `instructor_feedback`. As telas de provas do admin são reaproveitadas pelo gancho `useFormsArea()`. Ao mexer em `forms*`, `form_*` ou RLS, conferir que o parceiro continua sem ver nada além das provas dele.
 - **Admin:** novas telas entram em `src/App.jsx` (rota) e `src/components/admin/adminNav.js` (menu). As telas de edição voltam para a lista depois de salvar.
 - **Design:** usar os tokens (`--brand-navy`, `--brand-red`, `--font-display`). Skill `impeccable` manda no visual; `PRODUCT.md` é o contexto de marca.
 
