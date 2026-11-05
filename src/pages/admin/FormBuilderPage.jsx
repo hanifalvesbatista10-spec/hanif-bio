@@ -38,6 +38,7 @@ const EMPTY_FORM = {
   audience: "students", product_id: "", max_attempts: "", time_limit_minutes: "", pass_score: "",
   release_mode: "manual", release_at: "", shuffle_questions: false, shuffle_options: false,
   require_name: true, require_email: false, show_score: false, show_key: true, key_after_last_attempt: false,
+  exam_mode: false, exam_max_exits: 3, one_per_email: false,
   starts_at: "", ends_at: "",
 };
 
@@ -159,6 +160,7 @@ export default function FormBuilderPage() {
         shuffle_questions: Boolean(row.shuffle_questions), shuffle_options: Boolean(row.shuffle_options),
         require_name: settings.require_name !== false, require_email: Boolean(settings.require_email), show_score: Boolean(settings.show_score),
         show_key: settings.show_key !== false, key_after_last_attempt: Boolean(settings.key_after_last_attempt),
+        exam_mode: Boolean(settings.exam_mode), exam_max_exits: Number(settings.exam_max_exits) || 3, one_per_email: Boolean(settings.one_per_email),
         starts_at: toLocalInput(row.starts_at), ends_at: toLocalInput(row.ends_at),
       });
       setBlocks((rows || []).map((item) => blockFromRows(item, keyById[item.id])));
@@ -268,18 +270,21 @@ export default function FormBuilderPage() {
         audience: partner ? "public" : form.audience,
         product_id: students && form.product_id ? form.product_id : null,
         max_attempts: students ? numberOrNull(form.max_attempts) : null,
-        time_limit_minutes: students ? numberOrNull(form.time_limit_minutes) : null,
+        time_limit_minutes: partner ? null : numberOrNull(form.time_limit_minutes),
         pass_score: students ? numberOrNull(form.pass_score) : null,
         release_mode: students ? form.release_mode : "immediate",
         release_at: students && form.release_mode === "date" && form.release_at ? new Date(form.release_at).toISOString() : null,
-        shuffle_questions: students && form.shuffle_questions,
-        shuffle_options: students && form.shuffle_options,
+        shuffle_questions: !partner && form.shuffle_questions,
+        shuffle_options: !partner && form.shuffle_options,
         settings: {
           require_name: Boolean(form.require_name),
-          require_email: Boolean(form.require_email),
+          require_email: Boolean(form.require_email) || (!students && !partner && Boolean(form.one_per_email)),
           show_score: Boolean(form.show_score),
           show_key: Boolean(form.show_key),
           key_after_last_attempt: Boolean(form.key_after_last_attempt),
+          // modo prova e "uma resposta por e-mail" (SQL 62); parceiro não usa nenhum dos dois
+          ...(partner ? {} : { exam_mode: Boolean(form.exam_mode), exam_max_exits: Math.min(10, Math.max(1, Math.round(Number(form.exam_max_exits) || 3))) }),
+          ...(!partner && !students ? { one_per_email: Boolean(form.one_per_email) } : {}),
         },
         starts_at: form.starts_at ? new Date(form.starts_at).toISOString() : null,
         ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
@@ -390,8 +395,8 @@ export default function FormBuilderPage() {
         <h3>Quem responde e como</h3>
         {partner ? (
           <p className="fa-help">
-            Seus alunos respondem pelo link, sem criar conta. Nome e e-mail são sempre pedidos (o e-mail identifica o aluno no pré e no pós-teste), cada
-            e-mail responde uma única vez e o aviso de uso dos dados aparece no topo da prova.
+            Seus alunos respondem pelo link, sem criar conta. Nome e e-mail são sempre pedidos (o e-mail identifica o aluno no pré e no pós-teste), o mesmo
+            e-mail pode responder de novo (por exemplo, o pós-teste) e o aviso de uso dos dados aparece no topo da prova.
           </p>
         ) : (
         <div className="fa-seg is-wide" role="radiogroup" aria-label="Quem pode responder">
@@ -423,15 +428,40 @@ export default function FormBuilderPage() {
           <div className="fa-grid">
             <div className="fa-field fa-wide fa-checks">
               {!partner && <label className="fa-check"><input type="checkbox" checked={form.require_name} onChange={(e) => update("require_name", e.target.checked)} /> Pedir o nome</label>}
-              {!partner && <label className="fa-check"><input type="checkbox" checked={form.require_email} onChange={(e) => update("require_email", e.target.checked)} /> Pedir o e-mail</label>}
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.require_email || form.one_per_email} disabled={form.one_per_email} onChange={(e) => update("require_email", e.target.checked)} /> Pedir o e-mail</label>}
               <label className="fa-check"><input type="checkbox" checked={form.show_score} onChange={(e) => update("show_score", e.target.checked)} /> Mostrar a nota ao terminar</label>
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.one_per_email} onChange={(e) => update("one_per_email", e.target.checked)} /> Cada e-mail responde uma única vez</label>}
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.shuffle_questions} onChange={(e) => update("shuffle_questions", e.target.checked)} /> Embaralhar a ordem das perguntas</label>}
+              {!partner && <label className="fa-check"><input type="checkbox" checked={form.shuffle_options} onChange={(e) => update("shuffle_options", e.target.checked)} /> Embaralhar as alternativas</label>}
             </div>
+            {!partner && <label className="fa-field"><span>Tempo de prova (minutos)</span><input className="fa-input" type="number" min="1" value={form.time_limit_minutes} onChange={(e) => update("time_limit_minutes", e.target.value)} placeholder="Em branco = sem limite" /></label>}
             <label className="fa-field"><span>Abre em (opcional)</span><input className="fa-input" type="datetime-local" value={form.starts_at} onChange={(e) => update("starts_at", e.target.value)} /></label>
             <label className="fa-field"><span>Encerra em (opcional)</span><input className="fa-input" type="datetime-local" value={form.ends_at} onChange={(e) => update("ends_at", e.target.value)} /></label>
-            {!partner && <p className="fa-note fa-wide">Tempo de prova, tentativas, nota mínima e liberação da nota só funcionam para alunos logados, porque precisamos saber quem é a pessoa.</p>}
+            {!partner && <p className="fa-note fa-wide">Tentativas, nota mínima e liberação da nota só funcionam para alunos logados, porque precisamos saber quem é a pessoa. Aqui, “cada e-mail responde uma única vez” confere o e-mail digitado, então só desestimula: qualquer pessoa pode digitar outro.</p>}
           </div>
         )}
       </div>
+
+      {!partner && (
+        <div className="fa-card">
+          <h3>Modo prova</h3>
+          <div className="fa-checks">
+            <label className="fa-check"><input type="checkbox" checked={form.exam_mode} onChange={(e) => update("exam_mode", e.target.checked)} /> Ligar o modo prova</label>
+          </div>
+          {form.exam_mode && (
+            <label className="fa-field" style={{ maxWidth: 320 }}>
+              <span>Saídas da tela até encerrar a prova</span>
+              <input className="fa-input" type="number" min="1" max="10" value={form.exam_max_exits} onChange={(e) => update("exam_max_exits", e.target.value)} />
+            </label>
+          )}
+          <p className="fa-help">
+            A pessoa vê as regras antes de começar. Cada vez que sai da tela (troca de aba ou de aplicativo, minimiza ou recarrega a página), a saída é registrada e a prova
+            fica coberta por um aviso. Na última saída permitida, a prova é encerrada e enviada com o que já foi respondido. O texto das perguntas não pode ser copiado.
+            Os números de saídas aparecem em Resultados. O navegador não permite impedir a saída de verdade, e ferramentas que leem a tela (como Circle to Search ou Google Lens)
+            nem sempre contam como saída: o modo prova desencoraja e deixa o registro, mas não é uma trava total.
+          </p>
+        </div>
+      )}
 
       {students && (
         <div className="fa-card">

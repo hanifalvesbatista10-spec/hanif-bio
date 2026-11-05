@@ -1,14 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDuration, isQuestion, seededShuffle, uploadAnswerFile } from "../../services/forms";
+import useExamGuard from "./useExamGuard";
 import "../../styles/forms-run.css";
 
 const emptyValue = (value) =>
   value === undefined || value === null || value === "" || (Array.isArray(value) && value.length === 0);
 
 // Responde uma prova, atividade ou pesquisa. Serve para o formulário público e para as provas dos alunos.
-export default function FormRunner({ form, blocks, mode = "public", userId, submission, onSubmit, sending, error }) {
+// Prova pública com tempo ou modo prova passa por uma tela de início (PublicFormPage): ela entrega startedAtMs (quando a pessoa
+// começou) e presetIdentity (nome e e-mail já informados lá). O tempo e o rascunho sobrevivem a recarregar a página.
+export default function FormRunner({ form, blocks, mode = "public", userId, submission, onSubmit, sending, error, startedAtMs = null, presetIdentity = null }) {
   const student = mode === "student";
-  const draftKey = student && submission?.id ? `fx-draft-${submission.id}` : null;
+  const exam = Boolean(form.settings?.exam_mode);
+  const guarded = !student && Boolean(startedAtMs); // prova pública que começou na tela de início
+  const draftKey = student && submission?.id ? `fx-draft-${submission.id}` : guarded ? `fx-draft-pub-${form.id}` : null;
+  const examKey = student ? submission?.id : guarded ? `pub-${form.id}` : null;
   const [answers, setAnswers] = useState(() => {
     if (!draftKey) return {};
     try {
@@ -17,15 +23,26 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
       return {};
     }
   });
-  const [identity, setIdentity] = useState({ name: "", email: "" });
+  const [identity, setIdentity] = useState(presetIdentity || { name: "", email: "" });
   const [trap, setTrap] = useState(""); // campo invisível: só robô preenche
   const [localError, setLocalError] = useState("");
   const [invalidId, setInvalidId] = useState("");
   const [uploading, setUploading] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const sentRef = useRef(false);
+  const finishRef = useRef(null);
   const answersRef = useRef(answers);
   answersRef.current = answers;
+
+  const guard = useExamGuard({
+    enabled: exam && Boolean(examKey),
+    storageKey: examKey,
+    maxExits: form.settings?.exam_max_exits,
+    onLimit: () => finishRef.current?.(true, true),
+  });
+  const guardRef = useRef(guard);
+  guardRef.current = guard;
+  const autoTriedRef = useRef(false);
 
   // guarda o rascunho no aparelho (a tentativa continua valendo se a página recarregar)
   useEffect(() => {
@@ -37,11 +54,27 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
     }
   }, [answers, draftKey]);
 
+  const shuffleSeed = useMemo(() => {
+    if (student) return submission?.id || "";
+    if (startedAtMs) return String(startedAtMs);
+    try {
+      const key = `fx-seed-${form.id}`;
+      let seed = window.sessionStorage.getItem(key);
+      if (!seed) {
+        seed = String(Math.random()).slice(2);
+        window.sessionStorage.setItem(key, seed);
+      }
+      return seed;
+    } catch {
+      return "fixa";
+    }
+  }, [student, submission?.id, startedAtMs, form.id]);
+
   const items = useMemo(() => {
     let list = blocks;
-    if (student && form.shuffle_questions) {
+    if (form.shuffle_questions) {
       const positions = list.map((block, index) => (isQuestion(block.type) ? index : -1)).filter((index) => index >= 0);
-      const shuffled = seededShuffle(positions.map((index) => list[index]), `${submission?.id}-q`);
+      const shuffled = seededShuffle(positions.map((index) => list[index]), `${shuffleSeed}-q`);
       list = list.map((block, index) => {
         const slot = positions.indexOf(index);
         return slot >= 0 ? shuffled[slot] : block;
@@ -50,14 +83,17 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
     let number = 0;
     return list.map((block) => {
       let options = block.options || [];
-      if (student && form.shuffle_options && (block.type === "choice" || block.type === "multi_choice")) {
-        options = seededShuffle(options, `${submission?.id}-${block.id}`);
+      if (form.shuffle_options && (block.type === "choice" || block.type === "multi_choice")) {
+        options = seededShuffle(options, `${shuffleSeed}-${block.id}`);
       }
       return { block, options, number: isQuestion(block.type) ? (number += 1) : null };
     });
-  }, [blocks, form.shuffle_questions, form.shuffle_options, student, submission?.id]);
+  }, [blocks, form.shuffle_questions, form.shuffle_options, shuffleSeed]);
 
-  const deadline = student && submission?.deadline_at ? new Date(submission.deadline_at).getTime() : null;
+  const limitMinutes = Number(form.time_limit_minutes) || 0;
+  const deadline = student
+    ? submission?.deadline_at ? new Date(submission.deadline_at).getTime() : null
+    : startedAtMs && limitMinutes > 0 ? startedAtMs + limitMinutes * 60000 : null;
   const remaining = deadline ? Math.max(0, Math.ceil((deadline - now) / 1000)) : null;
 
   const setAnswer = (id, value) => {
@@ -71,21 +107,25 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
   );
 
   const finish = useCallback(
-    async (auto = false) => {
+    async (auto = false, endedByExits = false) => {
       if (sentRef.current) return;
       sentRef.current = true;
-      const ok = await onSubmit(buildPayload(), { identity, auto });
+      const ok = await onSubmit(buildPayload(), { identity, auto, exam: exam ? guardRef.current.snapshot(endedByExits) : undefined });
       if (ok === false) sentRef.current = false;
-      else if (draftKey) {
-        try {
-          window.localStorage.removeItem(draftKey);
-        } catch {
-          /* ignora */
+      else {
+        if (exam) guardRef.current.finish();
+        if (draftKey) {
+          try {
+            window.localStorage.removeItem(draftKey);
+          } catch {
+            /* ignora */
+          }
         }
       }
     },
-    [buildPayload, draftKey, identity, onSubmit]
+    [buildPayload, draftKey, identity, onSubmit, exam]
   );
+  finishRef.current = finish;
 
   // cronômetro
   useEffect(() => {
@@ -94,13 +134,17 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
     return () => window.clearInterval(timer);
   }, [deadline]);
 
+  // acabou o tempo: envia uma vez só (se o envio falhar, a pessoa vê o erro; não fica tentando sem parar)
   useEffect(() => {
-    if (deadline && remaining === 0) finish(true);
+    if (deadline && remaining === 0 && !autoTriedRef.current) {
+      autoTriedRef.current = true;
+      finish(true);
+    }
   }, [deadline, remaining, finish]);
 
   // avisa antes de sair da página com respostas em andamento
   useEffect(() => {
-    if (!student) return undefined;
+    if (!student && !guarded) return undefined;
     const warn = (event) => {
       if (sentRef.current) return;
       event.preventDefault();
@@ -108,7 +152,7 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [student]);
+  }, [student, guarded]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -129,7 +173,12 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
       }
     }
     const blank = blocks.filter((block) => isQuestion(block.type) && emptyValue(answers[block.id])).length;
-    if (student && blank > 0 && !window.confirm(`Você deixou ${blank} ${blank === 1 ? "questão" : "questões"} em branco. Enviar mesmo assim?`)) return;
+    if (student && blank > 0) {
+      guard.suppress(60000); // a caixa de confirmação tira o foco da página; não é saída
+      const proceed = window.confirm(`Você deixou ${blank} ${blank === 1 ? "questão" : "questões"} em branco. Enviar mesmo assim?`);
+      guard.suppress(0);
+      if (!proceed) return;
+    }
     finish(false);
   };
 
@@ -204,7 +253,7 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
               </div>
             ) : (
               <label className="fx-file-pick">
-                <input type="file" onChange={(e) => onFile(block, e.target.files?.[0])} disabled={uploading === block.id} />
+                <input type="file" onClick={() => guard.suppress(120000)} onChange={(e) => { guard.suppress(0); onFile(block, e.target.files?.[0]); }} disabled={uploading === block.id} />
                 <span>{uploading === block.id ? "Enviando arquivo..." : "Escolher arquivo"}</span>
               </label>
             )}
@@ -219,8 +268,39 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
   const shownError = localError || error;
   const lowTime = remaining !== null && remaining <= 300;
 
+  // modo prova: sem copiar, recortar, arrastar nem menu de contexto no enunciado (nos campos de resposta continua normal)
+  const blockCopy = (event) => {
+    if (!exam || /^(INPUT|TEXTAREA)$/.test(event.target?.tagName || "")) return;
+    event.preventDefault();
+  };
+
   return (
-    <form className="fx" onSubmit={submit} noValidate>
+    <form
+      className={`fx${exam ? " fx-exam" : ""}`}
+      onSubmit={submit}
+      noValidate
+      onCopy={blockCopy}
+      onCut={blockCopy}
+      onContextMenu={blockCopy}
+      onDragStart={blockCopy}
+    >
+      {guard.overlay && (
+        <div className="fx-guard" role="alertdialog" aria-modal="true" aria-labelledby="fx-guard-title">
+          <div className="fx-guard-box">
+            <h2 id="fx-guard-title">{guard.overlay.reached ? "Prova encerrada" : "Você saiu da prova"}</h2>
+            {guard.overlay.reached ? (
+              <p>Você saiu da tela {guard.limit} vezes, e esse é o limite. As suas respostas estão sendo enviadas.</p>
+            ) : (
+              <>
+                <p>Essa saída foi registrada (<strong>{guard.exits} de {guard.limit}</strong>). O tempo continuou correndo.</p>
+                <p>Na saída número {guard.limit}, a prova é encerrada e enviada com o que já estiver respondido.</p>
+                <button type="button" className="fx-submit" onClick={guard.dismiss}>Voltar para a prova</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {remaining !== null && (
         <div className={`fx-timer${lowTime ? " is-low" : ""}`} role="timer" aria-live="off">
           <span>Tempo restante</span>
@@ -228,7 +308,7 @@ export default function FormRunner({ form, blocks, mode = "public", userId, subm
         </div>
       )}
 
-      {!student && (form.settings?.require_name || form.settings?.require_email) && (
+      {!student && !presetIdentity && (form.settings?.require_name || form.settings?.require_email) && (
         <section className="fx-card">
           <h2>Identificação</h2>
           <div className="fx-id">

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import FormRunner from "../../components/forms/FormRunner";
+import { enterExamFullscreen } from "../../components/forms/useExamGuard";
 import { memberIcons as icons } from "../../components/member/MemberIcons";
 import { useAuth } from "../../contexts/AuthContext";
 import { formatDateTime, formatScore, friendlyFormError, typeLabel } from "../../services/forms";
@@ -60,14 +61,17 @@ export default function StudentActivityPage() {
     }
     setBlocks(rows);
     setSubmission({ id: data.submission_id, deadline_at: data.deadline_at, attempt_number: data.attempt_number });
+    if (form.settings?.exam_mode) enterExamFullscreen(); // vem de um clique, então o navegador permite
     setStage("run");
     setBusy(false);
     window.scrollTo({ top: 0 });
   };
 
-  const send = async (answers) => {
+  const send = async (answers, { exam } = {}) => {
     setBusy(true);
     setError("");
+    // modo prova: grava as saídas da tela antes de enviar (se falhar, o envio da prova segue)
+    if (exam) await supabase.rpc("form_log_exam", { p_submission_id: submission.id, p_log: exam }).then(() => null, () => null);
     const { data, error: sendError } = await supabase.rpc("form_submit", {
       p_form_id: form.id,
       p_submission_id: submission.id,
@@ -147,6 +151,9 @@ export default function StudentActivityPage() {
     info.release_mode === "manual" ? "A nota e os comentários aparecem quando o instrutor liberar." : null,
     info.release_mode === "date" && info.release_at ? `A nota e os comentários aparecem em ${formatDateTime(info.release_at)}.` : null,
     info.ends_at ? `Disponível até ${formatDateTime(info.ends_at)}.` : null,
+    form.settings?.exam_mode
+      ? `Modo prova: fique nesta tela até terminar. Cada saída (trocar de aba ou de aplicativo, ou recarregar a página) é registrada, e na saída número ${Number(form.settings?.exam_max_exits) || 3} a prova é encerrada e enviada com o que já estiver respondido. Não é possível copiar o texto das perguntas.`
+      : null,
   ].filter(Boolean);
 
   const canGo = info.in_progress || info.can_start;

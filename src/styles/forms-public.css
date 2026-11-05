@@ -100,3 +100,13 @@
     padding: 24px 20px;
   }
 }
+
+/* Tela de início da prova (regras + identificação) */
+.pf-rules {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+  padding-left: 20px;
+  color: #53677b;
+  line-height: 1.55;
+}

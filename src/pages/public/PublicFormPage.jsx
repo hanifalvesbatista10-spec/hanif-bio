@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import FormRunner from "../../components/forms/FormRunner";
+import { enterExamFullscreen } from "../../components/forms/useExamGuard";
 import { formatScore, typeLabel } from "../../services/forms";
 import { supabase } from "../../services/supabase";
 import "../../styles/forms-public.css";
@@ -15,6 +16,11 @@ export default function PublicFormPage() {
   const [message, setMessage] = useState("");
   const [result, setResult] = useState(null);
   const [startedAt] = useState(() => new Date().toISOString());
+  const [run, setRun] = useState(null); // prova com tempo ou modo prova: { startedAtMs, identity } depois que a pessoa começa
+  const [intro, setIntro] = useState({ name: "", email: "" });
+  const [introError, setIntroError] = useState("");
+
+  const startKey = (formId) => `fx-pub-start-${formId}`;
 
   useEffect(() => {
     const load = async () => {
@@ -25,6 +31,15 @@ export default function PublicFormPage() {
         return;
       }
       setForm(row);
+      // prova que já foi começada neste aparelho: retoma de onde parou (o tempo não reinicia)
+      if (row.settings?.exam_mode || row.time_limit_minutes) {
+        try {
+          const saved = JSON.parse(window.localStorage.getItem(startKey(row.id)) || "null");
+          if (saved?.startedAtMs && saved?.identity) setRun(saved);
+        } catch {
+          /* sem armazenamento: começa do zero */
+        }
+      }
       if (row.audience !== "students") {
         const { data: list, error } = await supabase.from("form_blocks").select("*").eq("form_id", row.id).order("position");
         if (error) setMessage(error.message);
@@ -35,18 +50,42 @@ export default function PublicFormPage() {
     load();
   }, [slug]);
 
-  const send = async (answers, { identity }) => {
+  const begin = () => {
+    const settings = form.settings || {};
+    const name = intro.name.trim();
+    const email = intro.email.trim();
+    if (settings.require_name && !name) return setIntroError("Informe o seu nome.");
+    if ((settings.require_email || settings.one_per_email) && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setIntroError("Informe um e-mail válido.");
+    setIntroError("");
+    const started = { startedAtMs: Date.now(), identity: { name, email } };
+    try {
+      window.localStorage.setItem(startKey(form.id), JSON.stringify(started));
+    } catch {
+      /* sem armazenamento: a prova roda, mas não retoma se a página recarregar */
+    }
+    if (settings.exam_mode) enterExamFullscreen();
+    setRun(started);
+    window.scrollTo({ top: 0 });
+  };
+
+  const send = async (answers, { identity, exam }) => {
     setSending(true);
     setMessage("");
+    const startedIso = run?.startedAtMs ? new Date(run.startedAtMs).toISOString() : startedAt;
     const { data, error } = await supabase.rpc("submit_public_form", {
       p_form_id: form.id,
-      p_respondent: { name: identity.name.trim(), email: identity.email.trim(), started_at: startedAt },
+      p_respondent: { name: identity.name.trim(), email: identity.email.trim(), started_at: startedIso, ...(exam ? { exam } : {}) },
       p_answers: answers,
     });
     setSending(false);
     if (error) {
       setMessage(error.message || "Não foi possível enviar.");
       return false;
+    }
+    try {
+      window.localStorage.removeItem(startKey(form.id));
+    } catch {
+      /* ignora */
     }
     setResult(data);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -77,6 +116,47 @@ export default function PublicFormPage() {
     );
   }
 
+  const settings = form.settings || {};
+  const gated = Boolean(settings.exam_mode || form.time_limit_minutes);
+  const maxExits = Number(settings.exam_max_exits) || 3;
+
+  // prova com tempo ou modo prova: antes de abrir as perguntas, regras + identificação
+  if (gated && !run) {
+    const rules = [
+      form.time_limit_minutes ? `Você tem ${form.time_limit_minutes} minutos depois de começar. Ao acabar o tempo, o envio é automático.` : null,
+      settings.exam_mode ? `Fique nesta tela até terminar. Cada vez que você sair (trocar de aba ou de aplicativo, ou recarregar a página) é registrado, e na saída número ${maxExits} a prova é encerrada e enviada com o que já estiver respondido.` : null,
+      settings.exam_mode ? "Não é possível copiar o texto das perguntas." : null,
+      settings.one_per_email ? "Cada e-mail responde uma única vez." : null,
+    ].filter(Boolean);
+    return (
+      <main className="pf-page">
+        <div className="pf-shell">
+          <header className="pf-hero">
+            <span>{typeLabel(form.type)}</span>
+            <h1>{form.title}</h1>
+            {form.description && <p>{form.description}</p>}
+          </header>
+          <section className="fx">
+            <div className="fx-card">
+              <h2>Antes de começar</h2>
+              <ul className="pf-rules">{rules.map((rule) => <li key={rule}>{rule}</li>)}</ul>
+              <div className="fx-id">
+                {settings.require_name && (
+                  <label><span>Nome *</span><input className="fx-input" value={intro.name} onChange={(e) => setIntro((v) => ({ ...v, name: e.target.value }))} autoComplete="name" /></label>
+                )}
+                {(settings.require_email || settings.one_per_email) && (
+                  <label><span>E-mail *</span><input className="fx-input" type="email" value={intro.email} onChange={(e) => setIntro((v) => ({ ...v, email: e.target.value }))} autoComplete="email" /></label>
+                )}
+              </div>
+              {introError && <div className="fx-error" role="alert">{introError}</div>}
+              <button type="button" className="fx-submit" onClick={begin}>Começar a prova</button>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="pf-page">
       <div className="pf-shell">
@@ -85,7 +165,16 @@ export default function PublicFormPage() {
           <h1>{form.title}</h1>
           {form.description && <p>{form.description}</p>}
         </header>
-        <FormRunner form={form} blocks={blocks} mode="public" onSubmit={send} sending={sending} error={message} />
+        <FormRunner
+          form={form}
+          blocks={blocks}
+          mode="public"
+          onSubmit={send}
+          sending={sending}
+          error={message}
+          startedAtMs={gated ? run?.startedAtMs : null}
+          presetIdentity={gated ? run?.identity : null}
+        />
       </div>
     </main>
   );

@@ -40,6 +40,32 @@ const FILTERS = [
   ["released", "Liberados"],
 ];
 
+// Modo prova (SQL 62): saídas da tela registradas no envio. Sem exam_log = prova sem modo prova (ou enviada antes dele).
+const awayText = (seconds) => {
+  const total = Math.max(0, Number(seconds) || 0);
+  return total >= 60 ? `${Math.floor(total / 60)} min ${total % 60} s` : `${total} s`;
+};
+
+function examInfo(log) {
+  if (!log || typeof log !== "object") return null;
+  const exits = Number(log.exits) || 0;
+  const late = Number(log.late_seconds) || 0;
+  const parts = [];
+  let tone = "is-published";
+  let text = "Sem saídas";
+  if (exits > 0) {
+    tone = "is-review";
+    text = `Saiu ${exits} ${exits === 1 ? "vez" : "vezes"}`;
+    parts.push(`${awayText(log.away_seconds)} fora da tela`);
+  }
+  if (log.ended_by_exits) {
+    tone = "is-bad";
+    text = "Encerrada por saídas";
+  }
+  if (late > 0) parts.push(`enviada ${awayText(late)} depois do limite`);
+  return { tone, text, detail: parts.join(" · "), exits, away: Number(log.away_seconds) || 0, ended: Boolean(log.ended_by_exits), late };
+}
+
 export default function FormResultsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -167,12 +193,13 @@ export default function FormResultsPage() {
   };
 
   const exportCsv = () => {
-    const header = ["nome", "email", "tentativa", "enviado_em", "nota", "nota_maxima", "percentual", "situacao", "aprovado", ...questions.map((q, i) => `${i + 1}. ${q.title || q.id}`)];
+    const header = ["nome", "email", "tentativa", "enviado_em", "nota", "nota_maxima", "percentual", "situacao", "aprovado", "saidas_da_tela", "segundos_fora", "encerrada_por_saidas", "atraso_segundos", ...questions.map((q, i) => `${i + 1}. ${q.title || q.id}`)];
     const rows = submissions.map((s) => {
       const map = answersBySub[s.id] || {};
       return [
         s.respondent_name || "", s.respondent_email || "", s.attempt_number, s.submitted_at || "", s.score ?? "", s.max_score ?? "",
         percent(s.score, s.max_score) ?? "", submissionState(s, form).label, s.passed === null ? "" : s.passed ? "sim" : "não",
+        ...(() => { const e = examInfo(s.exam_log); return e ? [e.exits, e.away, e.ended ? "sim" : "não", e.late || ""] : ["", "", "", ""]; })(),
         ...questions.map((q) => answerText(map[q.id]?.answer)),
       ];
     });
@@ -297,6 +324,7 @@ export default function FormResultsPage() {
                       <td>
                         <span className={`fa-pill is-${state.tone}`}>{state.label}</span>
                         {s.passed !== null && s.passed !== undefined && <small><span className={`fa-pill ${s.passed ? "is-published" : "is-bad"}`}>{s.passed ? "Aprovado" : "Reprovado"}</span></small>}
+                        {examInfo(s.exam_log) && <small><span className={`fa-pill ${examInfo(s.exam_log).tone}`} title={examInfo(s.exam_log).detail || undefined}>{examInfo(s.exam_log).text}</span></small>}
                       </td>
                       <td className="is-end">
                         <RowActions
@@ -468,6 +496,12 @@ function SubmissionDetail({ form, blocks, keys, submission, answers, busy, messa
             <span className={`fa-pill is-${state.tone}`}>{state.label}</span>{" "}
             {submission.passed !== null && submission.passed !== undefined && <span className={`fa-pill ${submission.passed ? "is-published" : "is-bad"}`}>{submission.passed ? "Aprovado" : "Reprovado"}</span>}
           </p>
+          {examInfo(submission.exam_log) && (
+            <p>
+              <span className={`fa-pill ${examInfo(submission.exam_log).tone}`}>{examInfo(submission.exam_log).text}</span>{" "}
+              {examInfo(submission.exam_log).detail}
+            </p>
+          )}
         </div>
         <div className="fa-top-actions">
           {submission.pending_manual && <button type="button" className="fa-btn is-ghost" onClick={onNext}>Próxima para corrigir</button>}
