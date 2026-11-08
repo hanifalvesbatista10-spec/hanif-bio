@@ -333,6 +333,7 @@ export default function FormResultsPage() {
                           items={[
                             { label: "Liberar ao aluno", hidden: partner || s.status !== "graded" || Boolean(s.results_released_at), onClick: () => release([s.id]) },
                             { label: "Ocultar do aluno", hidden: partner || !s.results_released_at, onClick: () => hide([s.id]) },
+                            { label: "Copiar link do resultado", hidden: !canCopyResultLink(form, s, partner), onClick: () => copyResultLink(form, s, notify) },
                             { label: "Excluir resposta", danger: true, onClick: () => removeSubmission(s) },
                           ]}
                         />
@@ -433,6 +434,18 @@ function QuestionStats({ questions, keys, answers, total }) {
 }
 
 // ---------------------------------------------------------------------------
+// Link para a pessoa rever a própria prova pública (o código é o segredo; só existe depois do SQL 63)
+const canCopyResultLink = (form, submission, partner) => !partner && form?.audience === "public" && Boolean(submission?.result_token);
+async function copyResultLink(form, submission, notify) {
+  const url = `${window.location.origin}/f/${form.slug}/resultado/${submission.result_token}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    notify("success", "Link do resultado copiado. Quem tiver o link vê as respostas desta pessoa quando o resultado estiver liberado.");
+  } catch {
+    window.prompt("Copie o link do resultado:", url);
+  }
+}
+
 function SubmissionDetail({ form, blocks, keys, submission, answers, busy, message, messageType, onBack, onNext, onReload, onRelease, onHide, notify }) {
   const { partner } = useFormsArea();
   const [drafts, setDrafts] = useState({});
@@ -505,6 +518,7 @@ function SubmissionDetail({ form, blocks, keys, submission, answers, busy, messa
         </div>
         <div className="fa-top-actions">
           {submission.pending_manual && <button type="button" className="fa-btn is-ghost" onClick={onNext}>Próxima para corrigir</button>}
+          {canCopyResultLink(form, submission, partner) && <button type="button" className="fa-btn is-ghost" onClick={() => copyResultLink(form, submission, notify)}>Copiar link do resultado</button>}
           {partner ? null : submission.results_released_at ? (
             <button type="button" className="fa-btn is-ghost" disabled={busy} onClick={onHide}>Ocultar do aluno</button>
           ) : (

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import RowActions from "../../components/admin/RowActions";
 import { supabase } from "../../services/supabase";
-import { friendlyFormError, typeLabel } from "../../services/forms";
+import { fetchFormProducts, friendlyFormError, typeLabel } from "../../services/forms";
 import { useFormsArea } from "../../services/formsArea";
 import "../../styles/forms-admin.css";
 
@@ -23,6 +23,7 @@ const FILTERS = [
 export default function FormsPage() {
   const [rows, setRows] = useState([]);
   const [counts, setCounts] = useState({});
+  const [courseIds, setCourseIds] = useState({}); // formId -> cursos que podem fazer a prova (vazio = todos os alunos)
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("info");
   const [loading, setLoading] = useState(true);
@@ -39,7 +40,7 @@ export default function FormsPage() {
   const load = async () => {
     setLoading(true);
     // Parceiro: só as provas dele. (Provas públicas publicadas são legíveis por qualquer pessoa, então o filtro é necessário.)
-    let formsQuery = supabase.from("forms").select("id,title,slug,type,status,audience,created_at").order("created_at", { ascending: false });
+    let formsQuery = supabase.from("forms").select("id,title,slug,type,status,audience,product_id,created_at").order("created_at", { ascending: false });
     if (partner) formsQuery = formsQuery.eq("created_by", userId);
     const [{ data, error }, { data: subs }] = await Promise.all([
       formsQuery,
@@ -47,6 +48,7 @@ export default function FormsPage() {
     ]);
     if (error) notify("error", friendlyFormError(error));
     else setRows(data || []);
+    if (!partner) setCourseIds((await fetchFormProducts(data || [])).byForm);
     const map = {};
     (subs || []).forEach((sub) => {
       map[sub.form_id] ||= { total: 0, pending: 0 };
@@ -147,7 +149,12 @@ export default function FormsPage() {
                   <tr key={row.id}>
                     <td><strong>{row.title}</strong><small>/f/{row.slug}</small></td>
                     <td>{typeLabel(row.type)}</td>
-                    <td>{row.audience === "students" ? "Só alunos logados" : "Link público"}</td>
+                    <td>
+                      {row.audience === "students" ? "Só alunos logados" : "Link público"}
+                      {row.audience === "students" && !partner && (
+                        <small>{courseIds[row.id]?.length ? `${courseIds[row.id].length} ${courseIds[row.id].length === 1 ? "curso" : "cursos"}` : "Todos os alunos"}</small>
+                      )}
+                    </td>
                     <td><span className={`fa-pill ${status.tone}`}>{status.label}</span></td>
                     <td className="is-num">
                       {count.total}

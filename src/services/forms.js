@@ -146,6 +146,27 @@ export function friendlyFormError(error) {
   return text || "Algo deu errado. Tente de novo.";
 }
 
+// Cursos que podem fazer cada prova de alunos (SQL 64, tabela form_products). Sem nenhum curso = todos os alunos.
+// Junta o curso único antigo (forms.product_id). Sem a migration, `ready` fica false e vale só o curso antigo.
+// `forms` precisa trazer id e product_id. Devolve { ready, byForm } com byForm = { [formId]: [productId, ...] }.
+export async function fetchFormProducts(forms = []) {
+  const { data, error } = await supabase.from("form_products").select("form_id,product_id");
+  const byForm = {};
+  const add = (formId, productId) => {
+    byForm[formId] ||= [];
+    if (!byForm[formId].includes(productId)) byForm[formId].push(productId);
+  };
+  (data || []).forEach((row) => add(row.form_id, row.product_id));
+  forms.forEach((form) => form.product_id && add(form.id, form.product_id));
+  return { ready: !error, byForm };
+}
+
+// O aluno (com os cursos ativos em `owned`, um Set) pode fazer esta prova? Mesma regra do banco (form_student_allowed).
+export const formOpenForStudent = (formId, byForm, owned) => {
+  const ids = byForm[formId] || [];
+  return ids.length === 0 || ids.some((id) => owned.has(id));
+};
+
 // Texto para copiar e colar em qualquer IA para gerar as questões comentadas no formato de importação
 export const AI_PROMPT = `Crie questões de prova COMENTADAS para eu importar no meu site. Use EXATAMENTE este formato, sem mudar as palavras em maiúsculas:
 

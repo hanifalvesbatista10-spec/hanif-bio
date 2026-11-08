@@ -86,7 +86,7 @@ export default function ResultReview({ result }) {
 
       {!result.key_shown && (
         <p className="fx-hint" style={{ margin: "0 0 14px" }}>
-          O gabarito e os comentários aparecem quando você usar todas as tentativas desta atividade.
+          {result.key_note || "O gabarito e os comentários aparecem quando você usar todas as tentativas desta atividade."}
         </p>
       )}
 

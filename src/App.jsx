@@ -12,6 +12,7 @@ import ThankYouPage from "./pages/public/ThankYouPage";
 import EventPage from "./pages/public/EventPage";
 import CertificateVerifyPage from "./pages/public/CertificateVerifyPage";
 import PublicFormPage from "./pages/public/PublicFormPage";
+import PublicResultPage from "./pages/public/PublicResultPage";
 import FeedbackLinkPage from "./pages/public/FeedbackLinkPage";
 import AffiliateApplyPage from "./pages/public/AffiliateApplyPage";
 import AffiliatePortalPage from "./pages/public/AffiliatePortalPage";
@@ -114,6 +115,7 @@ export default function App() {
           <Route path="/produto/:slug" element={<PublicProductPage />} />
           <Route path="/obrigado/mentoria-aph" element={<ThankYouPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
+          <Route path="/f/:slug/resultado/:token" element={<PublicResultPage />} />
           <Route path="/depoimento/:token" element={<FeedbackLinkPage />} />
           <Route path="/seja-afiliado" element={<AffiliateApplyPage />} />
           <Route path="/painel-afiliado" element={<AffiliatePortalPage />} />

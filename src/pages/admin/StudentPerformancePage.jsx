@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
-import { formatDateTime, formatScore, typeLabel } from "../../services/forms";
+import { fetchFormProducts, formatDateTime, formatScore, formOpenForStudent, typeLabel } from "../../services/forms";
 import { fetchLessonsAndLinks } from "../../services/lessons";
 import { INACTIVE_DAYS, LEVEL_LABEL, WEAK_BELOW, computeStudentPerformance, lessonsForTopic, riskSignals, summaryText } from "../../services/performance";
 import "../../styles/forms-admin.css";
@@ -103,9 +103,10 @@ export default function StudentPerformancePage() {
           supabase.from("forms").select("id,title,type,slug,product_id,ends_at").eq("status", "published").eq("audience", "students"),
           supabase.from("user_products").select("product_id,access_status").eq("user_id", id),
         ]);
+        const { byForm } = await fetchFormProducts(forms || []);
         const owned = new Set((access || []).filter((row) => row.access_status === "active").map((row) => row.product_id));
         const done = new Set(formIds);
-        const open = (forms || []).filter((form) => !done.has(form.id) && (!form.product_id || owned.has(form.product_id)) && (!form.ends_at || new Date(form.ends_at) > new Date()));
+        const open = (forms || []).filter((form) => !done.has(form.id) && formOpenForStudent(form.id, byForm, owned) && (!form.ends_at || new Date(form.ends_at) > new Date()));
 
         const lessonData = await fetchLessonsAndLinks();
 

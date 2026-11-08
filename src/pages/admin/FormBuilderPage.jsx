@@ -8,6 +8,7 @@ import {
   FORM_TYPES,
   RELEASE_MODES,
   canHavePoints,
+  fetchFormProducts,
   hasOptions,
   isQuestion,
   slugify,
@@ -35,7 +36,7 @@ const numberOrNull = (value) => {
 
 const EMPTY_FORM = {
   title: "", slug: "", description: "", type: "exam", status: "draft",
-  audience: "students", product_id: "", max_attempts: "", time_limit_minutes: "", pass_score: "",
+  audience: "students", limit_products: false, product_ids: [], max_attempts: "", time_limit_minutes: "", pass_score: "",
   release_mode: "manual", release_at: "", shuffle_questions: false, shuffle_options: false,
   require_name: true, require_email: false, show_score: false, show_key: true, key_after_last_attempt: false,
   exam_mode: false, exam_max_exits: 3, one_per_email: false,
@@ -103,6 +104,7 @@ export default function FormBuilderPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [blocks, setBlocks] = useState([]);
   const [products, setProducts] = useState([]);
+  const [coursesReady, setCoursesReady] = useState(true); // false = o banco ainda não tem o SQL 64 (só um curso por prova)
   const [serverIds, setServerIds] = useState([]);
   const [submissionCount, setSubmissionCount] = useState(0);
   const [openIds, setOpenIds] = useState({});
@@ -123,6 +125,7 @@ export default function FormBuilderPage() {
   useEffect(() => {
     if (partner) return; // o parceiro não vê produtos nem temas das provas do administrador
     supabase.from("products").select("id,title").order("title").then(({ data }) => setProducts(data || []));
+    supabase.from("form_products").select("form_id").limit(1).then(({ error }) => setCoursesReady(!error)); // SQL 64 já rodou?
     // temas e subtemas já usados em outras provas (sugestões ao digitar, para manter a mesma grafia)
     supabase.from("form_blocks").select("topic,subtopic").not("topic", "is", null).limit(3000).then(({ data }) => {
       const uniq = (list) => [...new Set(list.map((item) => String(item || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
@@ -152,9 +155,12 @@ export default function FormBuilderPage() {
       const { data: keys } = ids.length ? await supabase.from("form_block_keys").select("*").in("block_id", ids) : { data: [] };
       const keyById = Object.fromEntries((keys || []).map((key) => [key.block_id, key]));
       const settings = row.settings || {};
+      const courses = partner ? { ready: true, byForm: {} } : await fetchFormProducts([row]);
+      const courseIds = courses.byForm[row.id] || [];
+      setCoursesReady(courses.ready);
       setForm({
         title: row.title || "", slug: row.slug || "", description: row.description || "", type: row.type || "exam", status: row.status || "draft",
-        audience: row.audience || "public", product_id: row.product_id || "",
+        audience: row.audience || "public", limit_products: courseIds.length > 0, product_ids: courseIds,
         max_attempts: row.max_attempts ?? "", time_limit_minutes: row.time_limit_minutes ?? "", pass_score: row.pass_score ?? "",
         release_mode: row.release_mode || "immediate", release_at: toLocalInput(row.release_at),
         shuffle_questions: Boolean(row.shuffle_questions), shuffle_options: Boolean(row.shuffle_options),
@@ -254,6 +260,10 @@ export default function FormBuilderPage() {
     }
     if (publish && questionCount === 0) return notify("error", "Adicione ao menos uma pergunta antes de publicar.");
     if (students && form.release_mode === "date" && !form.release_at) return notify("error", "Escolha a data em que a nota será liberada.");
+    // cursos que podem fazer a prova (vazio = todos os alunos)
+    const courseIds = students && form.limit_products ? form.product_ids : [];
+    if (students && form.limit_products && courseIds.length === 0) return notify("error", "Marque ao menos um curso, ou escolha “Todos os alunos” em Para quem.");
+    if (!coursesReady && courseIds.length > 1) return notify("error", "Para limitar a prova a mais de um curso, rode o arquivo supabase/64_provas_por_curso.sql no Supabase e salve de novo.");
 
     const currentIds = blocks.map((block) => block.id);
     const removed = serverIds.filter((blockId) => !currentIds.includes(blockId));
@@ -268,7 +278,8 @@ export default function FormBuilderPage() {
         type: form.type,
         status: publish ? "published" : form.status,
         audience: partner ? "public" : form.audience,
-        product_id: students && form.product_id ? form.product_id : null,
+        // com o SQL 64 os cursos ficam em form_products; a coluna antiga só segue valendo se o banco ainda não o tem
+        product_id: !coursesReady && courseIds.length === 1 ? courseIds[0] : null,
         max_attempts: students ? numberOrNull(form.max_attempts) : null,
         time_limit_minutes: partner ? null : numberOrNull(form.time_limit_minutes),
         pass_score: students ? numberOrNull(form.pass_score) : null,
@@ -298,6 +309,18 @@ export default function FormBuilderPage() {
         const { data, error } = await supabase.from("forms").insert(payload).select("id").single();
         if (error) throw error;
         formId = data.id;
+      }
+
+      // cursos da prova: primeiro grava os marcados, depois tira os desmarcados (se algo falhar no meio, a prova nunca fica aberta a mais gente)
+      if (!partner && coursesReady) {
+        if (courseIds.length) {
+          const { error } = await supabase.from("form_products").upsert(courseIds.map((productId) => ({ form_id: formId, product_id: productId })), { onConflict: "form_id,product_id" });
+          if (error) throw error;
+        }
+        let cleanup = supabase.from("form_products").delete().eq("form_id", formId);
+        if (courseIds.length) cleanup = cleanup.not("product_id", "in", `(${courseIds.join(",")})`);
+        const { error: cleanupError } = await cleanup;
+        if (cleanupError) throw cleanupError;
       }
 
       const usesSubtopic = blocks.some((block) => (block.subtopic || "").trim());
@@ -407,13 +430,40 @@ export default function FormBuilderPage() {
 
         {students ? (
           <div className="fa-grid">
-            <label className="fa-field">
+            <label className="fa-field fa-wide">
               <span>Para quem</span>
-              <select className="fa-input" value={form.product_id} onChange={(e) => update("product_id", e.target.value)}>
-                <option value="">Todos os alunos</option>
-                {products.map((product) => <option key={product.id} value={product.id}>Só quem tem acesso a: {product.title}</option>)}
+              <select className="fa-input" value={form.limit_products ? "some" : "all"} onChange={(e) => update("limit_products", e.target.value === "some")}>
+                <option value="all">Todos os alunos</option>
+                <option value="some">Só alunos de cursos que eu escolher</option>
               </select>
+              <small>
+                {form.limit_products
+                  ? "A prova só aparece em Atividades para quem tem acesso ativo a pelo menos um dos cursos marcados. Quem não é desses cursos não a vê e não consegue abrir pelo link."
+                  : "Qualquer aluno logado vê esta prova em Atividades. Escolha cursos se ela for para um nível específico."}
+              </small>
             </label>
+            {form.limit_products && (
+              <div className="fa-field fa-wide">
+                <div className="fa-courses" role="group" aria-label="Cursos que podem fazer esta prova">
+                  {products.map((product) => (
+                    <label key={product.id} className="fa-check">
+                      <input
+                        type="checkbox"
+                        checked={form.product_ids.includes(product.id)}
+                        onChange={(e) => update("product_ids", e.target.checked ? [...form.product_ids, product.id] : form.product_ids.filter((item) => item !== product.id))}
+                      />
+                      {product.title}
+                    </label>
+                  ))}
+                </div>
+                <small className={form.product_ids.length === 0 ? "fa-courses-warn" : undefined}>
+                  {form.product_ids.length === 0
+                    ? "Marque ao menos um curso."
+                    : `${form.product_ids.length} ${form.product_ids.length === 1 ? "curso marcado" : "cursos marcados"}.`}
+                  {!coursesReady && " O banco ainda não tem a atualização de cursos múltiplos (SQL 64): por enquanto só dá para marcar um."}
+                </small>
+              </div>
+            )}
             <label className="fa-field"><span>Tentativas permitidas</span><input className="fa-input" type="number" min="1" value={form.max_attempts} onChange={(e) => update("max_attempts", e.target.value)} placeholder="Em branco = ilimitadas" /></label>
             <label className="fa-field"><span>Tempo de prova (minutos)</span><input className="fa-input" type="number" min="1" value={form.time_limit_minutes} onChange={(e) => update("time_limit_minutes", e.target.value)} placeholder="Em branco = sem limite" /></label>
             <label className="fa-field"><span>Nota mínima para aprovação (%)</span><input className="fa-input" type="number" min="0" max="100" value={form.pass_score} onChange={(e) => update("pass_score", e.target.value)} placeholder="Em branco = sem aprovação" /></label>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useParams } from "react-router-dom";
 import FormRunner from "../../components/forms/FormRunner";
 import { enterExamFullscreen } from "../../components/forms/useExamGuard";
 import { formatScore, typeLabel } from "../../services/forms";
@@ -20,7 +20,22 @@ export default function PublicFormPage() {
   const [intro, setIntro] = useState({ name: "", email: "" });
   const [introError, setIntroError] = useState("");
 
+  const [savedToken, setSavedToken] = useState(null); // código do resultado da última resposta enviada neste aparelho
+  const [copied, setCopied] = useState(false);
+
   const startKey = (formId) => `fx-pub-start-${formId}`;
+  const resultKey = (formId) => `fx-pub-result-${formId}`;
+  const resultUrl = (token) => `${window.location.origin}/f/${form.slug}/resultado/${token}`;
+
+  const copyLink = async (token) => {
+    try {
+      await navigator.clipboard.writeText(resultUrl(token));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      window.prompt("Copie o link do seu resultado:", resultUrl(token));
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -31,6 +46,12 @@ export default function PublicFormPage() {
         return;
       }
       setForm(row);
+      try {
+        const last = JSON.parse(window.localStorage.getItem(resultKey(row.id)) || "null");
+        if (last?.token) setSavedToken(last.token);
+      } catch {
+        /* sem armazenamento: sem o aviso de "você já respondeu" */
+      }
       // prova que já foi começada neste aparelho: retoma de onde parou (o tempo não reinicia)
       if (row.settings?.exam_mode || row.time_limit_minutes) {
         try {
@@ -84,6 +105,7 @@ export default function PublicFormPage() {
     }
     try {
       window.localStorage.removeItem(startKey(form.id));
+      if (data?.result_token) window.localStorage.setItem(resultKey(form.id), JSON.stringify({ token: data.result_token, at: Date.now() }));
     } catch {
       /* ignora */
     }
@@ -110,6 +132,17 @@ export default function PublicFormPage() {
                 <small>pontuação</small>
               </div>
             )}
+            {result.result_token && (
+              <div className="pf-link">
+                <h2>Veja suas respostas depois</h2>
+                <p>Guarde este link. Com ele você volta aqui para ver seus acertos e erros{form.settings?.show_key === false ? "" : ", o gabarito e os comentários"} assim que o resultado for liberado.</p>
+                <input className="pf-link-input" readOnly value={resultUrl(result.result_token)} onFocus={(e) => e.target.select()} aria-label="Link do seu resultado" />
+                <div className="pf-link-actions">
+                  <button type="button" className="pf-link-copy" onClick={() => copyLink(result.result_token)}>{copied ? "Link copiado" : "Copiar link"}</button>
+                  <Link className="pf-link-open" to={`/f/${form.slug}/resultado/${result.result_token}`}>Ver meu resultado agora</Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -117,6 +150,12 @@ export default function PublicFormPage() {
   }
 
   const settings = form.settings || {};
+  const returnBanner = savedToken ? (
+    <div className="pf-return" role="note">
+      <span>Você já enviou esta prova neste aparelho.</span>
+      <Link to={`/f/${form.slug}/resultado/${savedToken}`}>Ver meu resultado</Link>
+    </div>
+  ) : null;
   const gated = Boolean(settings.exam_mode || form.time_limit_minutes);
   const maxExits = Number(settings.exam_max_exits) || 3;
 
@@ -136,6 +175,7 @@ export default function PublicFormPage() {
             <h1>{form.title}</h1>
             {form.description && <p>{form.description}</p>}
           </header>
+          {returnBanner}
           <section className="fx">
             <div className="fx-card">
               <h2>Antes de começar</h2>
@@ -165,6 +205,7 @@ export default function PublicFormPage() {
           <h1>{form.title}</h1>
           {form.description && <p>{form.description}</p>}
         </header>
+        {returnBanner}
         <FormRunner
           form={form}
           blocks={blocks}
