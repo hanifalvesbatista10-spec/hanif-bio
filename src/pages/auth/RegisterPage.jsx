@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { friendlyAuthError, normalizeEmail, passwordProblem } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import PasswordField from "../../components/auth/PasswordField";
 import "../../styles/auth-extra.css";
 
@@ -31,10 +32,15 @@ export default function RegisterPage() {
     if (!accepted) return setMessage("Marque a caixa de concordância para criar a conta.");
 
     setSubmitting(true);
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setSubmitting(false);
+      return setMessage(captcha.message);
+    }
     const { data, error } = await supabase.auth.signUp({
       email,
       password: form.password,
-      options: { data: { full_name: fullName }, emailRedirectTo: redirectTo },
+      options: { data: { full_name: fullName }, emailRedirectTo: redirectTo, captchaToken: captcha.token },
     });
     setSubmitting(false);
 
@@ -59,7 +65,9 @@ export default function RegisterPage() {
 
   const resend = async () => {
     setMessage("");
-    const { error } = await supabase.auth.resend({ type: "signup", email: sentTo, options: { emailRedirectTo: redirectTo } });
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) return setMessage(captcha.message);
+    const { error } = await supabase.auth.resend({ type: "signup", email: sentTo, options: { emailRedirectTo: redirectTo, captchaToken: captcha.token } });
     if (error) return setMessage(friendlyAuthError(error));
     setResent(true);
   };

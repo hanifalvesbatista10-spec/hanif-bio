@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { friendlyAuthError } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import { buildCsv } from "../../services/finance";
 import RowActions from "../../components/admin/RowActions";
 
@@ -151,7 +152,12 @@ export default function UsersPage() {
   // Ajuda ao aluno que "não consegue entrar": manda o link para ele criar uma nova senha.
   const sendReset = async (row) => {
     setBusyId(row.id);
-    const { error } = await supabase.auth.resetPasswordForEmail(row.email, { redirectTo: `${window.location.origin}/atualizar-senha` });
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setBusyId("");
+      return captcha.message ? notify("error", captcha.message) : undefined;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(row.email, { redirectTo: `${window.location.origin}/atualizar-senha`, captchaToken: captcha.token });
     setBusyId("");
     if (error) notify("error", friendlyAuthError(error));
     else notify("success", `Link para criar nova senha enviado para ${row.email}. Peça para conferir também o spam.`);
@@ -159,7 +165,12 @@ export default function UsersPage() {
 
   const resendConfirmation = async (row) => {
     setBusyId(row.id);
-    const { error } = await supabase.auth.resend({ type: "signup", email: row.email, options: { emailRedirectTo: `${window.location.origin}/login?confirmado=1` } });
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setBusyId("");
+      return captcha.message ? notify("error", captcha.message) : undefined;
+    }
+    const { error } = await supabase.auth.resend({ type: "signup", email: row.email, options: { emailRedirectTo: `${window.location.origin}/login?confirmado=1`, captchaToken: captcha.token } });
     setBusyId("");
     if (error) notify("error", friendlyAuthError(error));
     else notify("success", `E-mail de confirmação reenviado para ${row.email}.`);

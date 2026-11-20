@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { friendlyAuthError, normalizeEmail } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import "../../styles/auth-extra.css";
 
 const RESEND_SECONDS = 60;
@@ -27,8 +28,15 @@ export default function RecoverPasswordPage() {
     setError("");
     setMessage("");
     const clean = normalizeEmail(email);
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setSubmitting(false);
+      if (captcha.message) setError(captcha.message);
+      return;
+    }
     const { error: requestError } = await supabase.auth.resetPasswordForEmail(clean, {
       redirectTo: `${window.location.origin}/atualizar-senha`,
+      captchaToken: captcha.token,
     });
     setSubmitting(false);
     if (requestError) {

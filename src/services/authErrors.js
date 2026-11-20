@@ -16,6 +16,7 @@ export function friendlyAuthError(error) {
   if (code === "over_email_send_rate_limit" || raw.includes("email rate limit") || raw.includes("security purposes")) {
     return "Enviamos e-mails demais em pouco tempo. Aguarde alguns minutos e tente de novo.";
   }
+  if (code === "captcha_failed" || raw.includes("captcha")) return "A verificação de segurança falhou ou expirou. Tente de novo.";
   if (status === 429 || raw.includes("too many") || raw.includes("rate limit")) return "Muitas tentativas. Aguarde alguns minutos e tente de novo.";
   if (raw.includes("user already registered") || code === "user_already_exists" || code === "email_exists") {
     return "Já existe uma conta com este e-mail. Entre com a sua senha ou use “Esqueci minha senha”.";

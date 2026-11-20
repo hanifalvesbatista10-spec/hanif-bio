@@ -3,6 +3,7 @@ import { Link, Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { friendlyAuthError } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import "../../styles/auth-extra.css";
 
 export default function LoginPage() {
@@ -22,9 +23,17 @@ export default function LoginPage() {
     setSubmitting(true);
     setMessage("");
 
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setSubmitting(false);
+      setMessage(captcha.message);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
+      options: { captchaToken: captcha.token },
     });
 
     if (error) {

@@ -3,6 +3,7 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from "react
 import { supabase } from "../../services/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { friendlyAuthError, normalizeEmail } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import PasswordField from "../../components/auth/PasswordField";
 import "../../styles/auth-extra.css";
 
@@ -52,7 +53,18 @@ export default function StudentLoginPage() {
     setNeedsConfirmation(false);
     setResent(false);
 
-    const { data: signedIn, error } = await supabase.auth.signInWithPassword({ email: normalizeEmail(email), password });
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setSubmitting(false);
+      setMessage(captcha.message);
+      return;
+    }
+
+    const { data: signedIn, error } = await supabase.auth.signInWithPassword({
+      email: normalizeEmail(email),
+      password,
+      options: { captchaToken: captcha.token },
+    });
 
     if (error) {
       setSubmitting(false);
@@ -77,10 +89,12 @@ export default function StudentLoginPage() {
 
   const resend = async () => {
     setMessage("");
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) return setMessage(captcha.message);
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: normalizeEmail(email),
-      options: { emailRedirectTo: `${window.location.origin}/login?confirmado=1` },
+      options: { emailRedirectTo: `${window.location.origin}/login?confirmado=1`, captchaToken: captcha.token },
     });
     if (error) return setMessage(friendlyAuthError(error));
     setResent(true);

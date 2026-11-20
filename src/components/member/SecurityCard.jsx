@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../services/supabase";
 import { friendlyAuthError, passwordProblem } from "../../services/authErrors";
+import { getCaptchaToken } from "../../services/captcha";
 import PasswordField from "../auth/PasswordField";
 
 // Aba "Segurança": e-mail de acesso, "Alterar senha" (pede a atual) e "Sair de todos os aparelhos".
@@ -55,7 +56,12 @@ export default function SecurityCard() {
 
     setSaving(true);
     // confere a senha atual antes de trocar (protege se alguém usar o computador aberto)
-    const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: current });
+    const captcha = await getCaptchaToken();
+    if (!captcha.ok) {
+      setSaving(false);
+      return captcha.message ? notify("error", captcha.message) : undefined;
+    }
+    const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: current, options: { captchaToken: captcha.token } });
     if (checkError) {
       setSaving(false);
       return notify("error", /invalid/i.test(checkError.message) ? "A senha atual está incorreta." : friendlyAuthError(checkError));
