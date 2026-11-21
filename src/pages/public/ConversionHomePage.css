@@ -1073,3 +1073,24 @@ body:has(.site-page.is-home) {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
 }
+
+/* Âncora do catálogo: o cabeçalho é fixo, então o topo da seção não pode ficar escondido atrás dele. */
+.site-page.is-home #produtos {
+  scroll-margin-top: var(--header-h);
+}
+
+/* Tablet em pé (651 a 900 px): ainda não é o menu do celular, mas o cabeçalho não cabe inteiro. Compacta os links e deixa o
+   botão de treinamentos só no corpo da página (ele se repete lá). */
+@media (min-width: 651px) and (max-width: 900px) {
+  .site-nav {
+    gap: 14px;
+  }
+
+  .site-nav a:not(.site-nav-cta) {
+    font-size: 0.84rem;
+  }
+
+  .site-nav .site-nav-cta {
+    display: none;
+  }
+}

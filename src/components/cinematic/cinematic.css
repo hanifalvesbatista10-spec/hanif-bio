@@ -1,0 +1,482 @@
+/* Abertura cinematográfica da home. Carregado só junto com a landing (importado pelo componente).
+   As variáveis --p, --push, --open-o, --prep-o, --pull, --veil e --t1o..--t4y vêm de useScrollScene.js. */
+
+/* ---------- Pista e cena fixa ---------- */
+.cx-track {
+  position: relative;
+  /* altura de rolagem da narrativa: cena + ~2,4 telas de progresso */
+  height: 340vh;
+  height: 340svh;
+  background: var(--background, #050d17);
+}
+
+.cx-stage {
+  --p: 0;
+  --push: 0;
+  --open-o: 1;
+  --prep-o: 1;
+  --pull: 0;
+  --veil: 0;
+  --t1o: 1;
+  --t1y: 0;
+  --t2o: 0;
+  --t2y: 1;
+  --t3o: 0;
+  --t3y: 1;
+  --t4o: 0;
+  --t4y: 1;
+  /* o cabeçalho do site é fixo e ocupa espaço: a cena fica logo abaixo dele e preenche o resto da tela */
+  position: sticky;
+  top: var(--header-h, 72px);
+  height: calc(100vh - var(--header-h, 72px));
+  height: calc(100svh - var(--header-h, 72px));
+  overflow: hidden;
+  isolation: isolate;
+  background: linear-gradient(135deg, #071426, #050d17 60%, #0a1c31);
+}
+
+/* ---------- Camadas de imagem (só transform e opacity se movem) ---------- */
+.cx-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.cx-layer picture,
+.cx-layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.cx-layer img {
+  object-fit: cover;
+  user-select: none;
+}
+
+.cx-layer-training {
+  z-index: 1;
+  /* começa em close no manequim e na maca e recua até mostrar o instrutor */
+  transform-origin: 0% 66%;
+  transform: scale(calc(1.9 - var(--pull) * 0.9));
+}
+
+.cx-layer-prep {
+  z-index: 2;
+  opacity: var(--prep-o);
+  transform-origin: 50% 55%;
+  transform: scale(calc(1.02 + var(--p) * 0.12));
+}
+
+.cx-layer-open {
+  z-index: 3;
+  opacity: var(--open-o);
+  /* aproximação em direção aos equipamentos do ambiente (monitor e maca), tirando o instrutor do quadro */
+  transform-origin: 26% 62%;
+  transform: translate3d(calc(var(--push) * -7%), 0, 0) scale(calc(1 + var(--push) * 0.9));
+}
+
+.cx-layer-open img {
+  object-position: 60% 40%;
+}
+
+/* Leitura do texto sobre a imagem: faixa escura à esquerda (e no topo, atrás do cabeçalho) */
+.cx-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(5, 13, 23, 0.72) 0%, rgba(5, 13, 23, 0) 20%),
+    linear-gradient(90deg, rgba(5, 13, 23, 0.94) 0%, rgba(5, 13, 23, 0.8) 30%, rgba(5, 13, 23, 0.38) 54%, rgba(5, 13, 23, 0) 76%);
+}
+
+/* Véu azul-marinho: reforça a leitura na aproximação e fecha a cena na cor da seção seguinte */
+.cx-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--background, #050d17);
+  opacity: var(--veil);
+}
+
+/* ---------- Textos ---------- */
+.cx-copy {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: grid;
+  align-items: center;
+  padding: 28px max(24px, 6vw) 96px;
+  pointer-events: none;
+}
+
+.cx-copy.is-pending {
+  opacity: 0;
+}
+
+.cx-moment {
+  grid-area: 1 / 1;
+  max-width: min(52rem, 100%);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.cx-copy.is-pending .cx-moment {
+  pointer-events: none !important;
+}
+
+.cx-moment[data-index="1"] { opacity: var(--t1o); transform: translate3d(0, calc(var(--t1y) * 40px), 0); }
+.cx-moment[data-index="2"] { opacity: var(--t2o); transform: translate3d(0, calc(var(--t2y) * 40px), 0); }
+.cx-moment[data-index="3"] { opacity: var(--t3o); transform: translate3d(0, calc(var(--t3y) * 40px), 0); }
+.cx-moment[data-index="4"] { opacity: var(--t4o); transform: translate3d(0, calc(var(--t4y) * 40px), 0); }
+
+/* só o momento ativo recebe clique (os demais são texto de leitura) */
+.cx-stage[data-active="0"] .cx-moment[data-index="1"],
+.cx-stage[data-active="1"] .cx-moment[data-index="2"],
+.cx-stage[data-active="2"] .cx-moment[data-index="3"],
+.cx-stage[data-active="3"] .cx-moment[data-index="4"] {
+  pointer-events: auto;
+}
+
+.cx-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.cx-kicker::before {
+  content: "";
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-red);
+}
+
+.cx-title {
+  margin: 20px 0 0;
+  max-width: 14ch;
+  font-family: var(--font-display);
+  font-size: clamp(2.7rem, 6.6vw, 6.6rem);
+  font-weight: 800;
+  line-height: 0.94;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  text-wrap: balance;
+  color: #fff;
+}
+
+.cx-moment[data-index="3"] .cx-title,
+.cx-moment[data-index="4"] .cx-title {
+  max-width: 18ch;
+  font-size: clamp(2.4rem, 5.2vw, 5.2rem);
+}
+
+.cx-moment[data-index="2"] {
+  /* mais alto, para o manequim (embaixo) aparecer livre */
+  align-self: start;
+  margin-top: 8vh;
+}
+
+.cx-moment[data-index="2"] .cx-title {
+  margin-top: 0;
+}
+
+.cx-accent {
+  color: var(--brand-red);
+}
+
+.cx-support {
+  margin: 24px 0 0;
+  max-width: 44ch;
+  font-size: clamp(1rem, 1.3vw, 1.2rem);
+  line-height: 1.65;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.cx-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 22px;
+  margin-top: 34px;
+}
+
+.cx-actions .hx-btn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 3px;
+}
+
+/* ---------- Marcador de progresso ---------- */
+.cx-rail {
+  position: absolute;
+  z-index: 7;
+  left: max(24px, 6vw);
+  bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.45);
+  pointer-events: none;
+}
+
+.cx-rail-tick {
+  transition: color 0.3s ease;
+}
+
+.cx-stage[data-active="0"] .cx-rail-tick:nth-child(1),
+.cx-stage[data-active="1"] .cx-rail-tick:nth-child(2),
+.cx-stage[data-active="2"] .cx-rail-tick:nth-child(3),
+.cx-stage[data-active="3"] .cx-rail-tick:nth-child(4) {
+  color: #fff;
+}
+
+.cx-rail-bar {
+  width: clamp(80px, 12vw, 160px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.cx-rail-bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--brand-red);
+  transform-origin: left center;
+  transform: scaleX(var(--p));
+}
+
+/* ---------- Celular: composição própria (texto embaixo, recortes verticais, fixação mais curta) ---------- */
+@media (max-width: 767px) {
+  .cx-track {
+    height: 270vh;
+    height: 270svh;
+  }
+
+  .cx-layer-open {
+    transform-origin: 50% 30%;
+    transform: scale(calc(1 + var(--push) * 0.12));
+  }
+
+  .cx-layer-open img {
+    object-position: 50% 18%;
+  }
+
+  .cx-layer-prep img {
+    object-position: 40% 60%;
+  }
+
+  .cx-layer-training {
+    transform-origin: 50% 30%;
+    transform: scale(calc(1.14 - var(--pull) * 0.14));
+  }
+
+  .cx-layer-training img {
+    object-position: 50% 12%;
+  }
+
+  .cx-moment[data-index="2"] {
+    align-self: end;
+    margin-top: 0;
+  }
+
+  /* na etapa do preparo o manequim fica na metade de cima: a faixa escura de baixo fica mais curta */
+  .cx-shade {
+    transition: opacity 0.35s ease;
+  }
+
+  .cx-stage[data-active="1"] .cx-shade {
+    opacity: 0.6;
+  }
+
+  .cx-shade {
+    background:
+      linear-gradient(180deg, rgba(5, 13, 23, 0.7) 0%, rgba(5, 13, 23, 0) 16%),
+      linear-gradient(0deg, rgba(5, 13, 23, 0.97) 0%, rgba(5, 13, 23, 0.86) 34%, rgba(5, 13, 23, 0.4) 56%, rgba(5, 13, 23, 0) 74%);
+  }
+
+  .cx-copy {
+    align-items: end;
+    padding: 16px 20px calc(58px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cx-title {
+    margin-top: 14px;
+    font-size: clamp(2.35rem, 11.4vw, 3.6rem);
+  }
+
+  .cx-moment[data-index="3"] .cx-title,
+  .cx-moment[data-index="4"] .cx-title {
+    font-size: clamp(2rem, 9.4vw, 3rem);
+  }
+
+  .cx-support {
+    margin-top: 16px;
+    font-size: 1rem;
+  }
+
+  .cx-actions {
+    margin-top: 22px;
+    gap: 12px 18px;
+  }
+
+  .cx-actions .hx-btn.is-primary,
+  .cx-actions .hx-btn.is-secondary {
+    min-height: 48px;
+  }
+
+  .cx-rail {
+    left: 20px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ---------- Movimento reduzido: quatro blocos em sequência, sem fixar nem mexer ---------- */
+.cx-static {
+  position: relative;
+  background: var(--background, #050d17);
+}
+
+.cx-static-block {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-height: 86vh;
+  min-height: 86svh;
+  overflow: hidden;
+}
+
+.cx-static-block.is-plain {
+  min-height: 60vh;
+  min-height: 60svh;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+}
+
+.cx-static-media,
+.cx-static-media picture,
+.cx-static-media img,
+.cx-static-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.cx-static-media img {
+  display: block;
+  object-fit: cover;
+  object-position: 60% 40%;
+}
+
+.cx-static-media.is-prep img {
+  transform: scale(1.35);
+  transform-origin: 40% 56%;
+}
+
+.cx-static-shade {
+  background:
+    linear-gradient(180deg, rgba(5, 13, 23, 0.7) 0%, rgba(5, 13, 23, 0) 20%),
+    linear-gradient(90deg, rgba(5, 13, 23, 0.94) 0%, rgba(5, 13, 23, 0.8) 30%, rgba(5, 13, 23, 0.38) 54%, rgba(5, 13, 23, 0) 76%);
+}
+
+.cx-static .cx-copy {
+  position: relative;
+  inset: auto;
+  padding-block: 40px 72px;
+  pointer-events: auto;
+}
+
+.cx-static.is-pending .cx-copy {
+  opacity: 0;
+}
+
+.cx-static .cx-moment {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+@media (max-width: 767px) {
+  .cx-static-block {
+    align-items: end;
+  }
+
+  .cx-static-media img {
+    object-position: 50% 18%;
+  }
+
+  .cx-static-media.is-prep img {
+    object-position: 40% 60%;
+    transform: none;
+  }
+
+  .cx-static-shade {
+    background:
+      linear-gradient(180deg, rgba(5, 13, 23, 0.7) 0%, rgba(5, 13, 23, 0) 16%),
+      linear-gradient(0deg, rgba(5, 13, 23, 0.97) 0%, rgba(5, 13, 23, 0.86) 34%, rgba(5, 13, 23, 0.4) 56%, rgba(5, 13, 23, 0) 74%);
+  }
+
+  .cx-static .cx-copy {
+    padding: 72px 20px 48px;
+  }
+}
+
+/* Mesmo sem JavaScript de preferência detectado, quem pede menos movimento não recebe transições de entrada */
+@media (prefers-reduced-motion: reduce) {
+  .cx-moment,
+  .cx-layer,
+  .cx-rail-tick {
+    transition: none;
+  }
+}
+
+/* Tablet em pé: a tela é mais alta que larga, então o recorte da imagem de computador (paisagem) precisa seguir o instrutor,
+   que fica à direita; sem isso ele sai do quadro. */
+@media (min-width: 768px) and (max-aspect-ratio: 1/1) {
+  .cx-layer-open img,
+  .cx-static-media img {
+    object-position: 84% 40%;
+  }
+
+  .cx-layer-training img {
+    object-position: 76% 40%;
+  }
+
+  /* mesma composição do celular: rosto em cima, texto embaixo sobre uma faixa escura */
+  .cx-shade,
+  .cx-static-shade {
+    background:
+      linear-gradient(180deg, rgba(5, 13, 23, 0.7) 0%, rgba(5, 13, 23, 0) 16%),
+      linear-gradient(0deg, rgba(5, 13, 23, 0.97) 0%, rgba(5, 13, 23, 0.86) 34%, rgba(5, 13, 23, 0.4) 56%, rgba(5, 13, 23, 0) 74%);
+  }
+
+  .cx-copy {
+    align-items: end;
+    padding-bottom: 72px;
+  }
+
+  .cx-moment[data-index="2"] {
+    align-self: end;
+    margin-top: 0;
+  }
+
+  .cx-static-block {
+    align-items: end;
+  }
+}

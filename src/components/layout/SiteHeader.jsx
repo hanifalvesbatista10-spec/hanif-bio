@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import { useMentorshipHref } from "../../services/mentorship";
 
 function useScrolled(threshold = 24) {
   const [scrolled, setScrolled] = useState(false);
@@ -30,6 +31,7 @@ export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
+  const mentorshipHref = useMentorshipHref(); // produto de mentoria ativo no cadastro; sem ele, o link vai para o catálogo
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
@@ -77,11 +79,15 @@ export default function SiteHeader({ primaryLabel = "Ver treinamentos" }) {
         </button>
 
         <nav className={`site-nav ${menuOpen ? "is-open" : ""}`}>
-          <a href={anchor("produtos")} onClick={closeMenu}>Produtos</a>
-          <Link to="/sobre" onClick={closeMenu}>Sobre</Link>
+          <a href={anchor("produtos")} onClick={closeMenu}>Cursos</a>
+          {mentorshipHref ? (
+            <Link to={mentorshipHref} onClick={closeMenu}>Mentoria</Link>
+          ) : (
+            <a href={anchor("produtos")} onClick={closeMenu}>Mentoria</a>
+          )}
+          <Link to="/sobre" onClick={closeMenu}>Instrutor</Link>
           <Link to="/conteudos" onClick={closeMenu}>Conteúdos</Link>
           <Link to="/radar" onClick={closeMenu}>Radar</Link>
-          <a href={anchor("depoimentos")} onClick={closeMenu}>Depoimentos</a>
           <Link className="site-nav-login" to={access.to} onClick={closeMenu}>
             <UserIcon />
             {access.label}

@@ -1,5 +1,47 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../services/supabase";
+import { uploadFormImage } from "../../services/forms";
+import { DEFAULT_MEDIA, DEFAULT_TEXT } from "../../components/cinematic/config";
+
+// Abertura cinematográfica da home (site_settings.cinematic, SQL 65). Campo vazio = usa o padrão (mostrado como dica).
+const CINE_TEXTS = [
+  ["kicker", "Linha de marca acima do título"],
+  ["title1", "Momento 1 · Título (é o título principal da página)"],
+  ["support1", "Momento 1 · Apoio", "long"],
+  ["primary_label", "Botão principal · Texto"],
+  ["primary_href", "Botão principal · Destino (#produtos, /rota ou https://…)"],
+  ["secondary_label", "Botão secundário · Texto"],
+  ["secondary_href", "Botão secundário · Destino (em branco: página do produto de mentoria ativo)"],
+  ["title2", "Momento 2 · Título"],
+  ["support2", "Momento 2 · Apoio (opcional)", "long"],
+  ["title3", "Momento 3 · Título"],
+  ["support3", "Momento 3 · Apoio", "long"],
+  ["title4", "Momento 4 · Título"],
+  ["support4", "Momento 4 · Apoio (opcional)", "long"],
+  ["cta4_label", "Momento 4 · Texto do botão"],
+  ["cta4_href", "Momento 4 · Destino do botão"],
+];
+
+const CINE_IMAGES = [
+  ["opening_desktop", "Cena de abertura · computador", DEFAULT_MEDIA.opening.desktop],
+  ["opening_mobile", "Cena de abertura · celular (vertical)", DEFAULT_MEDIA.opening.mobile],
+  ["prep_mobile", "Preparo · celular (vertical)", DEFAULT_MEDIA.prep.mobile],
+  ["training_desktop", "Treinamento · computador", DEFAULT_MEDIA.training.desktop],
+  ["training_mobile", "Treinamento · celular (vertical)", DEFAULT_MEDIA.training.mobile],
+];
+
+// Só guarda o que foi preenchido; tudo vazio vira nulo (a home usa o padrão).
+function cleanCinematic(raw) {
+  const out = {};
+  Object.entries(raw || {}).forEach(([key, value]) => {
+    if (key === "enabled") {
+      if (value === false) out.enabled = false;
+    } else if (typeof value === "string" && value.trim()) {
+      out[key] = value.trim();
+    }
+  });
+  return Object.keys(out).length ? out : null;
+}
 
 const fields = [
   ["hero_kicker", "Linha acima do título"],
@@ -40,6 +82,7 @@ export default function SiteSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
+  const [cineTouched, setCineTouched] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -68,6 +111,20 @@ export default function SiteSettingsPage() {
 
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
 
+  const cine = form.cinematic && typeof form.cinematic === "object" ? form.cinematic : {};
+  const setCine = (key, value) => {
+    setCineTouched(true);
+    setForm((current) => ({ ...current, cinematic: { ...(current.cinematic || {}), [key]: value } }));
+  };
+  const uploadCineImage = async (key, file) => {
+    try {
+      setCine(key, await uploadFormImage(file, "site"));
+    } catch (uploadError) {
+      setMessageType("error");
+      setMessage(uploadError.message || "Não foi possível enviar a imagem.");
+    }
+  };
+
   const setRoleAt = (index, value) => {
     setForm((current) => {
       const next = (current.professional_roles || []).slice();
@@ -95,6 +152,9 @@ export default function SiteSettingsPage() {
     setMessageType("success");
 
     const payload = { ...form, id: 1 };
+    // a coluna da abertura (SQL 65) só vai no envio se ela existe no banco ou se a pessoa mexeu nela
+    if ("cinematic" in form || cineTouched) payload.cinematic = cleanCinematic(form.cinematic);
+    else delete payload.cinematic;
     const { error } = await supabase
       .from("site_settings")
       .upsert(payload, { onConflict: "id" });
@@ -103,7 +163,9 @@ export default function SiteSettingsPage() {
       setMessageType("error");
       const isMissingColumn = error.message?.includes("column") && error.message?.includes("does not exist");
       setMessage(
-        isMissingColumn
+        isMissingColumn && /cinematic/i.test(error.message)
+          ? "O banco ainda não tem os campos da abertura da home. Execute supabase/65_abertura_cinematografica.sql no SQL Editor e tente novamente."
+          : isMissingColumn
           ? "O banco ainda não tem os campos novos. Execute supabase/10_conteudo_editavel_home_sobre.sql no SQL Editor e tente novamente."
           : `Erro ao salvar: ${error.message}`
       );
@@ -127,6 +189,7 @@ export default function SiteSettingsPage() {
         .site-cms-role-row{display:flex;gap:8px;margin-bottom:8px}.site-cms-role-row input{flex:1}
         .site-cms-list-item{padding:14px;border:1px solid #e7edf2;border-radius:14px;margin-bottom:10px;display:grid;gap:8px}
         .site-cms-remove{border:1px solid #f1bdc5;background:#fff5f6;color:#bb1730;border-radius:9px;padding:0 12px;font-weight:900;cursor:pointer}
+        .site-cms-check{display:flex;gap:10px;align-items:flex-start;font-weight:800;color:#12283d;font-size:.92rem;cursor:pointer}.site-cms-check input{width:18px;height:18px;margin-top:2px;accent-color:#d6152d}
         .site-cms-add{border:1px solid #d6e0e9;background:#fff;border-radius:10px;padding:9px 14px;font-weight:900;cursor:pointer;color:#12283d}
         @media(max-width:760px){.site-cms-head{align-items:start;flex-direction:column}.site-cms-grid{grid-template-columns:1fr}.site-cms-field.full{grid-column:auto}}
       `}</style>
@@ -157,6 +220,51 @@ export default function SiteSettingsPage() {
               </div>
             );
           })}
+        </div>
+
+        <div className="site-cms-section">
+          <h3>Abertura da home (cena com rolagem)</h3>
+          <p>
+            Os quatro momentos que acompanham a rolagem no topo da página. Campo em branco usa o texto ou a imagem padrão (mostrado na dica do campo).
+            Nos títulos, o trecho entre **asteriscos** sai em vermelho. Destinos: #produtos, uma rota do site (/sobre) ou um link https://.
+          </p>
+          <label className="site-cms-check">
+            <input
+              type="checkbox"
+              checked={cine.enabled !== false}
+              onChange={(event) => setCine("enabled", event.target.checked)}
+            />
+            Usar a abertura cinematográfica (desmarcado, a home volta à abertura simples)
+          </label>
+          <div className="site-cms-grid" style={{ marginTop: 14 }}>
+            {CINE_TEXTS.map(([key, label, kind]) => (
+              <div className={`site-cms-field ${kind === "long" ? "full" : ""}`} key={key}>
+                <label htmlFor={`cine_${key}`}>{label}</label>
+                {kind === "long" ? (
+                  <textarea id={`cine_${key}`} rows={2} style={{ minHeight: 70 }} placeholder={DEFAULT_TEXT[key]} value={cine[key] || ""} onChange={(event) => setCine(key, event.target.value)} />
+                ) : (
+                  <input id={`cine_${key}`} placeholder={DEFAULT_TEXT[key]} value={cine[key] || ""} onChange={(event) => setCine(key, event.target.value)} />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <h3 style={{ marginTop: 22 }}>Imagens da abertura</h3>
+          <p>JPG, PNG ou WebP de até 5 MB. As versões de celular são verticais (proporção 9:16, texto fica na parte de baixo). Em branco usa a imagem padrão.</p>
+          <div className="site-cms-grid">
+            {CINE_IMAGES.map(([key, label, fallback]) => (
+              <div className="site-cms-field full" key={key}>
+                <label htmlFor={`cine_${key}`}>{label}</label>
+                <div className="site-cms-role-row">
+                  <input id={`cine_${key}`} placeholder={fallback} value={cine[key] || ""} onChange={(event) => setCine(key, event.target.value)} />
+                  <label className="site-cms-add" style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}>
+                    Enviar imagem
+                    <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) uploadCineImage(key, file); }} />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="site-cms-section">

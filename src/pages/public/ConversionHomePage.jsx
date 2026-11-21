@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { DEFAULT_MEDIA, resolveCinematic } from "../../components/cinematic/config";
 import { supabase } from "../../services/supabase";
 import PublicFeedbacks from "../../components/feedbacks/PublicFeedbacks";
 import SiteHeader from "../../components/layout/SiteHeader";
@@ -18,6 +19,27 @@ import FaqSection from "../../components/sections/FaqSection";
 import FinalCta from "../../components/sections/FinalCta";
 import "./ConversionHomePage.css";
 import "../../styles/home.css";
+
+// A abertura cinematográfica (componente, estilos e lógica de rolagem) vai em um bloco separado, só carregado na home.
+const CinematicHero = lazy(() => import("../../components/cinematic/CinematicHero"));
+
+// Enquanto o bloco da abertura baixa, a mesma imagem de abertura já ocupa a tela (sem salto de layout nem tela vazia).
+function CinematicBoot({ media }) {
+  return (
+    <div id="top" aria-hidden="true" style={{ position: "relative", height: "calc(100svh - var(--header-h, 72px))", background: "#050d17" }}>
+      <picture>
+        <source media="(max-width: 767px)" srcSet={media.opening.mobile} />
+        <img
+          src={media.opening.desktop}
+          alt=""
+          fetchpriority="high"
+          decoding="async"
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "60% 40%" }}
+        />
+      </picture>
+    </div>
+  );
+}
 
 const fallbackSettings = {
   hero_kicker: "APH • URGÊNCIA • EMERGÊNCIA",
@@ -142,7 +164,13 @@ export default function ConversionHomePage() {
       {playIntro && <BrandIntro onFinish={() => setIntroActive(false)} />}
       <SiteHeader primaryLabel={settings.hero_primary_label || "Ver treinamentos"} />
 
-      <Hero settings={settings} introActive={introActive} pending={!settingsReady} />
+      {resolveCinematic(settings).enabled ? (
+        <Suspense fallback={<CinematicBoot media={DEFAULT_MEDIA} />}>
+          <CinematicHero settings={settings} pending={!settingsReady} />
+        </Suspense>
+      ) : (
+        <Hero settings={settings} introActive={introActive} pending={!settingsReady} />
+      )}
 
       <main>
         <ExpertiseStrip />
